@@ -1,16 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
-import { mockNews, mockAnnouncements } from '../data/mockData';
-import { Calendar, Clock, Download, Bell, ArrowRight, User } from 'lucide-react';
+import { getPublishedNewsArticles, getPublicNewsSourceMode } from '../services/newsService';
+import { NewsArticle } from '../types/news';
+import { mockAnnouncements } from '../data/mockData';
+import { Calendar, Clock, Download, Bell, ArrowRight, User, Loader2, Info } from 'lucide-react';
 
 export const NewsPage: React.FC = () => {
   const { t, getLocalizedText } = useLanguage();
   const { showToast } = useToast();
   const [filter, setFilter] = useState<'all' | 'news' | 'training' | 'tender' | 'event'>('all');
 
-  const filteredNews = filter === 'all' ? mockNews : mockNews.filter((n) => n.category === filter);
+  const [articles, setArticles] = useState<NewsArticle[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const isMockMode = getPublicNewsSourceMode() === 'mock';
+
+  useEffect(() => {
+    async function fetchNews() {
+      setLoading(true);
+      try {
+        const data = await getPublishedNewsArticles(filter);
+        setArticles(data);
+      } catch (err) {
+        console.warn('Failed to fetch public news articles:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchNews();
+  }, [filter]);
 
   const getCategoryBadgeClass = (category: string) => {
     switch (category) {
@@ -51,85 +71,86 @@ export const NewsPage: React.FC = () => {
           ))}
         </div>
 
+        {/* Dev Mock Mode Notice */}
+        {isMockMode && (
+          <div className="bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 p-4 rounded-xl flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-300">
+            <Info className="w-4 h-4 text-amber-600" />
+            <span>Developer Mode: VITE_PUBLIC_NEWS_SOURCE is set to 'mock'. Displaying static demonstration articles.</span>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* News articles */}
           <div className="lg:col-span-8 space-y-6">
-            {filteredNews.map((article) => {
-              const titleText = typeof article.title === 'string'
-                ? article.title
-                : article.title
-                ? getLocalizedText(article.title)
-                : article.titleKey
-                ? t(article.titleKey)
-                : '';
+            {loading ? (
+              <div className="py-16 text-center bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
+                <Loader2 className="w-8 h-8 text-emerald-600 animate-spin mx-auto mb-2" />
+                <p className="text-xs font-bold text-gray-500">Loading published news...</p>
+              </div>
+            ) : articles.length === 0 ? (
+              <div className="py-16 text-center bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
+                <Info className="w-8 h-8 text-gray-400 mx-auto" />
+                <p className="text-sm font-bold text-gray-700 dark:text-gray-300">No Published Articles Available</p>
+                <p className="text-xs text-gray-500">Check back later for official news updates from the Oromia Bureau of Agriculture.</p>
+              </div>
+            ) : (
+              articles.map((article) => {
+                const titleText = getLocalizedText(article.title);
+                const summaryText = getLocalizedText(article.excerpt);
+                const authorText = article.authorName
+                  ? getLocalizedText(article.authorName)
+                  : getLocalizedText(article.responsibleOffice) || 'Oromia Bureau';
 
-              const summaryText = typeof article.excerpt === 'string'
-                ? article.excerpt
-                : article.excerpt
-                ? getLocalizedText(article.excerpt)
-                : article.summaryKey
-                ? t(article.summaryKey)
-                : '';
+                return (
+                  <article
+                    key={article.slug}
+                    className="group rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-6"
+                  >
+                    <img
+                      src={article.featuredImage}
+                      alt={titleText}
+                      className="h-48 md:w-64 object-cover rounded-xl shrink-0 group-hover:scale-[1.02] transition-transform duration-300"
+                    />
+                    <div className="space-y-3 flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-2">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getCategoryBadgeClass(article.category)}`}>
+                            {t(`news_tab_${article.category}`)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                            {article.publishedAt ? new Date().toLocaleDateString() : 'Recent'}
+                          </span>
+                        </div>
 
-              const authorText = typeof article.author === 'string'
-                ? article.author
-                : article.author
-                ? getLocalizedText(article.author)
-                : '';
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-[#075D3A] dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
+                          {titleText}
+                        </h2>
 
-              return (
-                <article
-                  key={article.id}
-                  className="group rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-6"
-                >
-                  <img
-                    src={article.featuredImage || article.imageUrl}
-                    alt={titleText}
-                    className="h-48 md:w-64 object-cover rounded-xl shrink-0 group-hover:scale-[1.02] transition-transform duration-300"
-                  />
-                  <div className="space-y-3 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-2">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getCategoryBadgeClass(article.category)}`}>
-                          {t(`news_tab_${article.category}`)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                          {article.publishedAt || article.date}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                          {article.readingTime || article.readTime}
-                        </span>
+                        <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mt-2 line-clamp-3">
+                          {summaryText}
+                        </p>
                       </div>
 
-                      <h2 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-[#075D3A] dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
-                        {titleText}
-                      </h2>
+                      <div className="pt-3 border-t border-gray-100 dark:border-gray-700/80 flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                          <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span>{authorText}</span>
+                        </div>
 
-                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mt-2 line-clamp-3">
-                        {summaryText}
-                      </p>
-                    </div>
-
-                    <div className="pt-3 border-t border-gray-100 dark:border-gray-700/80 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                        <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>{authorText}</span>
+                        <Link
+                          to={`/news/${article.slug}`}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#075D3A] hover:bg-[#05482d] dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-lg transition-colors shadow-xs"
+                        >
+                          <span>Read Story</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
                       </div>
-
-                      <Link
-                        to={`/news/${article.slug}`}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#075D3A] hover:bg-[#05482d] dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-lg transition-colors shadow-xs"
-                      >
-                        <span>Read Story</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Link>
                     </div>
-                  </div>
-                </article>
-              );
-            })}
+                  </article>
+                );
+              })
+            )}
           </div>
 
           {/* Side Bulletins & Tenders */}

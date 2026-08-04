@@ -3,7 +3,7 @@ import { HeroSection } from '../components/home/HeroSection';
 import { QuickServicesSection } from '../components/home/QuickServicesSection';
 import { FeaturedProgramsSection } from '../components/home/FeaturedProgramsSection';
 import { MarketSnapshotSection } from '../components/home/MarketSnapshotSection';
-import { WeatherAdvisorySection } from '../components/home/WeatherAdvisorySection';
+import { AchievementsSection } from '../components/achievements/AchievementsSection';
 import { NewsAnnouncementsSection } from '../components/home/NewsAnnouncementsSection';
 import { FarmerResourcesSection } from '../components/home/FarmerResourcesSection';
 import { ContactFeedbackCTA } from '../components/home/ContactFeedbackCTA';
@@ -23,8 +23,8 @@ export const HomePage: React.FC = () => {
       {/* 4. Agricultural market snapshot */}
       <MarketSnapshotSection />
 
-      {/* 5. Weather and advisory section */}
-      <WeatherAdvisorySection />
+      {/* 5. Achievements and Impact section */}
+      <AchievementsSection />
 
       {/* 6. Latest news and announcements */}
       <NewsAnnouncementsSection />

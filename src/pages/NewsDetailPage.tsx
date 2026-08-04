@@ -15,10 +15,11 @@ import {
   Bookmark,
   ExternalLink,
   Quote,
-  Sparkles
+  Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { mockNews } from '../data/mockData';
+import { getPublishedNewsArticleBySlug, getPublishedNewsArticles } from '../services/newsService';
 import { NewsArticle, NewsContentBlock, LocalizedText } from '../types';
 
 export const NewsDetailPage: React.FC = () => {
@@ -29,15 +30,46 @@ export const NewsDetailPage: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
 
-  // Find article by slug or fallback to id for backward compatibility
-  const article = mockNews.find(
-    (item) => item.slug === newsSlug || item.id === newsSlug
-  );
+  const [article, setArticle] = useState<NewsArticle | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [relatedArticles, setRelatedArticles] = useState<NewsArticle[]>([]);
 
-  // Scroll to top on route / slug change
+  // Scroll to top and fetch article
   useEffect(() => {
     window.scrollTo(0, 0);
+
+    async function loadArticle() {
+      if (!newsSlug) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      try {
+        const fetched = await getPublishedNewsArticleBySlug(newsSlug);
+        setArticle(fetched);
+
+        if (fetched) {
+          const allPublished = await getPublishedNewsArticles();
+          setRelatedArticles(allPublished.filter((a) => a.slug !== fetched.slug).slice(0, 2));
+        }
+      } catch (err) {
+        console.warn('Failed to load news article details:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadArticle();
   }, [newsSlug]);
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 space-y-3">
+        <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+        <p className="text-xs font-bold text-gray-500">Loading article details...</p>
+      </div>
+    );
+  }
 
   if (!article) {
     return (
@@ -63,19 +95,21 @@ export const NewsDetailPage: React.FC = () => {
   }
 
   // Get localized strings for article fields
-  const titleText = typeof article.title === 'string' ? article.title : getLocalizedText(article.title);
-  const excerptText = typeof article.excerpt === 'string' ? article.excerpt : getLocalizedText(article.excerpt);
-  const authorText = typeof article.author === 'string' ? article.author : getLocalizedText(article.author);
+  const titleText = getLocalizedText(article.title);
+  const excerptText = getLocalizedText(article.excerpt);
+  const authorText = article.authorName
+    ? getLocalizedText(article.authorName)
+    : (article as any).author
+    ? typeof (article as any).author === 'string'
+      ? (article as any).author
+      : getLocalizedText((article as any).author)
+    : 'Oromia Bureau of Agriculture';
+
   const officeText = article.responsibleOffice
     ? typeof article.responsibleOffice === 'string'
       ? article.responsibleOffice
       : getLocalizedText(article.responsibleOffice)
     : undefined;
-
-  // Find related articles
-  const relatedArticles = article.relatedArticleIds
-    ? mockNews.filter((item) => article.relatedArticleIds.includes(item.id))
-    : mockNews.filter((item) => item.id !== article.id).slice(0, 2);
 
   // Category badge styling
   const getCategoryBadgeClass = (category: string) => {

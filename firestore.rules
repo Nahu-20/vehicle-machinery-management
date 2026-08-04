@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isStaffUser(uid) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/staffUsers/$(uid))
+        && get(/databases/$(database)/documents/staffUsers/$(uid)).data.active == true;
+    }
+
+    function isCurrentActiveStaff() {
+      return isStaffUser(request.auth.uid);
+    }
+
+    function getStaffRole() {
+      return exists(/databases/$(database)/documents/staffUsers/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.role
+        : '';
+    }
+
+    function isSuperAdmin() {
+      return isCurrentActiveStaff() && getStaffRole() == 'superAdmin';
+    }
+
+    function isContentAdmin() {
+      return isCurrentActiveStaff() && (getStaffRole() == 'superAdmin' || getStaffRole() == 'contentAdmin');
+    }
+
+    function isEditor() {
+      return isCurrentActiveStaff() && (
+        getStaffRole() == 'superAdmin' ||
+        getStaffRole() == 'contentAdmin' ||
+        getStaffRole() == 'editor'
+      );
+    }
+
+    function isMarketOfficer() {
+      return isCurrentActiveStaff() && (getStaffRole() == 'superAdmin' || getStaffRole() == 'marketOfficer');
+    }
+
+    function isAdvisoryOfficer() {
+      return isCurrentActiveStaff() && (getStaffRole() == 'superAdmin' || getStaffRole() == 'advisoryOfficer');
+    }
+
+    // Collection: staffUsers
+    match /staffUsers/{uid} {
+      allow get: if isSignedIn() && (request.auth.uid == uid || isSuperAdmin());
+      allow list: if isSuperAdmin();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin() || (
+        isCurrentActiveStaff()
+        && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.active == resource.data.active
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Collection: newsArticles (CMS News Articles)
+    match /newsArticles/{newsSlug} {
+      // Public can read only published articles; active staff can read any status
+      allow get: if resource.data.status == 'published' || isCurrentActiveStaff();
+      allow list: if isCurrentActiveStaff() || resource.data.status == 'published';
+
+      // Editors can create new draft articles
+      allow create: if isEditor()
+        && newsSlug == request.resource.data.slug
+        && request.resource.data.status == 'draft'
+        && request.resource.data.createdBy == request.auth.uid;
+
+      // Update rules with status-transition and role constraints
+      allow update: if isCurrentActiveStaff()
+        && request.resource.data.slug == resource.data.slug
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.updatedBy == request.auth.uid
+        && (
+          // Published articles can ONLY be edited, unpublished, or archived by Content Admins
+          (resource.data.status == 'published' && isContentAdmin())
+          ||
+          // Draft articles: Editors can update draft, submit for review, or archive
+          (resource.data.status == 'draft' && (
+            (request.resource.data.status in ['draft', 'review', 'archived'] && isEditor())
+            || (request.resource.data.status == 'published' && isContentAdmin())
+          ))
+          ||
+          // Review articles: Editors can return to draft, keep in review, or archive
+          (resource.data.status == 'review' && (
+            (request.resource.data.status in ['draft', 'review', 'archived'] && isEditor())
+            || (request.resource.data.status == 'published' && isContentAdmin())
+          ))
+          ||
+          // Unpublished articles: Content Admins can return to draft, republish, or archive
+          (resource.data.status == 'unpublished' && isContentAdmin() && (
+            request.resource.data.status in ['draft', 'published', 'archived', 'unpublished']
+          ))
+          ||
+          // Archived articles: Content Admins can return to draft
+          (resource.data.status == 'archived' && isContentAdmin() && (
+            request.resource.data.status in ['draft', 'archived']
+          ))
+        );
+
+      // Deletion strictly reserved for Content Admins
+      allow delete: if isContentAdmin();
+    }
+
+    // Public read collections, restricted staff write
+    match /news/{articleId} {
+      allow read: if true;
+      allow create, update: if isEditor();
+      allow delete: if isContentAdmin();
+    }
+
+    match /achievements/{achievementId} {
+      allow read: if true;
+      allow create, update: if isEditor();
+      allow delete: if isContentAdmin();
+    }
+
+    match /alerts/{alertId} {
+      allow read: if true;
+      allow create, update, delete: if isAdvisoryOfficer();
+    }
+
+    match /marketPrices/{priceId} {
+      allow read: if true;
+      allow create, update, delete: if isMarketOfficer();
+    }
+
+    match /resources/{resourceId} {
+      allow read: if true;
+      allow create, update, delete: if isContentAdmin();
+    }
+
+    // Audit logs: Read restricted to SuperAdmin, write restricted to active staff
+    match /auditLogs/{logId} {
+      allow read: if isSuperAdmin();
+      allow create: if isCurrentActiveStaff() && request.resource.data.actorUid == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}

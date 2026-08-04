@@ -1,3 +1,4 @@
+export * from './news';
 export type LanguageCode = 'om' | 'am' | 'en';
 
 export type LocalizedText = {
@@ -205,3 +206,112 @@ export interface FeedbackFormState {
   category: string;
   message: string;
 }
+
+export interface AchievementMetric {
+  label: LocalizedText;
+  value: string;
+  change?: string;
+  unit?: LocalizedText;
+}
+
+export type AchievementContentBlock =
+  | {
+      type: 'paragraph';
+      content: LocalizedText;
+    }
+  | {
+      type: 'heading';
+      level: 2 | 3;
+      content: LocalizedText;
+    }
+  | {
+      type: 'image';
+      src: string;
+      alt: LocalizedText;
+      caption?: LocalizedText;
+    }
+  | {
+      type: 'quote';
+      content: LocalizedText;
+      source?: LocalizedText;
+    }
+  | {
+      type: 'list';
+      ordered: boolean;
+      items: LocalizedText[];
+    }
+  | {
+      type: 'metrics';
+      items: AchievementMetric[];
+    };
+
+export interface BeforeAfterItem {
+  id: string;
+  projectTitle: LocalizedText;
+  beforeImage: string;
+  afterImage: string;
+  beforeDescription: LocalizedText;
+  afterDescription: LocalizedText;
+  metrics: AchievementMetric[];
+  zone: LocalizedText;
+  period: string;
+}
+
+export interface ProgramImpact {
+  id: string;
+  programKey: string;
+  title: LocalizedText;
+  initiativesCount: string;
+  summary: LocalizedText;
+  image: string;
+  iconName: string;
+}
+
+export interface ImpactReport {
+  id: string;
+  title: LocalizedText;
+  year: string;
+  format: 'PDF' | 'DOCX' | 'XLSX';
+  fileSize: string;
+  downloadUrl: string;
+}
+
+export interface AchievementMilestone {
+  id: string;
+  year: string;
+  title: LocalizedText;
+  description: LocalizedText;
+  program: LocalizedText;
+  zone: LocalizedText;
+  thumbnail?: string;
+  achievementSlug?: string;
+}
+
+export interface Achievement {
+  id: string;
+  slug: string;
+  title: LocalizedText;
+  excerpt: LocalizedText;
+  fullContent: AchievementContentBlock[];
+  category: 'crop' | 'livestock' | 'irrigation' | 'resource' | 'training' | 'empowerment';
+  program: LocalizedText;
+  zone: LocalizedText;
+  woreda?: LocalizedText;
+  year: string;
+  implementationPeriod: string;
+  featuredImage: string;
+  imageAlt: LocalizedText;
+  gallery?: string[];
+  metrics: AchievementMetric[];
+  beforeAfter?: BeforeAfterItem;
+  responsibleOffice: LocalizedText;
+  reportIds?: string[];
+  relatedAchievementIds?: string[];
+  featured?: boolean;
+  status: 'published' | 'draft';
+  publishedAt: string;
+  updatedAt?: string;
+  titleKey?: string;
+  summaryKey?: string;
+}
+

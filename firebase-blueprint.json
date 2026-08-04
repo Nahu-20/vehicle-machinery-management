@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "StaffUser": {
+      "title": "StaffUser",
+      "description": "Authenticated staff member profile and access authorization record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Authentication UID" },
+        "email": { "type": "string", "format": "email", "description": "Government staff email" },
+        "displayName": { "type": "string", "description": "Full name of staff member" },
+        "role": {
+          "type": "string",
+          "enum": ["superAdmin", "contentAdmin", "editor", "marketOfficer", "advisoryOfficer"],
+          "description": "Centralized authorization role"
+        },
+        "active": { "type": "boolean", "description": "Account activation status" },
+        "preferredLanguage": { "type": "string", "enum": ["om", "am", "en"], "description": "UI language preference" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role", "active", "preferredLanguage"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Administrative action log for security compliance",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "actorUid": { "type": "string" },
+        "actorEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "entityType": { "type": "string" },
+        "entityId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "metadata": { "type": "object" }
+      },
+      "required": ["id", "actorUid", "actorEmail", "action", "entityType", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/staffUsers/{uid}": {
+      "schema": { "$ref": "#/entities/StaffUser" },
+      "description": "Stores staff profiles and authorization roles keyed by auth UID"
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Logs administrative mutations performed by authorized staff"
+    }
+  }
+}
