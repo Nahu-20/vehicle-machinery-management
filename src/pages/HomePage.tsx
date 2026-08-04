@@ -6,7 +6,6 @@ import { MarketSnapshotSection } from '../components/home/MarketSnapshotSection'
 import { WeatherAdvisorySection } from '../components/home/WeatherAdvisorySection';
 import { NewsAnnouncementsSection } from '../components/home/NewsAnnouncementsSection';
 import { FarmerResourcesSection } from '../components/home/FarmerResourcesSection';
-import { OfficeDirectorySection } from '../components/home/OfficeDirectorySection';
 import { ContactFeedbackCTA } from '../components/home/ContactFeedbackCTA';
 
 export const HomePage: React.FC = () => {
@@ -33,10 +32,7 @@ export const HomePage: React.FC = () => {
       {/* 7. Farmer resources */}
       <FarmerResourcesSection />
 
-      {/* 8. Regional office directory preview */}
-      <OfficeDirectorySection />
-
-      {/* 9. Contact and feedback call-to-action */}
+      {/* 8. Contact and feedback call-to-action */}
       <ContactFeedbackCTA />
     </div>
   );

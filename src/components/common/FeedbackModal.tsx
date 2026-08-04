@@ -43,25 +43,25 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="feedback-modal-title"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-emerald-900/20 bg-white p-6 shadow-2xl space-y-4"
+        className="w-full max-w-lg rounded-2xl border border-emerald-900/20 dark:border-emerald-900/60 bg-white dark:bg-[#0B1912] p-6 shadow-2xl space-y-4 text-[#14251D] dark:text-emerald-100 transition-colors duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-          <div className="flex items-center gap-2 text-[#075D3A]">
+        <div className="flex items-center justify-between border-b border-gray-100 dark:border-emerald-900/60 pb-3">
+          <div className="flex items-center gap-2 text-[#087A4B] dark:text-emerald-300">
             <MessageSquare className="h-5 w-5" />
-            <h2 id="feedback-modal-title" className="text-lg font-bold text-[#17211B]">{t('modal_feedback_title')}</h2>
+            <h2 id="feedback-modal-title" className="text-lg font-bold text-[#14251D] dark:text-emerald-100">{t('modal_feedback_title')}</h2>
           </div>
           <button
             onClick={onClose}
             aria-label={t('close')}
-            className="rounded-xl p-2 text-gray-500 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="rounded-xl p-2 text-gray-500 dark:text-emerald-400 hover:bg-gray-100 dark:hover:bg-[#12281D] min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <X className="h-5 w-5" />
           </button>
@@ -69,56 +69,56 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
 
         {submitted ? (
           <div className="my-8 flex flex-col items-center justify-center text-center space-y-2">
-            <CheckCircle2 className="h-12 w-12 text-[#14804A] animate-bounce" />
-            <h3 className="text-base font-bold text-[#17211B]">{t('modal_feedback_success')}</h3>
-            <p className="text-xs text-[#5E6B63]">Official demonstration feedback submission log.</p>
+            <CheckCircle2 className="h-12 w-12 text-[#087A4B] dark:text-[#3FAE5A] animate-bounce" />
+            <h3 className="text-base font-bold text-[#14251D] dark:text-emerald-100">{t('modal_feedback_success')}</h3>
+            <p className="text-xs text-[#637069] dark:text-emerald-300/80">Official demonstration feedback submission log.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-[#17211B]">{t('modal_feedback_name')} *</label>
+              <label className="block text-xs font-bold text-[#14251D] dark:text-emerald-200">{t('modal_feedback_name')} *</label>
               <input
                 type="text"
                 required
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 placeholder="Obbo / Adde / Dr..."
-                className="mt-1 w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-xs text-[#17211B] focus:border-[#075D3A] focus:outline-none"
+                className="mt-1 w-full rounded-xl border border-gray-300 dark:border-emerald-800/80 bg-white dark:bg-[#12281D] px-3.5 py-2.5 text-xs text-[#14251D] dark:text-emerald-100 focus:border-[#087A4B] focus:outline-none"
               />
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-xs font-bold text-[#17211B]">{t('modal_feedback_contact')} *</label>
+                <label className="block text-xs font-bold text-[#14251D] dark:text-emerald-200">{t('modal_feedback_contact')} *</label>
                 <input
                   type="text"
                   required
                   value={formData.contact}
                   onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
                   placeholder="+251 911... or user@domain.et"
-                  className="mt-1 w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-xs text-[#17211B] focus:border-[#075D3A] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-300 dark:border-emerald-800/80 bg-white dark:bg-[#12281D] px-3.5 py-2.5 text-xs text-[#14251D] dark:text-emerald-100 focus:border-[#087A4B] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#17211B]">{t('modal_feedback_zone')} *</label>
+                <label className="block text-xs font-bold text-[#14251D] dark:text-emerald-200">{t('modal_feedback_zone')} *</label>
                 <input
                   type="text"
                   required
                   value={formData.zone}
                   onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
                   placeholder="e.g. Arsii / Adaamaa"
-                  className="mt-1 w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-xs text-[#17211B] focus:border-[#075D3A] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-300 dark:border-emerald-800/80 bg-white dark:bg-[#12281D] px-3.5 py-2.5 text-xs text-[#14251D] dark:text-emerald-100 focus:border-[#087A4B] focus:outline-none"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#17211B]">{t('modal_feedback_category')}</label>
+              <label className="block text-xs font-bold text-[#14251D] dark:text-emerald-200">{t('modal_feedback_category')}</label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="mt-1 w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-xs text-[#17211B] focus:border-[#075D3A] focus:outline-none"
+                className="mt-1 w-full rounded-xl border border-gray-300 dark:border-emerald-800/80 bg-white dark:bg-[#12281D] px-3.5 py-2.5 text-xs text-[#14251D] dark:text-emerald-100 focus:border-[#087A4B] focus:outline-none"
               >
                 <option value="Extension Support">Deeggarsa Eksteenshinii (Extension)</option>
                 <option value="Market Info">Gabaa Qonnaa (Market Info)</option>
@@ -129,14 +129,14 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#17211B]">{t('modal_feedback_message')} *</label>
+              <label className="block text-xs font-bold text-[#14251D] dark:text-emerald-200">{t('modal_feedback_message')} *</label>
               <textarea
                 rows={3}
                 required
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 placeholder="Write your suggestions or inquiries here..."
-                className="mt-1 w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-xs text-[#17211B] focus:border-[#075D3A] focus:outline-none"
+                className="mt-1 w-full rounded-xl border border-gray-300 dark:border-emerald-800/80 bg-white dark:bg-[#12281D] px-3.5 py-2.5 text-xs text-[#14251D] dark:text-emerald-100 focus:border-[#087A4B] focus:outline-none"
               />
             </div>
 
@@ -144,13 +144,13 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-xl border border-gray-300 px-4 py-2.5 text-xs font-semibold text-[#5E6B63] hover:bg-gray-50 min-h-[44px]"
+                className="rounded-xl border border-gray-300 dark:border-emerald-800/80 px-4 py-2.5 text-xs font-semibold text-[#637069] dark:text-emerald-300 hover:bg-gray-50 dark:hover:bg-[#12281D] min-h-[44px]"
               >
                 {t('close')}
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-1.5 rounded-xl bg-[#075D3A] px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#14804A] min-h-[44px]"
+                className="flex items-center gap-1.5 rounded-xl bg-[#087A4B] dark:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#063D2A] min-h-[44px]"
               >
                 <Send className="h-3.5 w-3.5 text-[#D7A928]" />
                 {t('modal_feedback_submit')}

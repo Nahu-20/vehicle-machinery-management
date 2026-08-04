@@ -44,16 +44,70 @@ export interface Program {
   badgeKey?: string;
 }
 
+export type NewsContentBlock =
+  | {
+      type: 'paragraph';
+      content: LocalizedText;
+    }
+  | {
+      type: 'heading';
+      level: 2 | 3;
+      content: LocalizedText;
+    }
+  | {
+      type: 'image';
+      src: string;
+      alt: LocalizedText;
+      caption?: LocalizedText;
+    }
+  | {
+      type: 'quote';
+      content: LocalizedText;
+      source?: LocalizedText;
+    }
+  | {
+      type: 'list';
+      ordered: boolean;
+      items: LocalizedText[];
+    }
+  | {
+      type: 'highlight';
+      title?: LocalizedText;
+      content: LocalizedText;
+    }
+  | {
+      type: 'relatedLink';
+      title: LocalizedText;
+      url: string;
+    };
+
 export interface NewsArticle {
   id: string;
-  titleKey: string;
-  summaryKey: string;
-  contentKey?: string;
+  slug: string;
+  title: LocalizedText;
+  excerpt: LocalizedText;
+  fullContent: NewsContentBlock[];
   category: 'news' | 'training' | 'tender' | 'event';
-  date: string;
-  author: string;
-  imageUrl: string;
-  readTime: string;
+  featuredImage: string;
+  imageAlt: LocalizedText;
+  publishedAt: string;
+  updatedAt?: string;
+  author: LocalizedText;
+  responsibleOffice?: LocalizedText;
+  readingTime: string;
+  tags: string[];
+  relatedArticleIds: string[];
+  featured?: boolean;
+  status: 'published' | 'draft';
+  translations?: Partial<Record<LanguageCode, boolean>>;
+  
+  // Legacy / convenience fields for backward compatibility
+  titleKey?: string;
+  summaryKey?: string;
+  contentKey?: string;
+  date?: string;
+  imageUrl?: string;
+  readTime?: string;
 }
 
 export interface Announcement {

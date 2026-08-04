@@ -187,6 +187,21 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     announcements_header: "Beeksisa Ariifachiisaa & Caalbaasii",
     view_all_news: "Odeeffannoo Hunda Ilaali",
 
+    // News detail & action labels
+    news_detail_breadcrumb: "Odeeffannoo",
+    news_not_found_title: "Waraqaan Oduu Hin Argamne",
+    news_not_found_desc: "Waraqaan oduu barbaaddan kun hin argamne ykn gara biraatti jijjiirameera.",
+    news_back_to_news: "Gara Oduu Cufaatti Deebi'i",
+    news_published_by: "Kan Maxxansame:",
+    news_responsible_office: "Waajjira Itti Gaafatamaa:",
+    news_updated_at: "Kan Haaromfame:",
+    news_share_button: "Qooddadhu (Share)",
+    news_print_button: "Maxxansi (Print)",
+    news_share_copied: "Liangii waraqaa oduu garagalfameera!",
+    news_related_title: "Oduu fi Beeksisa Walqabatan",
+    demo_content_notice_title: "Beeksisa Ragaa Agarsiisaa (Demo)",
+    demo_content_notice_desc: "Waraqaan oduu kun deeggarsa teestii fi agarsiisa poortaalaa Biiroo Qonnaa Oromiyaatiif kan qophaa'eedha.",
+
     // News articles sample
     news1_title: "Biiroon Qonnaa Oromiyaa Sanyii Filatamaa Quintala Kuma 500 Qonnaan Bultootaaf Raabsuu Jalqabe",
     news1_summary: "Misooma qamadii bara kanaatiif sanyii qulqullina ol'aanaa qabu dhiheessuun oomishtummaa harka dhibba dhibban dabaluuf hojjetamaa jira.",
@@ -255,15 +270,29 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     modal_feedback_submit: "Ergi (Submit)",
     modal_feedback_success: "Galatoomaa! Yaadni keessan milka'inaan ergameera.",
     
-    // Accessibility modal/toolbar
-    access_title: "Filannoowwan Dhaqqabamummaa (Accessibility)",
-    access_text_size: "Guddina Barruu (Text Size):",
-    access_normal: "Idilee (Normal)",
-    access_large: "Gudaa (Large)",
-    access_xlarge: "Baay'ee Gudaa (X-Large)",
-    access_contrast: "Haala Faallaa Ol'aanaa (High Contrast):",
-    access_contrast_toggle: "Cufaa / Banamaa",
-    access_reset: "Deebisi (Reset)",
+    // Theme & Appearance
+    theme_title: "Haala Halluu",
+    theme_light: "Ifaa (Light)",
+    theme_dark: "Dukkana (Dark)",
+    theme_system: "Sirna OS (System)",
+
+    // Chatbot Frontend
+    chat_title: "Gargaaraa Qonna Oromiyaa",
+    chat_launcher: "Gargaaraa Qonnaa Banadhu",
+    chat_status_demo: "Haala Agarsiisaa (Demo)",
+    chat_disclaimer: "Gargaaraan kun yeroo ampaa agarsiisaaf qofa kan qophaa'e malee tajaajila gorsa qonnaa deeggarsa rasmiitti hin qabatamne.",
+    chat_placeholder: "Gaaffii qonnaa keessan asitti barreessaa...",
+    chat_send: "Ergi",
+    chat_retry: "Irra deebi'ii yaali",
+    chat_clear: "Haasaa Haqii",
+    chat_close: "Cufi",
+    chat_quick_crop: "Gorsa Oomisha Midhaanii",
+    chat_quick_livestock: "Deeggarsa Beeyladaa",
+    chat_quick_market: "Odeeffannoo Gabaa",
+    chat_quick_pest: "Ittisa Hoomaa fi Dhukkubaa",
+    chat_quick_irrigation: "Deeggarsa Jallisii & Qilleensaa",
+    chat_quick_contact: "Waajjira Godinaa Qunnamaa",
+    chat_not_connected: "Tajaajilli sarara deeggarsa yaadaa yeroo ampaa endpoint n8n/Mastra waliin hin qabamne. Odeeffannoo dabalataaf sarara bilisaa 8844 irratti bilisaan bilbilaa.",
   },
 
   am: {
@@ -442,6 +471,21 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     announcements_header: "አስቸኳይ ማስታወቂያዎችና ጨረታዎች",
     view_all_news: "ሁሉንም ዜናዎች ይመልከቱ",
 
+    // News detail & action labels
+    news_detail_breadcrumb: "ዜና",
+    news_not_found_title: "የዜና መጣጥፉ አልተገኘም",
+    news_not_found_desc: "የፈለጉት የዜና መጣጥፍ አልተገኘም ወይም ወደ ሌላ ቦታ ተዛውሯል።",
+    news_back_to_news: "ወደ ሁሉም ዜናዎች ተመለስ",
+    news_published_by: "የታተመው በ:",
+    news_responsible_office: "ኃላፊነት ያለው መሥሪያ ቤት:",
+    news_updated_at: "የታደሰበት:",
+    news_share_button: "አጋራ (Share)",
+    news_print_button: "አትም (Print)",
+    news_share_copied: "የመጣጥፉ ሊንክ ተቀድቷል!",
+    news_related_title: "ተዛማጅ ዜናዎችና ማስታወቂያዎች",
+    demo_content_notice_title: "የማሳያ መረጃ ማስታወቂያ (Demo)",
+    demo_content_notice_desc: "ይህ የዜና መጣጥፍ ለኦሮሚያ ግብርና ቢሮ ዲጂታል ፖርታል ማሳያና ፍተሻ የተዘጋጀ ነው።",
+
     // News articles sample
     news1_title: "የኦሮሚያ ግብርና ቢሮ 500 ሺህ ኩንታል ምርጥ ዘር ለአርሶ አደሮች ማሰራጨት ጀመረ",
     news1_summary: "ለዚህ አመት የስንዴ ልማት ከፍተኛ ጥራት ያለው ምርጥ ዘር በማቅረብ ምርታማነትን በእጥፍ ለማሳደግ እየተሰራ ነው።",
@@ -510,15 +554,29 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     modal_feedback_submit: "ላክ (Submit)",
     modal_feedback_success: "እናመሰግናለን! አስተያየትዎ በተሳካ ሁኔታ ተልኳል።",
 
-    // Accessibility modal/toolbar
-    access_title: "የተደራሽነት አማራጮች (Accessibility)",
-    access_text_size: "የጽሁፍ መጠን (Text Size):",
-    access_normal: "መደበኛ (Normal)",
-    access_large: "ትልቅ (Large)",
-    access_xlarge: "በጣም ትልቅ (X-Large)",
-    access_contrast: "ከፍተኛ ንፅፅር (High Contrast):",
-    access_contrast_toggle: "አብራ / አጥፋ",
-    access_reset: "ወደ ነበረበት መልስ (Reset)",
+    // Theme & Appearance
+    theme_title: "የቀለም ገፅታ",
+    theme_light: "ብርሃን (Light)",
+    theme_dark: "ጨለማ (Dark)",
+    theme_system: "የሲስተም (System)",
+
+    // Chatbot Frontend
+    chat_title: "የኦሮሚያ ግብርና ረዳት",
+    chat_launcher: "የግብርና ረዳት ይክፈቱ",
+    chat_status_demo: "የማሳያ ሁኔታ (Demo)",
+    chat_disclaimer: "ይህ ረዳት በአሁኑ ጊዜ ለማሳያ ብቻ የቀረበ ነው፣ ከኦፊሴላዊ የግብርና ማማከር አገልግሎት ጋር አልተገናኘም።",
+    chat_placeholder: "የግብርና ጥያቄዎን እዚህ ይጻፉ...",
+    chat_send: "ላክ",
+    chat_retry: "ድጋሚ ሞክር",
+    chat_clear: "ንግግሩን አፅዳ",
+    chat_close: "ዝጋ",
+    chat_quick_crop: "የሰብል ምርት መመሪያ",
+    chat_quick_livestock: "የእንስሳት እርባታ ድጋፍ",
+    chat_quick_market: "የገበያ መረጃ",
+    chat_quick_pest: "የተባይና የበሽታ መከላከያ",
+    chat_quick_irrigation: "የመስኖና የአየር ሁኔታ ድጋፍ",
+    chat_quick_contact: "የዞን ጽሕፈት ቤትን ያነጋግሩ",
+    chat_not_connected: "የረዳቱ የቀጥታ አገልግሎት በአሁኑ ጊዜ አልተገናኘም። ለበለጠ መረጃ በነጻ ስልክ ቁጥር 8844 ይደውሉ።",
   },
 
   en: {
@@ -697,6 +755,21 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     announcements_header: "Official Tenders & Bulletins",
     view_all_news: "View All News",
 
+    // News detail & action labels
+    news_detail_breadcrumb: "News",
+    news_not_found_title: "News Article Not Found",
+    news_not_found_desc: "The requested news article could not be found or may have been moved.",
+    news_back_to_news: "Back to All News",
+    news_published_by: "Published by:",
+    news_responsible_office: "Responsible Office:",
+    news_updated_at: "Updated:",
+    news_share_button: "Share Article",
+    news_print_button: "Print Article",
+    news_share_copied: "Article link copied to clipboard!",
+    news_related_title: "Related News & Bulletins",
+    demo_content_notice_title: "Demonstration Content Notice",
+    demo_content_notice_desc: "This article is provided for demonstration and testing purposes as part of the Oromia Agricultural Bureau digital portal project.",
+
     // News articles sample
     news1_title: "Oromia Agricultural Bureau Commences Distribution of 500k Quintals of Certified Seeds",
     news1_summary: "To support the upcoming planting season, high-grade seeds are being dispatched to primary farmer cooperatives across 21 zones.",
@@ -765,14 +838,28 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     modal_feedback_submit: "Submit Feedback",
     modal_feedback_success: "Thank you! Your feedback has been received.",
 
-    // Accessibility modal/toolbar
-    access_title: "Accessibility Settings",
-    access_text_size: "Text Size Scaling:",
-    access_normal: "Normal (100%)",
-    access_large: "Large (115%)",
-    access_xlarge: "Extra Large (130%)",
-    access_contrast: "High Contrast Mode:",
-    access_contrast_toggle: "Toggle Contrast",
-    access_reset: "Reset Defaults",
+    // Theme & Appearance
+    theme_title: "Appearance Theme",
+    theme_light: "Light",
+    theme_dark: "Dark",
+    theme_system: "System",
+
+    // Chatbot Frontend
+    chat_title: "Oromia Agricultural Assistant",
+    chat_launcher: "Open Agricultural Assistant",
+    chat_status_demo: "Demonstration Mode",
+    chat_disclaimer: "This assistant is currently a demonstration and is not connected to an official agricultural advisory service.",
+    chat_placeholder: "Type your agricultural question here...",
+    chat_send: "Send",
+    chat_retry: "Retry",
+    chat_clear: "Clear Conversation",
+    chat_close: "Close Assistant",
+    chat_quick_crop: "Crop Production Guidance",
+    chat_quick_livestock: "Livestock Support",
+    chat_quick_market: "Market Information",
+    chat_quick_pest: "Pest & Disease Control",
+    chat_quick_irrigation: "Irrigation & Weather Support",
+    chat_quick_contact: "Contact Regional Office",
+    chat_not_connected: "The live assistant endpoint is not yet connected. For urgent assistance, please call our toll-free hotline at 8844 or visit our Regional Offices directory.",
   },
 };

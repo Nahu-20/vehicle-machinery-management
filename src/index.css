@@ -1,51 +1,42 @@
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --color-forest: #063D2A;
-    --color-primary: #087A4B;
-    --color-bright: #3FAE5A;
-    --color-gold: #D7A928;
-    --color-soft-green: #EFF8F2;
-    --color-warm-white: #FAFAF7;
-    --color-white: #FFFFFF;
-    --color-text-primary: #14251D;
-    --color-text-muted: #637069;
-    --color-border: #DDE8E1;
-    --font-size-multiplier: 1;
-  }
+@custom-variant dark (&:where(.dark, .dark *));
 
-  body {
-    background-color: var(--color-warm-white);
-    color: var(--color-text-primary);
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
-    font-size: calc(1rem * var(--font-size-multiplier, 1));
-    line-height: 1.6;
-    overflow-x: hidden;
-  }
+:root {
+  --color-forest: #063D2A;
+  --color-primary: #087A4B;
+  --color-bright: #3FAE5A;
+  --color-gold: #D7A928;
+  --color-soft-green: #EFF8F2;
+  --color-warm-white: #FAFAF7;
+  --color-white: #FFFFFF;
+  --color-text-primary: #14251D;
+  --color-text-muted: #637069;
+  --color-border: #DDE8E1;
+  --font-size-multiplier: 1;
+}
 
-  /* High contrast mode overrides */
-  body.high-contrast {
-    background-color: #000000 !important;
-    color: #FFFFFF !important;
-  }
-  body.high-contrast .bg-white,
-  body.high-contrast .bg-\[\#FAFAF7\],
-  body.high-contrast .bg-\[\#EFF8F2\],
-  body.high-contrast .bg-\[\#063D2A\] {
-    background-color: #111111 !important;
-    color: #FFFFFF !important;
-    border-color: #444444 !important;
-  }
-  body.high-contrast text,
-  body.high-contrast p,
-  body.high-contrast h1,
-  body.high-contrast h2,
-  body.high-contrast h3,
-  body.high-contrast h4,
-  body.high-contrast span {
-    color: #FFFFFF !important;
-  }
+html.dark {
+  color-scheme: dark;
+  --color-warm-white: #061810;
+  --color-text-primary: #F0FDF4;
+  --color-text-muted: #A7F3D0;
+  --color-border: #133A29;
+}
+
+body {
+  background-color: var(--color-warm-white);
+  color: var(--color-text-primary);
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: calc(1rem * var(--font-size-multiplier, 1));
+  line-height: 1.6;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html.dark body {
+  background: radial-gradient(circle at 50% 0%, #0E291C 0%, #061810 50%, #030E09 100%);
+  background-attachment: fixed;
 }
 
 /* Custom design system utilities */
@@ -65,6 +56,46 @@
 
 .border-agri { border-color: #DDE8E1; }
 
+/* Vibrant Dark Mode Linear Gradients & Glowing Utilities */
+.dark-gradient-card {
+  background: linear-gradient(135deg, #0F2A1D 0%, #153828 50%, #0A1E14 100%);
+}
+
+.dark-gradient-gold {
+  background: linear-gradient(135deg, #D7A928 0%, #F59E0B 50%, #B45309 100%);
+}
+
+.dark-gradient-emerald {
+  background: linear-gradient(135deg, #087A4B 0%, #10B981 50%, #047857 100%);
+}
+
+.dark-gradient-cyan {
+  background: linear-gradient(135deg, #0284C7 0%, #06B6D4 50%, #0F766E 100%);
+}
+
+.dark-gradient-purple {
+  background: linear-gradient(135deg, #7C3AED 0%, #9333EA 50%, #581C87 100%);
+}
+
+.dark-glow-emerald {
+  box-shadow: 0 0 35px -5px rgba(16, 185, 129, 0.25);
+}
+
+.dark-glow-gold {
+  box-shadow: 0 0 35px -5px rgba(215, 169, 40, 0.3);
+}
+
+.dark-glow-cyan {
+  box-shadow: 0 0 35px -5px rgba(6, 182, 212, 0.25);
+}
+
+.dark-glass-panel {
+  background: rgba(15, 42, 29, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
 /* Accessible focus ring */
 *:focus-visible {
   outline: 3px solid #D7A928 !important;
@@ -73,12 +104,17 @@
 
 /* Smooth card elevate transitions */
 .card-hover {
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, background 0.3s ease;
 }
 .card-hover:hover {
   transform: translateY(-4px);
-  box-shadow: 0 16px 32px -8px rgba(6, 61, 42, 0.08);
+  box-shadow: 0 16px 32px -8px rgba(6, 61, 42, 0.12);
   border-color: #087A4B;
+}
+
+html.dark .card-hover:hover {
+  box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.25);
+  border-color: #34D399;
 }
 
 /* Reduced motion */
@@ -90,5 +126,3 @@
     scroll-behavior: auto !important;
   }
 }
-
-

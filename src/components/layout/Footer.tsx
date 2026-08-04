@@ -17,7 +17,7 @@ export const Footer: React.FC = () => {
   const [activeModal, setActiveModal] = useState<'privacy' | 'accessibility' | null>(null);
 
   return (
-    <footer className="bg-[#063D2A] text-white pt-16 pb-8 border-t-4 border-[#D7A928]">
+    <footer className="bg-[#063D2A] dark:bg-[#042016] text-white pt-16 pb-8 border-t-4 border-[#D7A928] transition-colors duration-200">
       <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Prototype Banner Notice */}
         <div className="mb-12 rounded-2xl border border-[#D7A928]/40 bg-[#D7A928]/10 p-4 text-xs text-[#D7A928] flex flex-wrap items-center justify-between gap-3 backdrop-blur-md">
@@ -145,14 +145,14 @@ export const Footer: React.FC = () => {
       {/* Policy Modals */}
       {activeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 sm:p-7 text-[#14251D] shadow-2xl border border-[#DDE8E1]">
-            <div className="flex items-center justify-between border-b border-[#DDE8E1] pb-4">
-              <h3 className="text-lg font-extrabold text-[#063D2A]">
+          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#0B1912] p-6 sm:p-7 text-[#14251D] dark:text-emerald-100 shadow-2xl border border-[#DDE8E1] dark:border-emerald-900/60">
+            <div className="flex items-center justify-between border-b border-[#DDE8E1] dark:border-emerald-900/60 pb-4">
+              <h3 className="text-lg font-extrabold text-[#063D2A] dark:text-emerald-200">
                 {activeModal === 'privacy' ? t('footer_privacy') : t('footer_accessibility')}
               </h3>
-              <button onClick={() => setActiveModal(null)} className="p-1 text-gray-400 hover:text-black rounded-lg">✕</button>
+              <button onClick={() => setActiveModal(null)} className="p-1 text-gray-400 dark:text-emerald-400 hover:text-black dark:hover:text-white rounded-lg">✕</button>
             </div>
-            <div className="mt-4 text-xs sm:text-sm space-y-3 leading-relaxed text-[#637069]">
+            <div className="mt-4 text-xs sm:text-sm space-y-3 leading-relaxed text-[#637069] dark:text-emerald-200/80">
               {activeModal === 'privacy' ? (
                 <>
                   <p>
