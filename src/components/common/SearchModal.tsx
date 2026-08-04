@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { Search, X, ArrowRight, FileText, Sprout, Newspaper, Building2 } from 'lucide-react';
 import { mockServices, mockNews, mockPublications, mockOffices } from '../../data/mockData';
@@ -12,6 +12,18 @@ interface SearchModalProps {
 export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
   const { t } = useLanguage();
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -32,19 +44,33 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
     : [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-16 backdrop-blur-xs" role="dialog" aria-modal="true">
-      <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-emerald-900/20 bg-white shadow-2xl animate-in fade-in duration-200">
-        <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3 bg-[#F8F7F2]">
-          <Search className="h-5 w-5 text-[#075D3A]" />
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-16 backdrop-blur-xs animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="search-modal-title"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl overflow-hidden rounded-2xl border border-emerald-900/20 bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3.5 bg-[#F8F7F2]">
+          <Search className="h-5 w-5 text-[#075D3A] shrink-0" />
           <input
+            id="search-modal-title"
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('search_placeholder')}
             autoFocus
-            className="w-full bg-transparent text-sm font-medium text-[#17211B] placeholder-[#5E6B63] focus:outline-none"
+            className="w-full bg-transparent text-sm font-semibold text-[#17211B] placeholder-[#5E6B63] focus:outline-none"
           />
-          <button onClick={onClose} aria-label={t('close')} className="rounded-md p-1 text-[#5E6B63] hover:bg-gray-200">
+          <button
+            onClick={onClose}
+            aria-label={t('close')}
+            className="rounded-xl p-2 text-[#5E6B63] hover:bg-gray-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -53,7 +79,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
           {/* Services */}
           <div>
             <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#075D3A]">
-              <Sprout className="h-4 w-4" /> {t('nav_services')}
+              <Sprout className="h-4 w-4 text-[#D5A62E]" /> {t('nav_services')}
             </h3>
             <div className="mt-2 space-y-1">
               {filteredServices.map((srv) => (
@@ -61,7 +87,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                   key={srv.id}
                   to={srv.linkUrl}
                   onClick={onClose}
-                  className="flex items-center justify-between rounded-lg p-2 text-xs font-medium text-[#17211B] hover:bg-[#EAF5EE]"
+                  className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#17211B] hover:bg-[#EAF5EE] min-h-[44px]"
                 >
                   <span>{t(srv.titleKey)}</span>
                   <ArrowRight className="h-3.5 w-3.5 text-[#14804A]" />
@@ -73,7 +99,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
           {/* Publications */}
           <div>
             <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#075D3A]">
-              <FileText className="h-4 w-4" /> {t('nav_resources')}
+              <FileText className="h-4 w-4 text-[#D5A62E]" /> {t('nav_resources')}
             </h3>
             <div className="mt-2 space-y-1">
               {filteredPubs.map((pub) => (
@@ -81,11 +107,11 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                   key={pub.id}
                   to="/resources"
                   onClick={onClose}
-                  className="flex items-center justify-between rounded-lg p-2 text-xs font-medium text-[#17211B] hover:bg-[#EAF5EE]"
+                  className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#17211B] hover:bg-[#EAF5EE] min-h-[44px]"
                 >
                   <div>
                     <span className="font-semibold">{t(pub.titleKey)}</span>
-                    <span className="ml-2 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] text-[#075D3A]">{pub.format}</span>
+                    <span className="ml-2 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] text-[#075D3A] font-bold">{pub.format}</span>
                   </div>
                   <ArrowRight className="h-3.5 w-3.5 text-[#14804A]" />
                 </Link>
@@ -96,7 +122,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
           {/* News */}
           <div>
             <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#075D3A]">
-              <Newspaper className="h-4 w-4" /> {t('nav_news')}
+              <Newspaper className="h-4 w-4 text-[#D5A62E]" /> {t('nav_news')}
             </h3>
             <div className="mt-2 space-y-1">
               {filteredNews.map((news) => (
@@ -104,7 +130,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                   key={news.id}
                   to="/news"
                   onClick={onClose}
-                  className="flex items-center justify-between rounded-lg p-2 text-xs font-medium text-[#17211B] hover:bg-[#EAF5EE]"
+                  className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#17211B] hover:bg-[#EAF5EE] min-h-[44px]"
                 >
                   <span className="truncate max-w-md">{t(news.titleKey)}</span>
                   <span className="text-[10px] text-[#5E6B63]">{news.date}</span>
@@ -117,7 +143,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
           {filteredOffices.length > 0 && (
             <div>
               <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#075D3A]">
-                <Building2 className="h-4 w-4" /> Regional Offices
+                <Building2 className="h-4 w-4 text-[#D5A62E]" /> Regional Offices
               </h3>
               <div className="mt-2 space-y-1">
                 {filteredOffices.map((off) => (
@@ -125,7 +151,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                     key={off.id}
                     to="/contact"
                     onClick={onClose}
-                    className="flex items-center justify-between rounded-lg p-2 text-xs font-medium text-[#17211B] hover:bg-[#EAF5EE]"
+                    className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#17211B] hover:bg-[#EAF5EE] min-h-[44px]"
                   >
                     <span>{off.nameKey}</span>
                     <span className="text-[10px] text-[#5E6B63]">{off.phone}</span>

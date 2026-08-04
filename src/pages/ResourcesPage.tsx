@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import { mockPublications } from '../data/mockData';
 import { Search, Download, FileText, Calendar, BookOpen, Shield, Video, FileCheck } from 'lucide-react';
 
 export const ResourcesPage: React.FC = () => {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const [query, setQuery] = useState('');
   const [selectedFormat, setSelectedFormat] = useState<string>('all');
 
@@ -53,7 +55,7 @@ export const ResourcesPage: React.FC = () => {
               <button
                 key={fmt}
                 onClick={() => setSelectedFormat(fmt)}
-                className={`rounded-lg px-3 py-1 text-xs font-bold uppercase transition-all ${
+                className={`rounded-lg px-3 py-1 text-xs font-bold uppercase transition-all min-h-[44px] sm:min-h-[auto] ${
                   selectedFormat === fmt
                     ? 'bg-[#075D3A] text-white'
                     : 'bg-gray-100 text-[#5E6B63] hover:bg-gray-200'
@@ -88,9 +90,9 @@ export const ResourcesPage: React.FC = () => {
                   href={pub.downloadUrl}
                   onClick={(e) => {
                     e.preventDefault();
-                    alert(`Milestone 1 Demo Download: ${t(pub.titleKey)}`);
+                    showToast(t('demo_download_notice'), 'info', t(pub.titleKey));
                   }}
-                  className="flex items-center gap-1.5 rounded-lg bg-[#075D3A] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#14804A]"
+                  className="flex items-center gap-1.5 rounded-lg bg-[#075D3A] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#14804A] min-h-[44px]"
                 >
                   <Download className="h-3.5 w-3.5 text-[#D5A62E]" />
                   <span>{t('res_download')}</span>

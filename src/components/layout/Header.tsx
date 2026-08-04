@@ -6,6 +6,7 @@ import { AccessibilityModal } from '../common/AccessibilityModal';
 import { SearchModal } from '../common/SearchModal';
 import { NotificationBell } from '../common/NotificationBell';
 import { navigationItems } from '../../data/mockData';
+import { FARMER_HOTLINE } from '../../constants';
 import {
   Menu,
   X,
@@ -57,13 +58,13 @@ export const Header: React.FC = () => {
       </a>
 
       <header className="sticky top-0 z-40 w-full bg-white border-b border-[#DDE8E1] shadow-xs">
-        {/* 1. Compact Government Utility Bar */}
-        <div className="bg-[#063D2A] text-white text-xs py-1.5 px-3 sm:px-6 lg:px-8 border-b border-emerald-900/60 relative z-30 flex items-center min-h-[36px]">
-          <div className="max-w-[1360px] mx-auto flex items-center justify-between gap-2 w-full whitespace-nowrap">
+        {/* 1. Compact Government Utility Bar (optimized for 320px+ viewports) */}
+        <div className="bg-[#063D2A] text-white text-xs py-1.5 px-2.5 sm:px-6 lg:px-8 border-b border-emerald-900/60 relative z-30 flex items-center min-h-[36px]">
+          <div className="max-w-[1360px] mx-auto flex items-center justify-between gap-1.5 sm:gap-2 w-full">
             {/* Gov Identity */}
-            <div className="flex items-center gap-2 truncate">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 max-w-[50%] sm:max-w-none">
               <span className="inline-block h-2 w-2 rounded-full bg-[#D7A928] shrink-0 animate-pulse" aria-hidden="true" />
-              <span className="font-semibold tracking-wide text-emerald-100 text-[11px] sm:text-xs truncate">
+              <span className="font-semibold tracking-wide text-emerald-100 text-[10px] sm:text-xs truncate">
                 {t('gov_name')}
               </span>
               <span className="hidden sm:inline text-emerald-600">•</span>
@@ -73,16 +74,16 @@ export const Header: React.FC = () => {
             </div>
 
             {/* Utility Items Right */}
-            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
               {/* Shortened Hotline Badge */}
               <a
-                href="tel:8844"
-                title="Call Toll-Free Agricultural Hotline: 8844"
-                className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100 bg-emerald-900/50 hover:bg-emerald-800 px-2 sm:px-2.5 py-0.5 rounded-full border border-emerald-700/60 transition-colors"
+                href={`tel:${FARMER_HOTLINE}`}
+                title={`Call Toll-Free Agricultural Hotline: ${FARMER_HOTLINE}`}
+                className="flex items-center gap-1 text-xs font-semibold text-emerald-100 bg-emerald-900/50 hover:bg-emerald-800 px-2 py-0.5 rounded-full border border-emerald-700/60 transition-colors"
               >
                 <PhoneCall className="h-3 w-3 text-[#D7A928] shrink-0" />
                 <span className="hidden sm:inline text-[11px]">{t('hotline_label')}</span>
-                <strong className="text-white font-black text-[11px] sm:text-xs">8844</strong>
+                <strong className="text-white font-black text-[10px] sm:text-xs">{FARMER_HOTLINE}</strong>
               </a>
 
               {/* Prototype Badge (Desktop) */}
@@ -247,7 +248,7 @@ export const Header: React.FC = () => {
                         key={lang.code}
                         type="button"
                         onClick={() => setLanguage(lang.code)}
-                        className={`flex flex-col items-center justify-center p-2 rounded-lg text-xs transition-all border ${
+                        className={`flex flex-col items-center justify-center p-2 rounded-lg text-xs transition-all border min-h-[44px] ${
                           currentLang === lang.code
                             ? 'bg-[#087A4B] text-white font-black border-[#087A4B] shadow-xs ring-1 ring-emerald-700'
                             : 'bg-white text-[#14251D] font-bold border-gray-200 hover:bg-emerald-50'
@@ -333,7 +334,7 @@ export const Header: React.FC = () => {
                 <div className="rounded-xl bg-[#EFF8F2] p-2.5 border border-[#DDE8E1] text-center space-y-0.5">
                   <div className="flex items-center justify-center gap-1.5 text-xs font-black text-[#063D2A]">
                     <PhoneCall className="h-3.5 w-3.5 text-[#087A4B]" />
-                    <span>Oromia Agri Hotline: <strong className="text-[#087A4B]">8844</strong></span>
+                    <span>Oromia Agri Hotline: <strong className="text-[#087A4B]">{FARMER_HOTLINE}</strong></span>
                   </div>
                   <p className="text-[10px] text-[#637069] font-medium">Toll-Free Agricultural Assistance</p>
                 </div>

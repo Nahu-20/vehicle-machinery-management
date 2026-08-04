@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import { mockNews, mockAnnouncements } from '../data/mockData';
 import { Calendar, Clock, Download, Bell, Newspaper, Tag } from 'lucide-react';
 
 export const NewsPage: React.FC = () => {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const [filter, setFilter] = useState<'all' | 'news' | 'training' | 'tender' | 'event'>('all');
 
   const filteredNews = filter === 'all' ? mockNews : mockNews.filter((n) => n.category === filter);
@@ -24,7 +26,7 @@ export const NewsPage: React.FC = () => {
             <button
               key={cat}
               onClick={() => setFilter(cat)}
-              className={`rounded-lg px-4 py-2 text-xs font-bold capitalize transition-all ${
+              className={`rounded-lg px-4 py-2 text-xs font-bold capitalize transition-all min-h-[44px] ${
                 filter === cat
                   ? 'bg-[#075D3A] text-white shadow-sm'
                   : 'bg-white text-[#5E6B63] hover:bg-emerald-50 border'
@@ -69,7 +71,14 @@ export const NewsPage: React.FC = () => {
                       <span>{anc.date}</span>
                     </div>
                     <h4 className="text-xs font-bold text-[#17211B]">{anc.titleKey}</h4>
-                    <a href="#" onClick={(e) => { e.preventDefault(); alert('Demo Tender download'); }} className="inline-flex items-center gap-1 text-[11px] font-bold text-[#075D3A] hover:underline">
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        showToast(t('demo_download_notice'), 'info', anc.titleKey);
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#075D3A] hover:underline min-h-[44px]"
+                    >
                       <Download className="h-3 w-3" /> Download Tender Packet
                     </a>
                   </div>

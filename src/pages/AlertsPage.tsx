@@ -217,16 +217,17 @@ export const AlertsPage: React.FC = () => {
           </div>
 
           {/* Filters Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
             {/* Severity Filter */}
             <div>
-              <label className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
-                {t('alert_strip_title')}
+              <label htmlFor="severity-filter" className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
+                Severity
               </label>
               <select
+                id="severity-filter"
                 value={selectedSeverity}
                 onChange={(e) => setSelectedSeverity(e.target.value)}
-                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none"
+                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none min-h-[44px]"
               >
                 <option value="all">Severity: All</option>
                 <option value="critical">{t('alert_severity_critical')}</option>
@@ -238,13 +239,14 @@ export const AlertsPage: React.FC = () => {
 
             {/* Category Filter */}
             <div>
-              <label className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
+              <label htmlFor="category-filter" className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
                 Category
               </label>
               <select
+                id="category-filter"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none"
+                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none min-h-[44px]"
               >
                 <option value="all">{t('alert_category_all')}</option>
                 <option value="weather">{t('alert_category_weather')}</option>
@@ -258,13 +260,14 @@ export const AlertsPage: React.FC = () => {
 
             {/* Zone Filter */}
             <div>
-              <label className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
+              <label htmlFor="zone-filter" className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
                 Zonal Region
               </label>
               <select
+                id="zone-filter"
                 value={selectedZone}
                 onChange={(e) => setSelectedZone(e.target.value)}
-                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none"
+                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none min-h-[44px]"
               >
                 <option value="all">Zone: All Oromia</option>
                 {allZones.map((z) => (
@@ -277,17 +280,35 @@ export const AlertsPage: React.FC = () => {
 
             {/* Status Filter */}
             <div>
-              <label className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
+              <label htmlFor="status-filter" className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
                 Status
               </label>
               <select
+                id="status-filter"
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none"
+                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none min-h-[44px]"
               >
                 <option value="all">{t('alert_status_all')}</option>
                 <option value="active">{t('alert_status_active')}</option>
                 <option value="expired">{t('alert_status_expired')}</option>
+              </select>
+            </div>
+
+            {/* Date Filter */}
+            <div>
+              <label htmlFor="date-filter" className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
+                Date Range
+              </label>
+              <select
+                id="date-filter"
+                value={selectedDateFilter}
+                onChange={(e) => setSelectedDateFilter(e.target.value)}
+                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none min-h-[44px]"
+              >
+                <option value="all">Date: All Time</option>
+                <option value="last7">Recent Alerts</option>
+                <option value="last30">Past 30 Days</option>
               </select>
             </div>
 
@@ -296,9 +317,9 @@ export const AlertsPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleClearFilters}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[#DDE8E1] bg-[#EFF8F2] px-3 py-2 text-xs font-bold text-[#087A4B] hover:bg-[#087A4B] hover:text-white transition-all h-[38px]"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[#DDE8E1] bg-[#EFF8F2] px-3 py-2 text-xs font-bold text-[#087A4B] hover:bg-[#087A4B] hover:text-white transition-all min-h-[44px]"
               >
-                <Filter className="h-3.5 w-3.5" />
+                <X className="h-4 w-4" />
                 <span>{t('alert_filter_clear')}</span>
               </button>
             </div>
