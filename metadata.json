@@ -1,0 +1,6 @@
+{
+  "name": "Oromia Agricultural Bureau",
+  "description": "Official public agricultural information platform for the Oromia Agricultural Bureau (Biiroo Qonnaa Oromiyaa)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

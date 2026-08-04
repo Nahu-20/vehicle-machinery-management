@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-forest: #063D2A;
+    --color-primary: #087A4B;
+    --color-bright: #3FAE5A;
+    --color-gold: #D7A928;
+    --color-soft-green: #EFF8F2;
+    --color-warm-white: #FAFAF7;
+    --color-white: #FFFFFF;
+    --color-text-primary: #14251D;
+    --color-text-muted: #637069;
+    --color-border: #DDE8E1;
+    --font-size-multiplier: 1;
+  }
+
+  body {
+    background-color: var(--color-warm-white);
+    color: var(--color-text-primary);
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: calc(1rem * var(--font-size-multiplier, 1));
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* High contrast mode overrides */
+  body.high-contrast {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+  }
+  body.high-contrast .bg-white,
+  body.high-contrast .bg-\[\#FAFAF7\],
+  body.high-contrast .bg-\[\#EFF8F2\],
+  body.high-contrast .bg-\[\#063D2A\] {
+    background-color: #111111 !important;
+    color: #FFFFFF !important;
+    border-color: #444444 !important;
+  }
+  body.high-contrast text,
+  body.high-contrast p,
+  body.high-contrast h1,
+  body.high-contrast h2,
+  body.high-contrast h3,
+  body.high-contrast h4,
+  body.high-contrast span {
+    color: #FFFFFF !important;
+  }
+}
+
+/* Custom design system utilities */
+.bg-forest { background-color: #063D2A; }
+.bg-primary-green { background-color: #087A4B; }
+.bg-bright-green { background-color: #3FAE5A; }
+.bg-agri-gold { background-color: #D7A928; }
+.bg-soft-green { background-color: #EFF8F2; }
+.bg-warm-white { background-color: #FAFAF7; }
+
+.text-forest { color: #063D2A; }
+.text-primary-green { color: #087A4B; }
+.text-bright-green { color: #3FAE5A; }
+.text-agri-gold { color: #D7A928; }
+.text-dark-primary { color: #14251D; }
+.text-muted-green { color: #637069; }
+
+.border-agri { border-color: #DDE8E1; }
+
+/* Accessible focus ring */
+*:focus-visible {
+  outline: 3px solid #D7A928 !important;
+  outline-offset: 2px !important;
+}
+
+/* Smooth card elevate transitions */
+.card-hover {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px -8px rgba(6, 61, 42, 0.08);
+  border-color: #087A4B;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
