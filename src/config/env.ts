@@ -3,6 +3,7 @@ export interface FirebaseEnvConfig {
   authDomain: string;
   projectId: string;
   storageBucket: string;
+  firebaseStorageBucket: string;
   messagingSenderId: string;
   appId: string;
 }
@@ -11,7 +12,7 @@ export const getFirebaseConfig = (): FirebaseEnvConfig | null => {
   const apiKey = import.meta.env.VITE_FIREBASE_API_KEY?.trim();
   const authDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN?.trim();
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID?.trim();
-  const storageBucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET?.trim();
+  const rawStorageBucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET?.trim() || '';
   const messagingSenderId = import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID?.trim();
   const appId = import.meta.env.VITE_FIREBASE_APP_ID?.trim();
 
@@ -19,11 +20,14 @@ export const getFirebaseConfig = (): FirebaseEnvConfig | null => {
     return null;
   }
 
+  const effectiveStorageBucket = rawStorageBucket || `${projectId}.appspot.com`;
+
   return {
     apiKey,
     authDomain,
     projectId,
-    storageBucket: storageBucket || `${projectId}.appspot.com`,
+    storageBucket: effectiveStorageBucket,
+    firebaseStorageBucket: effectiveStorageBucket,
     messagingSenderId: messagingSenderId || '',
     appId,
   };
@@ -31,6 +35,11 @@ export const getFirebaseConfig = (): FirebaseEnvConfig | null => {
 
 export const isFirebaseConfigured = (): boolean => {
   return getFirebaseConfig() !== null;
+};
+
+export const isStorageConfigured = (): boolean => {
+  const config = getFirebaseConfig();
+  return Boolean(config && config.firebaseStorageBucket && config.firebaseStorageBucket.length > 0);
 };
 
 export const getFirebaseConfigStatus = (): {

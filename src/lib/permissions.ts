@@ -14,6 +14,10 @@ export const ALL_PERMISSIONS: Permission[] = [
   'settings.manage',
   'audit.view',
   'audit.export',
+  'media.view',
+  'media.upload',
+  'media.delete',
+  'media.manage',
 ];
 
 export const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
@@ -26,12 +30,18 @@ export const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
     'content.publish',
     'resources.manage',
     'audit.view',
+    'media.view',
+    'media.upload',
+    'media.delete',
+    'media.manage',
   ],
   editor: [
     'dashboard.view',
     'content.view',
     'content.create',
     'content.edit',
+    'media.view',
+    'media.upload',
   ],
   marketOfficer: [
     'dashboard.view',

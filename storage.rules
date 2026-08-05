@@ -1,40 +1,100 @@
 rules_version = '2';
 
 // Firebase Storage Security Rules for Oromia Agricultural Bureau Platform
-// Milestone 2.1: Deny arbitrary public uploads until full CMS media uploads are enabled in Milestone 2.2.
+// Milestone 2.2B-1B: Secure Private Media Staging Upload Service
+
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Default deny all read/write operations
-    match /{allPaths=**} {
-      allow read, write: if false;
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    /* PROPOSED FUTURE CMS MEDIA PATHS (Milestone 2.2+):
-    
-    1. News Article Images:
-       match /news/{articleId}/{fileName} {
-         allow read: if true;
-         allow write: if request.auth != null
-           && request.resource.size < 5 * 1024 * 1024
-           && request.resource.contentType.matches('image/(jpeg|png|webp)');
-       }
+    function staffExists() {
+      return firestore.exists(/databases/(default)/documents/staffUsers/$(request.auth.uid));
+    }
 
-    2. Achievement Case Media:
-       match /achievements/{achievementId}/{fileName} {
-         allow read: if true;
-         allow write: if request.auth != null
-           && request.resource.size < 10 * 1024 * 1024
-           && request.resource.contentType.matches('image/(jpeg|png|webp)');
-       }
+    function staffProfile() {
+      return firestore.get(/databases/(default)/documents/staffUsers/$(request.auth.uid)).data;
+    }
 
-    3. Extension Publications & Manuals:
-       match /publications/{fileName} {
-         allow read: if true;
-         allow write: if request.auth != null
-           && request.resource.size < 25 * 1024 * 1024
-           && request.resource.contentType.matches('application/(pdf|vnd.openxmlformats-officedocument.wordprocessingml.document)');
-       }
-    */
+    function isActiveStaff() {
+      return isSignedIn() && staffExists() && staffProfile().active == true;
+    }
+
+    function canUploadNewsMedia() {
+      return isActiveStaff() && (
+        staffProfile().role == 'superAdmin' ||
+        staffProfile().role == 'contentAdmin' ||
+        staffProfile().role == 'editor'
+      );
+    }
+
+    function isValidMediaId(mediaId) {
+      return mediaId.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$');
+    }
+
+    function isValidNewsImage() {
+      return request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 8 * 1024 * 1024
+        && (
+          request.resource.contentType == 'image/jpeg' ||
+          request.resource.contentType == 'image/png' ||
+          request.resource.contentType == 'image/webp'
+        );
+    }
+
+    function hasValidStagingMetadata(uid, mediaId) {
+      return request.resource.metadata != null
+        && request.resource.metadata.mediaId == mediaId
+        && request.resource.metadata.ownerUid == uid
+        && request.resource.metadata.ownerUid == request.auth.uid
+        && request.resource.metadata.module == 'news'
+        && request.resource.metadata.purpose == 'featured-image'
+        && request.resource.metadata.uploadedFrom == 'admin-news-editor'
+        && request.resource.metadata.schemaVersion == '1'
+        && request.resource.metadata.originalFileName is string
+        && request.resource.metadata.originalFileName.size() > 0
+        && request.resource.metadata.originalFileName.size() <= 200;
+    }
+
+    // Secure Private Media Staging Path
+    match /media/staging/{uid}/{mediaId} {
+      allow create: if isSignedIn()
+        && uid == request.auth.uid
+        && canUploadNewsMedia()
+        && isValidMediaId(mediaId)
+        && isValidNewsImage()
+        && hasValidStagingMetadata(uid, mediaId);
+
+      allow get: if isSignedIn()
+        && uid == request.auth.uid
+        && isActiveStaff();
+
+      allow list: if false;
+
+      allow update: if false;
+
+      allow delete: if isSignedIn()
+        && uid == request.auth.uid
+        && isActiveStaff();
+    }
+
+    // Public Media Path (Deny all for now until promotion is enabled)
+    match /media/public/{allPaths=**} {
+      allow get, list, create, update, delete: if false;
+    }
+
+    // Derivatives Path (Deny all)
+    match /media/derivatives/{allPaths=**} {
+      allow get, list, create, update, delete: if false;
+    }
+
+    // Catch-all default deny
+    match /{allPaths=**} {
+      allow get, list, create, update, delete: if false;
+    }
   }
 }

@@ -31,7 +31,11 @@ export type Permission =
   | 'staff.manage'
   | 'settings.manage'
   | 'audit.view'
-  | 'audit.export';
+  | 'audit.export'
+  | 'media.view'
+  | 'media.upload'
+  | 'media.delete'
+  | 'media.manage';
 
 export type StaffAuthorizationStatus =
   | 'loading'
