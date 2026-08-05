@@ -6,6 +6,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useStaffAuthorization } from '../../../hooks/useStaffAuthorization';
 import { getDraftRecovery } from '../../../services/newsDraftRecoveryService';
 import { NewsStatusBadge } from '../../../components/admin/news/NewsStatusBadge';
+import { NewsImage } from '../../../components/news/NewsImage';
 import {
   ArrowLeft,
   Edit,
@@ -29,55 +30,34 @@ export const AdminNewsPreviewPage: React.FC = () => {
 
   useEffect(() => {
     async function resolvePreviewArticle() {
+      if (!newsSlug) {
+        setError('Article slug is required for preview.');
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
-      // Priority 1: location.state preview data passed from editor
-      if (location.state?.previewData) {
-        const stateData = location.state.previewData;
-        const valid = validateNewsArticle(stateData, stateData.slug || newsSlug || 'preview');
-        if (valid) {
-          setArticle(valid);
-          setLoading(false);
-          return;
+      try {
+        const fetched = await getNewsArticleBySlug(newsSlug);
+        if (fetched) {
+          setArticle(fetched);
+        } else {
+          setError(`Draft preview document "${newsSlug}" was not found in Firestore database.`);
+          setArticle(null);
         }
+      } catch (err: any) {
+        console.warn('[AdminNewsPreviewPage] Error fetching Firestore article:', err);
+        setError(err?.message || 'Failed to load article from Firestore database.');
+        setArticle(null);
+      } finally {
+        setLoading(false);
       }
-
-      // Priority 2: Same-user session draft recovery data
-      if (staffUser?.uid && newsSlug) {
-        const recovery = getDraftRecovery(staffUser.uid, newsSlug);
-        if (recovery?.formData) {
-          const valid = validateNewsArticle(recovery.formData, newsSlug);
-          if (valid) {
-            setArticle(valid);
-            setLoading(false);
-            return;
-          }
-        }
-      }
-
-      // Priority 3: Authorized Firestore article
-      if (newsSlug) {
-        try {
-          const fetched = await getNewsArticleBySlug(newsSlug);
-          if (fetched) {
-            setArticle(fetched);
-            setLoading(false);
-            return;
-          }
-        } catch (err: any) {
-          console.warn('[AdminNewsPreviewPage] Error fetching Firestore article:', err);
-        }
-      }
-
-      // Priority 4: Not-found state
-      setError(`Draft preview unavailable for "${newsSlug || 'new'}".`);
-      setArticle(null);
-      setLoading(false);
     }
 
     resolvePreviewArticle();
-  }, [newsSlug, location.state, staffUser?.uid]);
+  }, [newsSlug]);
 
   if (loading) {
     return (
@@ -151,9 +131,9 @@ export const AdminNewsPreviewPage: React.FC = () => {
 
           <Link
             to={`/admin/news/${article.slug}/edit`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-950 hover:bg-slate-900 text-white rounded-xl transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-950 hover:bg-slate-900 text-white rounded-xl transition-colors font-bold text-xs shadow-xs"
           >
-            <Edit className="w-3.5 h-3.5" /> Back to Editor
+            <Edit className="w-3.5 h-3.5 text-amber-400" /> Back to Edit
           </Link>
         </div>
       </div>
@@ -184,16 +164,13 @@ export const AdminNewsPreviewPage: React.FC = () => {
           )}
         </div>
 
-        {article.featuredImage && (
-          <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950">
-            <img
-              src={article.featuredImage}
-              alt={getLocalizedText(article.imageAlt) || titleStr}
-              className="w-full h-72 md:h-96 object-cover"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-        )}
+        <NewsImage
+          src={article.featuredImage}
+          alt={getLocalizedText(article.imageAlt) || titleStr || 'Article hero image'}
+          aspect="preview"
+          objectPosition={article.imagePosition || 'center'}
+          caption={getLocalizedText(article.imageAlt)}
+        />
 
         {/* Content Blocks Rendering */}
         <div className="space-y-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-sm leading-relaxed">

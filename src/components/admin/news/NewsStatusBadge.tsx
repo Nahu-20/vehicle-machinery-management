@@ -1,6 +1,6 @@
 import React from 'react';
 import { NewsStatus } from '../../../types/news';
-import { FileText, Eye, CheckCircle2, EyeOff, Archive } from 'lucide-react';
+import { FileText, Eye, CheckCircle2, EyeOff, Archive, Trash2 } from 'lucide-react';
 
 interface NewsStatusBadgeProps {
   status: NewsStatus;
@@ -41,6 +41,13 @@ export const NewsStatusBadge: React.FC<NewsStatusBadgeProps> = ({ status }) => {
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-300 dark:border-gray-700">
           <Archive className="w-3.5 h-3.5 text-gray-500" />
           <span>Archived</span>
+        </span>
+      );
+    case 'trashed':
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300 border border-red-300 dark:border-red-800">
+          <Trash2 className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+          <span>Trashed</span>
         </span>
       );
     default:

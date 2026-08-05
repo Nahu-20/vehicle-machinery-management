@@ -52,11 +52,15 @@ service cloud.firestore {
       return isCurrentActiveStaff() && (getStaffRole() == 'superAdmin' || getStaffRole() == 'advisoryOfficer');
     }
 
+    function hasAuditViewPermission() {
+      return isCurrentActiveStaff() && (getStaffRole() == 'superAdmin' || getStaffRole() == 'contentAdmin');
+    }
+
     // Collection: staffUsers
     match /staffUsers/{uid} {
       allow get: if isSignedIn() && (request.auth.uid == uid || isSuperAdmin());
       allow list: if isSuperAdmin();
-      allow create: if isSuperAdmin();
+      allow create: if isSuperAdmin() || (isSignedIn() && request.auth.uid == uid);
       allow update: if isSuperAdmin() || (
         isCurrentActiveStaff()
         && request.auth.uid == uid
@@ -70,9 +74,19 @@ service cloud.firestore {
 
     // Collection: newsArticles (CMS News Articles)
     match /newsArticles/{newsSlug} {
-      // Public can read only published articles; active staff can read any status
-      allow get: if resource.data.status == 'published' || isCurrentActiveStaff();
-      allow list: if isCurrentActiveStaff() || resource.data.status == 'published';
+      // Public can read only published articles where publishedAt <= request.time; active staff can read any status
+      allow get: if isCurrentActiveStaff() || (
+        resource.data.status == 'published'
+        && resource.data.publishedAt != null
+        && resource.data.publishedAt is timestamp
+        && resource.data.publishedAt <= request.time
+      );
+      allow list: if isCurrentActiveStaff() || (
+        resource.data.status == 'published'
+        && resource.data.publishedAt != null
+        && resource.data.publishedAt is timestamp
+        && resource.data.publishedAt <= request.time
+      );
 
       // Editors can create new draft articles
       allow create: if isEditor()
@@ -83,38 +97,44 @@ service cloud.firestore {
       // Update rules with status-transition and role constraints
       allow update: if isCurrentActiveStaff()
         && request.resource.data.slug == resource.data.slug
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.createdBy == resource.data.createdBy
+        && (!('createdAt' in resource.data) || resource.data.createdAt == null || request.resource.data.createdAt == resource.data.createdAt)
+        && (!('createdBy' in resource.data) || resource.data.createdBy == null || request.resource.data.createdBy == resource.data.createdBy)
         && request.resource.data.updatedBy == request.auth.uid
         && (
-          // Published articles can ONLY be edited, unpublished, or archived by Content Admins
+          // Published articles can ONLY be edited, unpublished, archived, or trashed by Content Admins
           (resource.data.status == 'published' && isContentAdmin())
           ||
-          // Draft articles: Editors can update draft, submit for review, or archive
+          // Draft articles: Editors can update draft, submit for review, archive, or trash
           (resource.data.status == 'draft' && (
-            (request.resource.data.status in ['draft', 'review', 'archived'] && isEditor())
+            (request.resource.data.status in ['draft', 'review', 'archived', 'trashed'] && isEditor())
             || (request.resource.data.status == 'published' && isContentAdmin())
           ))
           ||
-          // Review articles: Editors can return to draft, keep in review, or archive
+          // Review articles: Editors can return to draft, keep in review, archive, or trash
           (resource.data.status == 'review' && (
-            (request.resource.data.status in ['draft', 'review', 'archived'] && isEditor())
+            (request.resource.data.status in ['draft', 'review', 'archived', 'trashed'] && isEditor())
             || (request.resource.data.status == 'published' && isContentAdmin())
           ))
           ||
-          // Unpublished articles: Content Admins can return to draft, republish, or archive
+          // Unpublished articles: Content Admins can return to draft, republish, archive, or trash
           (resource.data.status == 'unpublished' && isContentAdmin() && (
-            request.resource.data.status in ['draft', 'published', 'archived', 'unpublished']
+            request.resource.data.status in ['draft', 'published', 'archived', 'unpublished', 'trashed']
           ))
           ||
-          // Archived articles: Content Admins can return to draft
+          // Archived articles: Content Admins can return to draft or trash
           (resource.data.status == 'archived' && isContentAdmin() && (
-            request.resource.data.status in ['draft', 'archived']
+            request.resource.data.status in ['draft', 'archived', 'trashed']
+          ))
+          ||
+          // Trashed articles: Restore to draft allowed for Editors; restore to published requires Content Admin
+          (resource.data.status == 'trashed' && (
+            (request.resource.data.status in ['draft', 'trashed'] && isEditor())
+            || (request.resource.data.status in ['draft', 'review', 'published', 'unpublished', 'archived'] && isContentAdmin())
           ))
         );
 
-      // Deletion strictly reserved for Content Admins
-      allow delete: if isContentAdmin();
+      // Permanent deletion strictly reserved for Super Admin on trashed items
+      allow delete: if isSuperAdmin() && resource.data.status == 'trashed';
     }
 
     // Public read collections, restricted staff write
@@ -145,11 +165,21 @@ service cloud.firestore {
       allow create, update, delete: if isContentAdmin();
     }
 
-    // Audit logs: Read restricted to SuperAdmin, write restricted to active staff
+    // Audit logs: Read restricted to active staff with audit.view permission (superAdmin, contentAdmin).
+    // Writes restricted from browser clients (allow create, update, delete: if false).
     match /auditLogs/{logId} {
-      allow read: if isSuperAdmin();
-      allow create: if isCurrentActiveStaff() && request.resource.data.actorUid == request.auth.uid;
-      allow update, delete: if false;
+      allow read: if hasAuditViewPermission();
+      allow create, update, delete: if false;
+    }
+
+    match /newsAuditLogs/{logId} {
+      allow read: if hasAuditViewPermission();
+      allow create, update, delete: if false;
+    }
+
+    match /adminAuditLogs/{logId} {
+      allow read: if hasAuditViewPermission();
+      allow create, update, delete: if false;
     }
   }
 }

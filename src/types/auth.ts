@@ -29,7 +29,9 @@ export type Permission =
   | 'market.manage'
   | 'resources.manage'
   | 'staff.manage'
-  | 'settings.manage';
+  | 'settings.manage'
+  | 'audit.view'
+  | 'audit.export';
 
 export type StaffAuthorizationStatus =
   | 'loading'

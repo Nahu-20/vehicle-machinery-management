@@ -12,6 +12,8 @@ export const ALL_PERMISSIONS: Permission[] = [
   'resources.manage',
   'staff.manage',
   'settings.manage',
+  'audit.view',
+  'audit.export',
 ];
 
 export const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
@@ -23,6 +25,7 @@ export const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
     'content.edit',
     'content.publish',
     'resources.manage',
+    'audit.view',
   ],
   editor: [
     'dashboard.view',

@@ -126,3 +126,48 @@ html.dark .card-hover:hover {
     scroll-behavior: auto !important;
   }
 }
+
+/* Article Print Styles */
+@media print {
+  header,
+  footer,
+  nav,
+  aside,
+  .print\:hidden,
+  #chat-launcher,
+  #chat-panel {
+    display: none !important;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+  }
+
+  main, article, .max-w-5xl, .max-w-4xl {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  h1, h2, h3, h4, h5, h6, p, span, div, li, td, th {
+    color: #000000 !important;
+  }
+
+  article, figure, blockquote, img, h1, h2, h3 {
+    break-inside: avoid;
+  }
+
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+}
+

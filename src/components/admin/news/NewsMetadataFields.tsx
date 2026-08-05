@@ -1,6 +1,7 @@
 import React from 'react';
 import { NewsCategory, NewsArticleInput, LocalizedText, sanitizeSlug } from '../../../types/news';
 import { LocalizedTextFields } from './LocalizedTextFields';
+import { NewsImage } from '../../news/NewsImage';
 import { Tag, Building2, User, Image, Link2, Star, AlertCircle, Info } from 'lucide-react';
 
 interface NewsMetadataFieldsProps {
@@ -115,34 +116,56 @@ export const NewsMetadataFields: React.FC<NewsMetadataFieldsProps> = ({
           </span>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-            Image URL <span className="text-red-500 font-bold">*</span>
-          </label>
-          <input
-            type="url"
-            value={input.featuredImage}
-            onChange={(e) => onChange({ ...input, featuredImage: e.target.value })}
-            placeholder="https://images.unsplash.com/photo-..."
-            className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 text-xs focus:ring-2 focus:ring-emerald-500 transition-all"
-          />
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-            Note: Direct binary upload will be supported in a future Storage milestone. Please use approved asset URLs or Unsplash links.
-          </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2 space-y-2">
+            <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+              Image URL <span className="text-red-500 font-bold">*</span>
+            </label>
+            <input
+              type="url"
+              value={input.featuredImage}
+              onChange={(e) => onChange({ ...input, featuredImage: e.target.value })}
+              placeholder="https://images.unsplash.com/photo-..."
+              className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 text-xs focus:ring-2 focus:ring-emerald-500 transition-all"
+            />
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Note: Direct binary upload will be supported in a future Storage milestone. Please use approved asset URLs or Unsplash links.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+              Image Focus / Position
+            </label>
+            <select
+              value={input.imagePosition || 'center'}
+              onChange={(e) => onChange({ ...input, imagePosition: e.target.value as any })}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-emerald-500 transition-all"
+            >
+              <option value="center">Center (Default)</option>
+              <option value="top">Top</option>
+              <option value="bottom">Bottom</option>
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </select>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Controls focal alignment for cropping.
+            </p>
+          </div>
         </div>
 
-        {input.featuredImage && (
-          <div className="relative rounded-xl overflow-hidden h-40 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
-            <img
-              src={input.featuredImage}
-              alt={input.imageAlt.om || 'Preview'}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = 'none';
-              }}
-            />
-          </div>
-        )}
+        {/* Editor Image Preview */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+            Editor Image Preview
+          </label>
+          <NewsImage
+            src={input.featuredImage}
+            alt={input.imageAlt.en || input.imageAlt.om || 'Featured news cover image'}
+            aspect="card"
+            objectPosition={input.imagePosition || 'center'}
+          />
+        </div>
 
         <LocalizedTextFields
           label="Image Alternative Text (Accessibility)"

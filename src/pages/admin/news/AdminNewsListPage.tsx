@@ -1,12 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStaffAuthorization } from '../../../hooks/useStaffAuthorization';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useToast } from '../../../context/ToastContext';
-import { subscribeToAdminNews, publishNewsArticle, unpublishNewsArticle, archiveNewsArticle } from '../../../services/newsService';
+import {
+  getAdminNewsArticlesPaginated,
+  publishNewsArticle,
+  unpublishNewsArticle,
+  archiveNewsArticle,
+  moveNewsToTrash,
+  restoreNewsFromTrash,
+  permanentlyDeleteNewsArticle,
+} from '../../../services/newsService';
 import { seedMockNewsToFirestore } from '../../../services/newsSeedService';
 import { NewsArticle, NewsStatus, NewsCategory } from '../../../types/news';
 import { NewsStatusBadge } from '../../../components/admin/news/NewsStatusBadge';
+import { TrashConfirmModal } from '../../../components/admin/news/TrashConfirmModal';
+import { RestoreConfirmModal } from '../../../components/admin/news/RestoreConfirmModal';
+import { PermanentDeleteConfirmModal } from '../../../components/admin/news/PermanentDeleteConfirmModal';
+import { ArticleDetailDrawer } from '../../../components/admin/news/ArticleDetailDrawer';
 import {
   Plus,
   Search,
@@ -16,17 +28,26 @@ import {
   CheckCircle2,
   EyeOff,
   Archive,
+  Trash2,
+  RotateCcw,
   RefreshCw,
-  Calendar,
   Tag,
-  Building2,
   Database,
   Loader2,
   FileText,
+  ChevronLeft,
+  ChevronRight,
+  History,
+  Info,
+  XCircle,
+  Clock,
+  User,
 } from 'lucide-react';
+import { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export const AdminNewsListPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { staffUser, hasPermission } = useStaffAuthorization();
   const { getLocalizedText } = useLanguage();
   const { showToast } = useToast();
@@ -35,44 +56,132 @@ export const AdminNewsListPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filter States
-  const [statusFilter, setStatusFilter] = useState<NewsStatus | 'all'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<NewsCategory | 'all'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  // Initialize filter states from URL query parameters if present
+  const initialStatusParam = (searchParams.get('status') as NewsStatus) || 'all';
+  const initialCategoryParam = (searchParams.get('category') as NewsCategory) || 'all';
+  const initialSearchParam = searchParams.get('q') || '';
+
+  const [statusFilter, setStatusFilter] = useState<NewsStatus | 'all'>(
+    ['draft', 'review', 'published', 'unpublished', 'archived', 'trashed'].includes(initialStatusParam)
+      ? initialStatusParam
+      : 'all'
+  );
+  const [categoryFilter, setCategoryFilter] = useState<NewsCategory | 'all'>(
+    ['news', 'training', 'event', 'tender', 'announcement'].includes(initialCategoryParam)
+      ? initialCategoryParam
+      : 'all'
+  );
+  const [searchQuery, setSearchQuery] = useState(initialSearchParam);
   const [isSeeding, setIsSeeding] = useState(false);
+
+  // Modal / Drawer States
+  const [trashModalTarget, setTrashModalTarget] = useState<NewsArticle | null>(null);
+  const [restoreModalTarget, setRestoreModalTarget] = useState<NewsArticle | null>(null);
+  const [deleteModalTarget, setDeleteModalTarget] = useState<NewsArticle | null>(null);
+  const [detailDrawerTarget, setDetailDrawerTarget] = useState<NewsArticle | null>(null);
+
+  // Pagination states (20 items per page)
+  const [page, setPage] = useState(1);
+  const [cursorStack, setCursorStack] = useState<(QueryDocumentSnapshot | null)[]>([null]);
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   const canCreate = hasPermission('content.create');
   const canEdit = hasPermission('content.edit');
   const canPublish = hasPermission('content.publish');
+  const isSuperAdmin = staffUser?.role === 'superAdmin';
+
+  // Keep URL parameters in sync with filter state
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    if (statusFilter !== 'all') params.status = statusFilter;
+    if (categoryFilter !== 'all') params.category = categoryFilter;
+    if (searchQuery.trim()) params.q = searchQuery.trim();
+    setSearchParams(params, { replace: true });
+  }, [statusFilter, categoryFilter, searchQuery]);
+
+  const loadArticles = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const startDoc = cursorStack[page - 1] || null;
+      const res = await getAdminNewsArticlesPaginated(
+        {
+          status: statusFilter,
+          category: categoryFilter,
+          searchQuery,
+        },
+        20,
+        startDoc,
+        page
+      );
+      setArticles(res.articles);
+      setLastDoc(res.lastDoc);
+      setHasMore(res.hasMore);
+      setTotalCount(res.totalCount);
+    } catch (err: any) {
+      console.warn('Error fetching admin news:', err);
+      setError('Failed to load news articles from Firestore.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setLoading(true);
-    const unsubscribe = subscribeToAdminNews(
-      {
-        status: statusFilter,
-        category: categoryFilter,
-        searchQuery,
-      },
-      (fetchedArticles) => {
-        setArticles(fetchedArticles);
-        setLoading(false);
-        setError(null);
-      },
-      (err) => {
-        console.warn('Error fetching admin news:', err);
-        setError('Failed to load news articles from Firestore.');
-        setLoading(false);
-      }
-    );
+    loadArticles();
+  }, [statusFilter, categoryFilter, searchQuery, page]);
 
-    return () => unsubscribe();
-  }, [statusFilter, categoryFilter, searchQuery]);
+  const handleStatusFilter = (st: NewsStatus | 'all') => {
+    setStatusFilter(st);
+    setPage(1);
+    setCursorStack([null]);
+    setLastDoc(null);
+  };
+
+  const handleCategoryFilter = (cat: NewsCategory | 'all') => {
+    setCategoryFilter(cat);
+    setPage(1);
+    setCursorStack([null]);
+    setLastDoc(null);
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setPage(1);
+    setCursorStack([null]);
+    setLastDoc(null);
+  };
+
+  const handleClearFilters = () => {
+    setStatusFilter('all');
+    setCategoryFilter('all');
+    setSearchQuery('');
+    setPage(1);
+    setCursorStack([null]);
+    setLastDoc(null);
+  };
+
+  const handleNextPage = () => {
+    if (hasMore) {
+      setCursorStack((prev) => [...prev, lastDoc]);
+      setPage((prev) => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (page > 1) {
+      setCursorStack((prev) => prev.slice(0, prev.length - 1));
+      setPage((prev) => prev - 1);
+    }
+  };
 
   const handlePublish = async (slug: string) => {
     if (!staffUser) return;
     const res = await publishNewsArticle(slug, staffUser);
     if (res.success) {
       showToast('Article published live.', 'success');
+      loadArticles();
     } else {
       showToast(res.error || 'Failed to publish article.', 'error');
     }
@@ -83,6 +192,7 @@ export const AdminNewsListPage: React.FC = () => {
     const res = await unpublishNewsArticle(slug, staffUser);
     if (res.success) {
       showToast('Article unpublished.', 'info');
+      loadArticles();
     } else {
       showToast(res.error || 'Failed to unpublish article.', 'error');
     }
@@ -93,8 +203,42 @@ export const AdminNewsListPage: React.FC = () => {
     const res = await archiveNewsArticle(slug, staffUser);
     if (res.success) {
       showToast('Article archived.', 'info');
+      loadArticles();
     } else {
       showToast(res.error || 'Failed to archive article.', 'error');
+    }
+  };
+
+  const handleConfirmTrash = async (reason: string) => {
+    if (!trashModalTarget || !staffUser) return;
+    const res = await moveNewsToTrash(trashModalTarget.slug, staffUser, reason);
+    if (res.success) {
+      showToast(`Moved "${trashModalTarget.slug}" to trash.`, 'info');
+      loadArticles();
+    } else {
+      showToast(res.error || 'Failed to move article to trash.', 'error');
+    }
+  };
+
+  const handleConfirmRestore = async () => {
+    if (!restoreModalTarget || !staffUser) return;
+    const res = await restoreNewsFromTrash(restoreModalTarget.slug, staffUser);
+    if (res.success) {
+      showToast(`Restored "${restoreModalTarget.slug}" from trash.`, 'success');
+      loadArticles();
+    } else {
+      showToast(res.error || 'Failed to restore article.', 'error');
+    }
+  };
+
+  const handleConfirmPermanentDelete = async (typedSlug: string) => {
+    if (!deleteModalTarget || !staffUser) return;
+    const res = await permanentlyDeleteNewsArticle(deleteModalTarget.slug, typedSlug, staffUser);
+    if (res.success) {
+      showToast(`Permanently deleted article "${deleteModalTarget.slug}".`, 'success');
+      loadArticles();
+    } else {
+      showToast(res.error || 'Failed to permanently delete article.', 'error');
     }
   };
 
@@ -107,6 +251,7 @@ export const AdminNewsListPage: React.FC = () => {
         `Seeded ${res.seeded} articles to Firestore (${res.skipped} already existed).`,
         'success'
       );
+      loadArticles();
     } catch (err: any) {
       showToast('Failed to seed demo articles.', 'error');
     } finally {
@@ -114,21 +259,33 @@ export const AdminNewsListPage: React.FC = () => {
     }
   };
 
+  const hasActiveFilters = statusFilter !== 'all' || categoryFilter !== 'all' || searchQuery.trim() !== '';
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <h1 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
             <FileText className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            <span>News & Press Releases Management</span>
+            <span>News & Press Releases Directory</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Create, edit, preview, and publish official agricultural bulletins across Afaan Oromo, Amharic, and English.
+            Official administrative directory for news across Afaan Oromo, Amharic, and English.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Global Activity History Link */}
+          <Link
+            to="/admin/news/activity"
+            className="px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+            title="View global administrative activity history"
+          >
+            <History className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Activity History</span>
+          </Link>
+
           {/* Seed Demo Button */}
           <button
             type="button"
@@ -166,20 +323,20 @@ export const AdminNewsListPage: React.FC = () => {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by title or slug..."
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Search title or slug..."
             className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 text-xs focus:ring-2 focus:ring-emerald-500 transition-all"
           />
         </div>
 
         {/* Status & Category Selectors */}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
           {/* Status Filter */}
           <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
             <Filter className="w-3.5 h-3.5 text-slate-500" />
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => handleStatusFilter(e.target.value as any)}
               className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none"
             >
               <option value="all">All Statuses</option>
@@ -188,6 +345,7 @@ export const AdminNewsListPage: React.FC = () => {
               <option value="published">Published</option>
               <option value="unpublished">Unpublished</option>
               <option value="archived">Archived</option>
+              <option value="trashed">Trash</option>
             </select>
           </div>
 
@@ -196,7 +354,7 @@ export const AdminNewsListPage: React.FC = () => {
             <Tag className="w-3.5 h-3.5 text-slate-500" />
             <select
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value as any)}
+              onChange={(e) => handleCategoryFilter(e.target.value as any)}
               className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none"
             >
               <option value="all">All Categories</option>
@@ -208,8 +366,18 @@ export const AdminNewsListPage: React.FC = () => {
             </select>
           </div>
 
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
+            <button
+              onClick={handleClearFilters}
+              className="px-3 py-1.5 text-xs font-bold rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 hover:bg-rose-100 transition-colors flex items-center gap-1"
+            >
+              <XCircle className="w-3.5 h-3.5" /> Clear
+            </button>
+          )}
+
           <span className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-2">
-            Total: {articles.length}
+            Total: {totalCount}
           </span>
         </div>
       </div>
@@ -218,7 +386,9 @@ export const AdminNewsListPage: React.FC = () => {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
           <Loader2 className="w-8 h-8 text-emerald-600 animate-spin mb-2" />
-          <p className="text-xs font-bold text-slate-600 dark:text-slate-400">Loading articles from Firestore...</p>
+          <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+            Loading articles from Firestore...
+          </p>
         </div>
       ) : error ? (
         <div className="p-6 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-2xl text-center space-y-2">
@@ -228,27 +398,39 @@ export const AdminNewsListPage: React.FC = () => {
         <div className="text-center py-16 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
           <FileText className="w-10 h-10 text-slate-400 mx-auto" />
           <div className="space-y-1">
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white">No News Articles Found</h3>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+              No News Articles Found
+            </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              No news articles match your filter criteria or Firestore is empty.
+              No articles match status "{statusFilter}", category "{categoryFilter}" or search "{searchQuery}".
             </p>
           </div>
-          {canCreate && (
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleSeedDemoData}
-                className="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors"
-              >
-                Seed Demonstration Data
-              </button>
-              <Link
-                to="/admin/news/new"
-                className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-sm"
-              >
-                Create First Article
-              </Link>
-            </div>
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors"
+            >
+              Clear Search & Filters
+            </button>
+          ) : (
+            canCreate && (
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleSeedDemoData}
+                  className="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors"
+                >
+                  Seed Demonstration Data
+                </button>
+                <Link
+                  to="/admin/news/new"
+                  className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-sm"
+                >
+                  Create First Article
+                </Link>
+              </div>
+            )
           )}
         </div>
       ) : (
@@ -262,7 +444,7 @@ export const AdminNewsListPage: React.FC = () => {
                     <th className="p-4">Article</th>
                     <th className="p-4">Category</th>
                     <th className="p-4">Status</th>
-                    <th className="p-4">Office</th>
+                    <th className="p-4">Last Actor</th>
                     <th className="p-4">Version</th>
                     <th className="p-4 text-right">Actions</th>
                   </tr>
@@ -271,11 +453,23 @@ export const AdminNewsListPage: React.FC = () => {
                   {articles.map((item) => {
                     const titleStr = getLocalizedText(item.title);
                     const officeStr = getLocalizedText(item.responsibleOffice);
+                    const isTrashed = item.status === 'trashed';
+
+                    const actorName =
+                      item.updatedByName ||
+                      item.updatedByEmail ||
+                      item.createdByName ||
+                      item.createdByEmail ||
+                      'System';
 
                     return (
                       <tr
                         key={item.slug}
-                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors"
+                        className={`transition-colors ${
+                          isTrashed
+                            ? 'bg-red-50/30 dark:bg-red-950/20 hover:bg-red-50/60 dark:hover:bg-red-950/40'
+                            : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
+                        }`}
                       >
                         <td className="p-4">
                           <div className="flex items-center gap-3 max-w-md">
@@ -312,7 +506,14 @@ export const AdminNewsListPage: React.FC = () => {
                         </td>
 
                         <td className="p-4 text-slate-600 dark:text-slate-300 truncate max-w-[150px]">
-                          {officeStr || 'Oromia Bureau'}
+                          <div className="space-y-0.5">
+                            <p className="font-bold text-slate-900 dark:text-white truncate flex items-center gap-1">
+                              <User className="w-3 h-3 text-slate-400" /> {actorName}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              {officeStr || 'Oromia Bureau'}
+                            </p>
+                          </div>
                         </td>
 
                         <td className="p-4 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
@@ -320,31 +521,54 @@ export const AdminNewsListPage: React.FC = () => {
                         </td>
 
                         <td className="p-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Link
-                              to={`/admin/news/${item.slug}/preview`}
-                              className="p-2 rounded-xl text-slate-600 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                              title="Preview Draft"
+                          <div className="flex items-center justify-end gap-1">
+                            {/* View Details Drawer Button */}
+                            <button
+                              onClick={() => setDetailDrawerTarget(item)}
+                              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                              title="View Article Details & Lifecycle Metadata"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Info className="w-4 h-4 text-slate-500" />
+                            </button>
+
+                            {/* Audit History Link */}
+                            <Link
+                              to={`/admin/news/${item.slug}/history`}
+                              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                              title="View Immutable Audit History"
+                            >
+                              <History className="w-4 h-4 text-slate-500" />
                             </Link>
 
-                            {canEdit && (
+                            {/* Preview Draft */}
+                            {!isTrashed && (
+                              <Link
+                                to={`/admin/news/${item.slug}/preview`}
+                                className="p-1.5 rounded-lg text-slate-600 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                title="Preview Draft"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Link>
+                            )}
+
+                            {/* Edit Article */}
+                            {canEdit && !isTrashed && (
                               <Link
                                 to={`/admin/news/${item.slug}/edit`}
-                                className="p-2 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                className="p-1.5 rounded-lg text-slate-600 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                 title="Edit Article"
                               >
                                 <Edit className="w-4 h-4" />
                               </Link>
                             )}
 
-                            {canPublish && (
+                            {/* Publish / Unpublish / Archive */}
+                            {canPublish && !isTrashed && (
                               <>
                                 {item.status !== 'published' ? (
                                   <button
                                     onClick={() => handlePublish(item.slug)}
-                                    className="p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 transition-colors"
+                                    className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 transition-colors"
                                     title="Publish Article"
                                   >
                                     <CheckCircle2 className="w-4 h-4" />
@@ -352,7 +576,7 @@ export const AdminNewsListPage: React.FC = () => {
                                 ) : (
                                   <button
                                     onClick={() => handleUnpublish(item.slug)}
-                                    className="p-2 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors"
+                                    className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors"
                                     title="Unpublish Article"
                                   >
                                     <EyeOff className="w-4 h-4" />
@@ -362,10 +586,46 @@ export const AdminNewsListPage: React.FC = () => {
                                 {item.status !== 'archived' && (
                                   <button
                                     onClick={() => handleArchive(item.slug)}
-                                    className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                    className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                     title="Archive Article"
                                   >
                                     <Archive className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </>
+                            )}
+
+                            {/* Trash Action */}
+                            {canEdit && !isTrashed && (
+                              <button
+                                onClick={() => setTrashModalTarget(item)}
+                                className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-950/60 transition-colors"
+                                title="Move to Trash"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {/* Trashed State Actions */}
+                            {isTrashed && (
+                              <>
+                                {canEdit && (
+                                  <button
+                                    onClick={() => setRestoreModalTarget(item)}
+                                    className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/60 transition-colors"
+                                    title="Restore from Trash"
+                                  >
+                                    <RotateCcw className="w-4 h-4" />
+                                  </button>
+                                )}
+
+                                {isSuperAdmin && (
+                                  <button
+                                    onClick={() => setDeleteModalTarget(item)}
+                                    className="p-1.5 rounded-lg text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/60 transition-colors"
+                                    title="Permanently Delete Article (Super Admin Only)"
+                                  >
+                                    <Trash2 className="w-4 h-4 font-black text-red-700" />
                                   </button>
                                 )}
                               </>
@@ -385,11 +645,14 @@ export const AdminNewsListPage: React.FC = () => {
             {articles.map((item) => {
               const titleStr = getLocalizedText(item.title);
               const officeStr = getLocalizedText(item.responsibleOffice);
+              const isTrashed = item.status === 'trashed';
 
               return (
                 <div
                   key={item.slug}
-                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-3"
+                  className={`rounded-2xl border p-5 shadow-sm space-y-3 bg-white dark:bg-slate-900 ${
+                    isTrashed ? 'border-red-200 dark:border-red-900 bg-red-50/20' : 'border-slate-200 dark:border-slate-800'
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
@@ -406,47 +669,138 @@ export const AdminNewsListPage: React.FC = () => {
                     <span>{officeStr}</span>
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <Link
-                      to={`/admin/news/${item.slug}/preview`}
-                      className="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-1"
+                  <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      onClick={() => setDetailDrawerTarget(item)}
+                      className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-1"
                     >
-                      <Eye className="w-3.5 h-3.5" /> Preview
+                      <Info className="w-3.5 h-3.5" /> Details
+                    </button>
+
+                    <Link
+                      to={`/admin/news/${item.slug}/history`}
+                      className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-1"
+                    >
+                      <History className="w-3.5 h-3.5" /> History
                     </Link>
 
-                    {canEdit && (
+                    {!isTrashed && (
+                      <Link
+                        to={`/admin/news/${item.slug}/preview`}
+                        className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-1"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> Preview
+                      </Link>
+                    )}
+
+                    {canEdit && !isTrashed && (
                       <Link
                         to={`/admin/news/${item.slug}/edit`}
-                        className="px-3 py-1.5 text-xs font-bold rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center gap-1"
+                        className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center gap-1"
                       >
                         <Edit className="w-3.5 h-3.5" /> Edit
                       </Link>
                     )}
 
-                    {canPublish && (
-                      item.status !== 'published' ? (
-                        <button
-                          onClick={() => handlePublish(item.slug)}
-                          className="px-3 py-1.5 text-xs font-bold rounded-xl bg-emerald-600 text-white flex items-center gap-1"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Publish
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleUnpublish(item.slug)}
-                          className="px-3 py-1.5 text-xs font-bold rounded-xl bg-rose-600 text-white flex items-center gap-1"
-                        >
-                          <EyeOff className="w-3.5 h-3.5" /> Unpublish
-                        </button>
-                      )
+                    {canEdit && !isTrashed && (
+                      <button
+                        onClick={() => setTrashModalTarget(item)}
+                        className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-red-100 text-red-800 flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Trash
+                      </button>
+                    )}
+
+                    {isTrashed && (
+                      <>
+                        {canEdit && (
+                          <button
+                            onClick={() => setRestoreModalTarget(item)}
+                            className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-blue-600 text-white flex items-center gap-1"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" /> Restore
+                          </button>
+                        )}
+
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => setDeleteModalTarget(item)}
+                            className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-red-700 text-white flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
               );
             })}
           </div>
+
+          {/* Pagination Controls */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-xs">
+            <div className="text-xs font-bold text-slate-600 dark:text-slate-400">
+              Showing Page {page} {totalCount > 0 ? `(${totalCount} total articles)` : ''}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handlePrevPage}
+                disabled={page === 1 || loading}
+                className="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Previous</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleNextPage}
+                disabled={!hasMore || loading}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-[#075D3A] hover:bg-emerald-800 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-xs flex items-center gap-1"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </>
       )}
+
+      {/* Modals & Drawer */}
+      <TrashConfirmModal
+        isOpen={!!trashModalTarget}
+        articleTitle={trashModalTarget ? getLocalizedText(trashModalTarget.title) : ''}
+        articleSlug={trashModalTarget?.slug || ''}
+        isPublished={trashModalTarget?.status === 'published'}
+        onClose={() => setTrashModalTarget(null)}
+        onConfirm={handleConfirmTrash}
+      />
+
+      <RestoreConfirmModal
+        isOpen={!!restoreModalTarget}
+        articleTitle={restoreModalTarget ? getLocalizedText(restoreModalTarget.title) : ''}
+        articleSlug={restoreModalTarget?.slug || ''}
+        previousStatus={restoreModalTarget?.previousStatusBeforeTrash}
+        onClose={() => setRestoreModalTarget(null)}
+        onConfirm={handleConfirmRestore}
+      />
+
+      <PermanentDeleteConfirmModal
+        isOpen={!!deleteModalTarget}
+        articleTitle={deleteModalTarget ? getLocalizedText(deleteModalTarget.title) : ''}
+        articleSlug={deleteModalTarget?.slug || ''}
+        onClose={() => setDeleteModalTarget(null)}
+        onConfirm={handleConfirmPermanentDelete}
+      />
+
+      <ArticleDetailDrawer
+        isOpen={!!detailDrawerTarget}
+        article={detailDrawerTarget}
+        onClose={() => setDetailDrawerTarget(null)}
+      />
     </div>
   );
 };

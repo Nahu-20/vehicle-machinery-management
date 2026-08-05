@@ -21,8 +21,15 @@ if (config) {
     // Connection validation as required by skill guidelines
     if (db) {
       getDocFromServer(doc(db, 'test', 'connection')).catch((error) => {
-        if (error instanceof Error && error.message.includes('the client is offline')) {
-          console.warn('Firebase client appears to be offline or un-provisioned.');
+        const errMsg = error instanceof Error ? error.message : String(error);
+        if (
+          errMsg.includes('offline') ||
+          errMsg.includes('unavailable') ||
+          (error && typeof error === 'object' && 'code' in error && (error as any).code === 'unavailable')
+        ) {
+          console.warn('Firebase client is operating in offline or fallback mode.');
+        } else {
+          console.warn('Firebase connection test info:', errMsg);
         }
       });
     }

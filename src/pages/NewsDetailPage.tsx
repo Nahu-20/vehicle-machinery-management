@@ -21,6 +21,7 @@ import {
 import { useLanguage } from '../context/LanguageContext';
 import { getPublishedNewsArticleBySlug, getPublishedNewsArticles } from '../services/newsService';
 import { NewsArticle, NewsContentBlock, LocalizedText } from '../types';
+import { NewsImage } from '../components/news/NewsImage';
 
 export const NewsDetailPage: React.FC = () => {
   const { newsSlug } = useParams<{ newsSlug: string }>();
@@ -166,16 +167,28 @@ export const NewsDetailPage: React.FC = () => {
 
   // Print handler
   const handlePrint = () => {
-    window.print();
+    try {
+      window.print();
+    } catch (err) {
+      console.warn('[NewsDetailPage] window.print error:', err);
+      try {
+        if (window.top && window.top !== window) {
+          window.top.print();
+        }
+      } catch (topErr) {
+        console.warn('[NewsDetailPage] window.top.print error:', topErr);
+      }
+    }
   };
 
   // Render a single content block safely
   const renderContentBlock = (block: NewsContentBlock, index: number) => {
+    const blockKey = (block as any).id || `block-${index}`;
     switch (block.type) {
       case 'paragraph': {
         const text = getLocalizedText(block.content);
         return (
-          <p key={index} className="text-gray-800 dark:text-gray-200 text-lg leading-relaxed mb-6">
+          <p key={blockKey} className="text-gray-800 dark:text-gray-200 text-lg leading-relaxed mb-6">
             {text}
           </p>
         );
@@ -185,13 +198,13 @@ export const NewsDetailPage: React.FC = () => {
         const text = getLocalizedText(block.content);
         if (block.level === 2) {
           return (
-            <h2 key={index} className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-10 mb-4 pb-2 border-b border-gray-200 dark:border-gray-800">
+            <h2 key={blockKey} className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-10 mb-4 pb-2 border-b border-gray-200 dark:border-gray-800">
               {text}
             </h2>
           );
         }
         return (
-          <h3 key={index} className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-3">
+          <h3 key={blockKey} className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-3">
             {text}
           </h3>
         );
@@ -201,7 +214,7 @@ export const NewsDetailPage: React.FC = () => {
         const altText = getLocalizedText(block.alt);
         const captionText = block.caption ? getLocalizedText(block.caption) : null;
         return (
-          <figure key={index} className="my-8">
+          <figure key={blockKey} className="my-8">
             <div className="overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800 shadow-md">
               <img
                 src={block.src}
@@ -223,7 +236,7 @@ export const NewsDetailPage: React.FC = () => {
         const text = getLocalizedText(block.content);
         const sourceText = block.source ? getLocalizedText(block.source) : null;
         return (
-          <blockquote key={index} className="my-8 p-6 bg-emerald-50/70 dark:bg-emerald-950/30 border-l-4 border-emerald-600 rounded-r-xl relative">
+          <blockquote key={blockKey} className="my-8 p-6 bg-emerald-50/70 dark:bg-emerald-950/30 border-l-4 border-emerald-600 rounded-r-xl relative">
             <Quote className="w-8 h-8 text-emerald-300 dark:text-emerald-800 absolute top-4 right-4 opacity-50" />
             <p className="text-lg italic font-medium text-gray-800 dark:text-gray-200 mb-3 relative z-10">
               {text}
@@ -241,22 +254,23 @@ export const NewsDetailPage: React.FC = () => {
         const ListTag = block.ordered ? 'ol' : 'ul';
         return (
           <ListTag
-            key={index}
+            key={blockKey}
             className={`my-6 space-y-3 ${
               block.ordered ? 'list-decimal list-inside text-gray-800 dark:text-gray-200' : 'space-y-3'
             }`}
           >
             {block.items.map((item, i) => {
               const itemText = getLocalizedText(item);
+              const itemKey = `${blockKey}-item-${i}`;
               if (block.ordered) {
                 return (
-                  <li key={i} className="text-gray-800 dark:text-gray-200 text-base sm:text-lg leading-relaxed pl-2">
+                  <li key={itemKey} className="text-gray-800 dark:text-gray-200 text-base sm:text-lg leading-relaxed pl-2">
                     {itemText}
                   </li>
                 );
               }
               return (
-                <li key={i} className="flex items-start gap-3 text-gray-800 dark:text-gray-200 text-base sm:text-lg">
+                <li key={itemKey} className="flex items-start gap-3 text-gray-800 dark:text-gray-200 text-base sm:text-lg">
                   <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-400 mt-2.5 flex-shrink-0" />
                   <span>{itemText}</span>
                 </li>
@@ -270,7 +284,7 @@ export const NewsDetailPage: React.FC = () => {
         const title = block.title ? getLocalizedText(block.title) : null;
         const text = getLocalizedText(block.content);
         return (
-          <div key={index} className="my-8 p-6 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl shadow-sm">
+          <div key={blockKey} className="my-8 p-6 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl shadow-sm">
             <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-bold text-lg mb-2">
               <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               {title || t('highlight_notice')}
@@ -285,7 +299,7 @@ export const NewsDetailPage: React.FC = () => {
       case 'relatedLink': {
         const title = getLocalizedText(block.title);
         return (
-          <div key={index} className="my-8 p-4 bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-between gap-4">
+          <div key={blockKey} className="my-8 p-4 bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-between gap-4">
             <span className="font-semibold text-gray-900 dark:text-white text-base">
               {title}
             </span>
@@ -406,19 +420,22 @@ export const NewsDetailPage: React.FC = () => {
         </header>
 
         {/* Featured Banner Image */}
-        <div className="mb-10 rounded-2xl overflow-hidden shadow-lg border border-gray-200 dark:border-gray-800 bg-gray-900">
-          <img
-            src={article.featuredImage || article.imageUrl}
-            alt={typeof article.imageAlt === 'string' ? article.imageAlt : getLocalizedText(article.imageAlt)}
-            className="w-full h-auto max-h-[520px] object-cover"
-          />
-        </div>
+        <NewsImage
+          src={article.featuredImage || article.imageUrl}
+          alt={typeof article.imageAlt === 'string' ? article.imageAlt : getLocalizedText(article.imageAlt) || titleText}
+          aspect="hero"
+          objectPosition={article.imagePosition || 'center'}
+          caption={typeof article.imageAlt === 'string' ? article.imageAlt : getLocalizedText(article.imageAlt)}
+          className="mb-10"
+        />
 
         {/* Main Content Layout Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Main Article Body Column */}
           <main className="lg:col-span-8 bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-10 shadow-sm border border-gray-200/80 dark:border-gray-700">
-            {article.fullContent && article.fullContent.length > 0 ? (
+            {article.content && article.content.length > 0 ? (
+              article.content.map((block, idx) => renderContentBlock(block, idx))
+            ) : article.fullContent && article.fullContent.length > 0 ? (
               article.fullContent.map((block, idx) => renderContentBlock(block, idx))
             ) : (
               <p className="text-gray-800 dark:text-gray-200 text-lg leading-relaxed">
@@ -430,9 +447,9 @@ export const NewsDetailPage: React.FC = () => {
             {article.tags && article.tags.length > 0 && (
               <div className="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-2 print:hidden">
                 <Tag className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mr-1" />
-                {article.tags.map((tag) => (
+                {article.tags.map((tag, tagIdx) => (
                   <span
-                    key={tag}
+                    key={`${tag}-${tagIdx}`}
                     className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-semibold rounded-md border border-gray-200 dark:border-gray-600"
                   >
                     #{tag}
@@ -483,11 +500,12 @@ export const NewsDetailPage: React.FC = () => {
                   {t('news_related_title')}
                 </h3>
                 <div className="space-y-4">
-                  {relatedArticles.map((relItem) => {
+                  {relatedArticles.map((relItem, relIdx) => {
                     const relTitle = typeof relItem.title === 'string' ? relItem.title : getLocalizedText(relItem.title);
+                    const relKey = relItem.slug || (relItem as any).id || `related-${relIdx}`;
                     return (
                       <article
-                        key={relItem.id}
+                        key={relKey}
                         className="group flex flex-col gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border border-gray-100 dark:border-gray-700/50"
                       >
                         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">

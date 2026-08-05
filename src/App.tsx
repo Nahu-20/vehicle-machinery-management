@@ -42,6 +42,8 @@ import { AdminNewsListPage } from './pages/admin/news/AdminNewsListPage';
 import { AdminNewsCreatePage } from './pages/admin/news/AdminNewsCreatePage';
 import { AdminNewsEditPage } from './pages/admin/news/AdminNewsEditPage';
 import { AdminNewsPreviewPage } from './pages/admin/news/AdminNewsPreviewPage';
+import { AdminNewsHistoryPage } from './pages/admin/news/AdminNewsHistoryPage';
+import { AdminNewsActivityPage } from './pages/admin/news/AdminNewsActivityPage';
 import { AlertsManagementPage } from './pages/admin/AlertsManagementPage';
 import { MarketManagementPage } from './pages/admin/MarketManagementPage';
 import { ResourcesManagementPage } from './pages/admin/ResourcesManagementPage';
@@ -156,6 +158,28 @@ export default function App() {
                           moduleTitle="Preview News Article"
                         >
                           <AdminNewsPreviewPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="news/:newsSlug/history"
+                      element={
+                        <RequirePermission
+                          requiredPermission="content.view"
+                          moduleTitle="Article Audit History"
+                        >
+                          <AdminNewsHistoryPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="news/activity"
+                      element={
+                        <RequirePermission
+                          requiredPermission="content.view"
+                          moduleTitle="News Activity Log"
+                        >
+                          <AdminNewsActivityPage />
                         </RequirePermission>
                       }
                     />

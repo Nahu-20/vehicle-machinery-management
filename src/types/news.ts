@@ -11,7 +11,8 @@ export type NewsStatus =
   | 'review'
   | 'published'
   | 'unpublished'
-  | 'archived';
+  | 'archived'
+  | 'trashed';
 
 export type NewsCategory =
   | 'news'
@@ -61,6 +62,7 @@ export interface NewsArticle {
 
   featuredImage: string;
   imageAlt: LocalizedText;
+  imagePosition?: 'center' | 'top' | 'bottom' | 'left' | 'right';
 
   responsibleOffice: LocalizedText;
   authorName?: LocalizedText;
@@ -75,15 +77,77 @@ export interface NewsArticle {
   createdAt: any;
   createdBy: string;
   createdByEmail: string;
+  createdByName?: string;
 
   updatedAt: any;
   updatedBy: string;
   updatedByEmail: string;
+  updatedByName?: string;
+
+  submittedForReviewByUid?: string;
+  submittedForReviewByEmail?: string;
+  submittedForReviewByName?: string;
+  submittedForReviewAt?: any;
 
   publishedBy?: string;
   publishedByEmail?: string;
+  publishedByName?: string;
+
+  unpublishedByUid?: string;
+  unpublishedByEmail?: string;
+  unpublishedByName?: string;
+  unpublishedAt?: any;
+
+  archivedByUid?: string;
+  archivedByEmail?: string;
+  archivedByName?: string;
+  archivedAt?: any;
+
+  restoredByUid?: string;
+  restoredByEmail?: string;
+  restoredByName?: string;
+  restoredAt?: any;
+
+  trashedByUid?: string;
+  trashedByEmail?: string;
+  trashedByName?: string;
+  trashedAt?: any;
+  trashReason?: string;
+  statusBeforeTrash?: NewsStatus;
 
   version: number;
+}
+
+export type NewsAuditAction =
+  | 'created'
+  | 'updated'
+  | 'submitted_for_review'
+  | 'returned_to_draft'
+  | 'published'
+  | 'unpublished'
+  | 'republished'
+  | 'archived'
+  | 'moved_to_trash'
+  | 'restored'
+  | 'permanently_deleted';
+
+export interface NewsAuditLog {
+  id: string;
+  articleSlug: string;
+  articleTitle?: LocalizedText;
+  action: NewsAuditAction;
+  actorUid: string;
+  actorEmail: string;
+  actorDisplayName: string;
+  actorRole: string;
+  previousStatus?: NewsStatus;
+  newStatus?: NewsStatus;
+  versionBefore?: number;
+  versionAfter?: number;
+  changedFields?: string[];
+  reason?: string;
+  occurredAt: any;
+  metadata?: Record<string, unknown>;
 }
 
 export interface NewsArticleInput {
@@ -95,6 +159,7 @@ export interface NewsArticleInput {
   tags: string[];
   featuredImage: string;
   imageAlt: LocalizedText;
+  imagePosition?: 'center' | 'top' | 'bottom' | 'left' | 'right';
   responsibleOffice: LocalizedText;
   authorName?: LocalizedText;
   featured: boolean;
@@ -404,21 +469,85 @@ export function validateForPublishing(article: any): ValidationResult {
   return { valid: errors.length === 0, errors };
 }
 
+export function normalizeTimestampToISO(val: any): string | null {
+  if (!val) return null;
+  if (typeof val === 'string') {
+    const parsed = Date.parse(val);
+    return isNaN(parsed) ? null : val;
+  }
+  if (val instanceof Timestamp) {
+    return val.toDate().toISOString();
+  }
+  if (typeof val?.toDate === 'function') {
+    return val.toDate().toISOString();
+  }
+  if (val instanceof Date) {
+    return val.toISOString();
+  }
+  if (typeof val?.seconds === 'number') {
+    return new Date(val.seconds * 1000).toISOString();
+  }
+  if (typeof val === 'number') {
+    return new Date(val).toISOString();
+  }
+  return null;
+}
+
+export function parseTimestampMillis(val: any): number | null {
+  if (!val) return null;
+  if (val instanceof Timestamp) {
+    return val.toMillis();
+  }
+  if (typeof val?.toMillis === 'function') {
+    return val.toMillis();
+  }
+  if (typeof val?.toDate === 'function') {
+    return val.toDate().getTime();
+  }
+  if (typeof val?.seconds === 'number') {
+    return val.seconds * 1000;
+  }
+  if (val instanceof Date) {
+    return val.getTime();
+  }
+  if (typeof val === 'string') {
+    const t = Date.parse(val);
+    return isNaN(t) ? null : t;
+  }
+  if (typeof val === 'number') {
+    return val;
+  }
+  return null;
+}
+
 /**
  * Runtime validator for a raw NewsArticle object read from Firestore
  */
 export function validateNewsArticle(data: any, docSlug: string): NewsArticle | null {
   if (!data || typeof data !== 'object') return null;
 
-  const slug = typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : docSlug;
-  if (!slug) return null;
+  const invalidFields: Array<{ name: string; expected: string; actual: string }> = [];
 
-  const validStatuses: NewsStatus[] = ['draft', 'review', 'published', 'unpublished', 'archived'];
+  const slug = typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : docSlug;
+  if (typeof data.slug !== 'string' || !data.slug.trim()) {
+    invalidFields.push({ name: 'slug', expected: 'non-empty string', actual: typeof data.slug });
+  }
+
+  const validStatuses: NewsStatus[] = ['draft', 'review', 'published', 'unpublished', 'archived', 'trashed'];
   const status: NewsStatus = validStatuses.includes(data.status) ? data.status : 'draft';
+  if (!validStatuses.includes(data.status)) {
+    invalidFields.push({ name: 'status', expected: validStatuses.join('|'), actual: String(data.status) });
+  }
 
   const validCategories: NewsCategory[] = ['news', 'training', 'event', 'tender', 'announcement'];
   const category: NewsCategory = validCategories.includes(data.category) ? data.category : 'news';
+  if (!validCategories.includes(data.category)) {
+    invalidFields.push({ name: 'category', expected: validCategories.join('|'), actual: String(data.category) });
+  }
 
+  if (!isValidLocalizedText(data.title) && typeof data.title !== 'string') {
+    invalidFields.push({ name: 'title', expected: 'LocalizedText or string', actual: typeof data.title });
+  }
   const title: LocalizedText = isValidLocalizedText(data.title)
     ? data.title
     : {
@@ -427,6 +556,9 @@ export function validateNewsArticle(data: any, docSlug: string): NewsArticle | n
         en: typeof data.title === 'string' ? data.title : '',
       };
 
+  if (!isValidLocalizedText(data.excerpt) && typeof data.excerpt !== 'string') {
+    invalidFields.push({ name: 'excerpt', expected: 'LocalizedText or string', actual: typeof data.excerpt });
+  }
   const excerpt: LocalizedText = isValidLocalizedText(data.excerpt)
     ? data.excerpt
     : {
@@ -435,6 +567,9 @@ export function validateNewsArticle(data: any, docSlug: string): NewsArticle | n
         en: typeof data.excerpt === 'string' ? data.excerpt : '',
       };
 
+  if (!Array.isArray(data.content)) {
+    invalidFields.push({ name: 'content', expected: 'Array of content blocks', actual: typeof data.content });
+  }
   const content: NewsContentBlock[] = Array.isArray(data.content)
     ? data.content.map((block: any, idx: number) => {
         const id = block.id || `block-${idx}`;
@@ -481,6 +616,9 @@ export function validateNewsArticle(data: any, docSlug: string): NewsArticle | n
       })
     : [];
 
+  if (!isValidLocalizedText(data.responsibleOffice) && typeof data.responsibleOffice !== 'string') {
+    invalidFields.push({ name: 'responsibleOffice', expected: 'LocalizedText or string', actual: typeof data.responsibleOffice });
+  }
   const responsibleOffice: LocalizedText = isValidLocalizedText(data.responsibleOffice)
     ? data.responsibleOffice
     : {
@@ -493,6 +631,40 @@ export function validateNewsArticle(data: any, docSlug: string): NewsArticle | n
     ? data.imageAlt
     : createEmptyLocalizedText();
 
+  if (typeof data.featured !== 'boolean' && data.featured !== undefined) {
+    invalidFields.push({ name: 'featured', expected: 'boolean', actual: typeof data.featured });
+  }
+
+  const publishedAtISO = normalizeTimestampToISO(data.publishedAt);
+  if (data.status === 'published' && !publishedAtISO) {
+    invalidFields.push({ name: 'publishedAt', expected: 'valid Timestamp/Date/ISO string', actual: String(data.publishedAt) });
+  }
+
+  const createdAtISO = normalizeTimestampToISO(data.createdAt);
+  if (data.createdAt && !createdAtISO) {
+    invalidFields.push({ name: 'createdAt', expected: 'valid Timestamp/Date/ISO string', actual: String(data.createdAt) });
+  }
+
+  const updatedAtISO = normalizeTimestampToISO(data.updatedAt);
+  if (data.updatedAt && !updatedAtISO) {
+    invalidFields.push({ name: 'updatedAt', expected: 'valid Timestamp/Date/ISO string', actual: String(data.updatedAt) });
+  }
+
+  if (typeof data.version !== 'number' && data.version !== undefined) {
+    invalidFields.push({ name: 'version', expected: 'number', actual: typeof data.version });
+  }
+
+  const isDev = Boolean(import.meta.env?.DEV);
+  if (isDev && invalidFields.length > 0) {
+    console.warn('[newsValidator] Diagnostic for document:', {
+      documentId: docSlug,
+      invalidFieldNames: invalidFields.map((f) => f.name),
+      expectedType: invalidFields.map((f) => f.expected).join('; '),
+      actualTypeCategory: invalidFields.map((f) => f.actual).join('; '),
+      validationResult: 'NORMALIZED_WITH_FALLBACKS',
+    });
+  }
+
   return {
     slug,
     title,
@@ -502,50 +674,78 @@ export function validateNewsArticle(data: any, docSlug: string): NewsArticle | n
     tags: Array.isArray(data.tags) ? data.tags.filter((t: any) => typeof t === 'string') : [],
     featuredImage: typeof data.featuredImage === 'string' ? data.featuredImage : '',
     imageAlt,
+    imagePosition: ['center', 'top', 'bottom', 'left', 'right'].includes(data.imagePosition)
+      ? data.imagePosition
+      : 'center',
     responsibleOffice,
     authorName: isValidLocalizedText(data.authorName) ? data.authorName : undefined,
     status,
     featured: Boolean(data.featured),
-    publishedAt: data.publishedAt || null,
-    republishedAt: data.republishedAt || null,
-    scheduledFor: data.scheduledFor || null,
-    createdAt: data.createdAt || null,
+    publishedAt: publishedAtISO,
+    republishedAt: normalizeTimestampToISO(data.republishedAt),
+    scheduledFor: normalizeTimestampToISO(data.scheduledFor),
+    createdAt: createdAtISO,
     createdBy: typeof data.createdBy === 'string' ? data.createdBy : '',
     createdByEmail: typeof data.createdByEmail === 'string' ? data.createdByEmail : '',
-    updatedAt: data.updatedAt || null,
+    createdByName: typeof data.createdByName === 'string' ? data.createdByName : undefined,
+    updatedAt: updatedAtISO,
     updatedBy: typeof data.updatedBy === 'string' ? data.updatedBy : '',
     updatedByEmail: typeof data.updatedByEmail === 'string' ? data.updatedByEmail : '',
+    updatedByName: typeof data.updatedByName === 'string' ? data.updatedByName : undefined,
+    submittedForReviewByUid: typeof data.submittedForReviewByUid === 'string' ? data.submittedForReviewByUid : undefined,
+    submittedForReviewByEmail: typeof data.submittedForReviewByEmail === 'string' ? data.submittedForReviewByEmail : undefined,
+    submittedForReviewByName: typeof data.submittedForReviewByName === 'string' ? data.submittedForReviewByName : undefined,
+    submittedForReviewAt: normalizeTimestampToISO(data.submittedForReviewAt),
     publishedBy: typeof data.publishedBy === 'string' ? data.publishedBy : undefined,
     publishedByEmail: typeof data.publishedByEmail === 'string' ? data.publishedByEmail : undefined,
+    publishedByName: typeof data.publishedByName === 'string' ? data.publishedByName : undefined,
+    unpublishedByUid: typeof data.unpublishedByUid === 'string' ? data.unpublishedByUid : undefined,
+    unpublishedByEmail: typeof data.unpublishedByEmail === 'string' ? data.unpublishedByEmail : undefined,
+    unpublishedByName: typeof data.unpublishedByName === 'string' ? data.unpublishedByName : undefined,
+    unpublishedAt: normalizeTimestampToISO(data.unpublishedAt),
+    archivedByUid: typeof data.archivedByUid === 'string' ? data.archivedByUid : undefined,
+    archivedByEmail: typeof data.archivedByEmail === 'string' ? data.archivedByEmail : undefined,
+    archivedByName: typeof data.archivedByName === 'string' ? data.archivedByName : undefined,
+    archivedAt: normalizeTimestampToISO(data.archivedAt),
+    restoredByUid: typeof data.restoredByUid === 'string' ? data.restoredByUid : undefined,
+    restoredByEmail: typeof data.restoredByEmail === 'string' ? data.restoredByEmail : undefined,
+    restoredByName: typeof data.restoredByName === 'string' ? data.restoredByName : undefined,
+    restoredAt: normalizeTimestampToISO(data.restoredAt),
+    trashedByUid: typeof data.trashedByUid === 'string' ? data.trashedByUid : undefined,
+    trashedByEmail: typeof data.trashedByEmail === 'string' ? data.trashedByEmail : undefined,
+    trashedByName: typeof data.trashedByName === 'string' ? data.trashedByName : undefined,
+    trashedAt: normalizeTimestampToISO(data.trashedAt),
+    trashReason: typeof data.trashReason === 'string' ? data.trashReason : undefined,
+    statusBeforeTrash: validStatuses.includes(data.statusBeforeTrash) ? data.statusBeforeTrash : undefined,
     version: typeof data.version === 'number' ? data.version : 1,
   };
 }
 
-export function parseFirestoreError(error: any): { code: string; message: string } {
+export function parseFirestoreError(error: any): NewsServiceError {
   if (error instanceof NewsServiceError) {
-    return { code: error.code, message: error.message };
+    return error;
   }
   const msg = error?.message || String(error);
   if (msg.includes('permission-denied') || msg.includes('Missing or insufficient permissions')) {
-    return {
-      code: 'PERMISSION_DENIED',
-      message: 'Permission denied: Your staff account or role lacks authorization for this operation.',
-    };
+    return new NewsServiceError(
+      'PERMISSION_DENIED',
+      'Permission denied: Your staff account or role lacks authorization for this operation.'
+    );
   }
   if (msg.includes('not-found') || msg.includes('No document to update')) {
-    return {
-      code: 'NEWS_NOT_FOUND',
-      message: 'The requested news article was not found or has been removed.',
-    };
+    return new NewsServiceError(
+      'NEWS_NOT_FOUND',
+      'The requested news article was not found or has been removed.'
+    );
   }
   if (msg.includes('already-exists')) {
-    return {
-      code: 'SLUG_ALREADY_EXISTS',
-      message: 'An article with this URL slug already exists in Firestore.',
-    };
+    return new NewsServiceError(
+      'SLUG_ALREADY_EXISTS',
+      'An article with this URL slug already exists in Firestore.'
+    );
   }
-  return {
-    code: 'UNKNOWN_ERROR',
-    message: msg || 'An unexpected database error occurred.',
-  };
+  return new NewsServiceError(
+    'UNKNOWN_ERROR',
+    msg || 'An unexpected database error occurred.'
+  );
 }

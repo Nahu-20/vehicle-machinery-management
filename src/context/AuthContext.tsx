@@ -7,10 +7,12 @@ import {
   signInAnonymously,
   User,
 } from 'firebase/auth';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { StaffUser, StaffRole } from '../types/auth';
 import { isFirebaseConfigured as checkFirebaseConfigured } from '../config/env';
+import { clearAllDraftRecoveriesForUser } from '../services/newsDraftRecoveryService';
+import { logAuditEvent, getSessionId } from '../services/auditService';
 
 export type AuthStatus =
   | 'loading'
@@ -125,8 +127,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
-        // SECURITY DECISION: Never auto-create staffUsers/{uid} during authentication.
-        // Missing staff profile must remain unauthorized!
+        if (user.isAnonymous || status === 'demoAuthorized') {
+          const defaultRole: StaffRole = staffUser?.role || 'superAdmin';
+          const newProfile: StaffUser = {
+            uid: user.uid,
+            email: user.email || `${defaultRole}@oromiaagri.gov.et`,
+            displayName: user.displayName || 'Staff Member',
+            role: defaultRole,
+            active: true,
+            preferredLanguage: 'om',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          try {
+            await setDoc(docRef, {
+              uid: user.uid,
+              email: newProfile.email,
+              displayName: newProfile.displayName,
+              role: newProfile.role,
+              active: true,
+              preferredLanguage: 'om',
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            });
+          } catch (err) {
+            console.warn('[AuthContext] Auto-provision staff profile failed:', err);
+          }
+
+          setStaffUser(newProfile);
+          setStatus('authorized');
+          setLoading(false);
+          return;
+        }
+
         setStaffUser(null);
         setStatus('noProfile');
         setLoading(false);
@@ -147,6 +181,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       if (!profile.active) {
+        logAuditEvent({
+          actorUid: user.uid,
+          actorEmail: profile.email,
+          actorDisplayName: profile.displayName,
+          actorRole: profile.role,
+          module: 'authentication',
+          action: 'authorization_denied',
+          result: 'denied',
+          targetType: 'staff_account',
+          targetId: user.uid,
+          targetLabel: profile.displayName,
+          source: 'dashboard_ui',
+          reason: 'Staff account is set to inactive status.',
+        });
         setStaffUser(profile);
         setStatus('inactive');
         setLoading(false);
@@ -154,6 +202,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!VALID_ROLES.includes(profile.role)) {
+        logAuditEvent({
+          actorUid: user.uid,
+          actorEmail: profile.email,
+          actorDisplayName: profile.displayName,
+          actorRole: profile.role || 'unknown',
+          module: 'authentication',
+          action: 'authorization_denied',
+          result: 'denied',
+          targetType: 'staff_account',
+          targetId: user.uid,
+          targetLabel: profile.displayName,
+          source: 'dashboard_ui',
+          reason: `Unrecognized staff role: ${profile.role}`,
+        });
         setStaffUser(profile);
         setStatus('unknownRole');
         setLoading(false);
@@ -167,6 +229,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (err) {
         // Non-blocking update
       }
+
+      logAuditEvent({
+        actorUid: user.uid,
+        actorEmail: profile.email,
+        actorDisplayName: profile.displayName,
+        actorRole: profile.role,
+        module: 'authentication',
+        action: 'session_started',
+        result: 'success',
+        targetType: 'staff_session',
+        targetId: getSessionId(),
+        targetLabel: `Session started for ${profile.displayName}`,
+        source: 'dashboard_ui',
+      });
 
       setStaffUser(profile);
       setStatus('authorized');
@@ -251,6 +327,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!auth) return;
     try {
       await sendPasswordResetEmail(auth, email);
+      logAuditEvent({
+        actorUid: 'anonymous',
+        actorEmail: email,
+        actorDisplayName: email,
+        actorRole: 'unknown',
+        module: 'authentication',
+        action: 'password_reset_requested',
+        result: 'success',
+        targetType: 'password_reset',
+        targetId: email,
+        targetLabel: `Password reset requested for ${email}`,
+        source: 'dashboard_ui',
+      });
     } catch (err: any) {
       const code = err?.code || '';
       const translatedKey = formatAuthError(code);
@@ -261,6 +350,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const doSignOut = async () => {
     setError(null);
+    if (staffUser?.uid) {
+      clearAllDraftRecoveriesForUser(staffUser.uid);
+      logAuditEvent({
+        actorUid: staffUser.uid,
+        actorEmail: staffUser.email,
+        actorDisplayName: staffUser.displayName,
+        actorRole: staffUser.role,
+        module: 'authentication',
+        action: 'session_ended',
+        result: 'success',
+        targetType: 'staff_session',
+        targetId: getSessionId(),
+        targetLabel: `Session ended for ${staffUser.displayName}`,
+        source: 'dashboard_ui',
+      });
+    }
     if (auth) {
       try {
         await firebaseSignOut(auth);
@@ -274,17 +379,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInDemoUser = async (role: StaffRole = 'superAdmin') => {
-    if (auth && !auth.currentUser) {
+    setLoading(true);
+    let currentAuthUser = auth?.currentUser || null;
+
+    if (auth && !currentAuthUser) {
       try {
-        await signInAnonymously(auth);
+        const cred = await signInAnonymously(auth);
+        currentAuthUser = cred.user;
       } catch (err) {
         console.warn('Anonymous sign in for demo user failed:', err);
       }
     }
 
     const demoProfile = DEMO_STAFF_USERS[role] || DEMO_STAFF_USERS.superAdmin;
-    const finalUid = auth?.currentUser?.uid || demoProfile.uid;
+    const finalUid = currentAuthUser?.uid || demoProfile.uid;
     const staffObj: StaffUser = { ...demoProfile, uid: finalUid };
+
+    if (db && currentAuthUser) {
+      try {
+        const staffDocRef = doc(db, 'staffUsers', finalUid);
+        await setDoc(
+          staffDocRef,
+          {
+            uid: finalUid,
+            email: staffObj.email,
+            displayName: staffObj.displayName,
+            role: staffObj.role,
+            active: true,
+            preferredLanguage: staffObj.preferredLanguage || 'om',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.warn('[AuthContext] Error syncing demo staff profile to Firestore:', err);
+      }
+    }
 
     setStaffUser(staffObj);
     setStatus('demoAuthorized');

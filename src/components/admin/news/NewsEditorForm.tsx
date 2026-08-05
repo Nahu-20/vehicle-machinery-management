@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useStaffAuthorization } from '../../../hooks/useStaffAuthorization';
 import { useToast } from '../../../context/ToastContext';
+import { useLanguage } from '../../../context/LanguageContext';
 import {
   NewsArticleInput,
   NewsArticle,
@@ -61,6 +62,7 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
   const navigate = useNavigate();
   const { staffUser, hasPermission, role, authorizationStatus } = useStaffAuthorization();
   const { showToast } = useToast();
+  const { language } = useLanguage();
 
   const isSubmittingRef = useRef(false);
 
@@ -124,22 +126,41 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
 
   const currentKeyId = isEditMode && initialArticle ? initialArticle.slug : formData.slug || 'new';
 
+  const location = useLocation();
+  const hasRestoredRef = useRef(false);
+
   // Compute dirty status by comparing normalized structures
   const dirty = isFormDirty(formData, baselineForm);
 
-  // Check draft recovery on mount
+  // Check draft recovery on mount or location change
   useEffect(() => {
-    if (!staffUser?.uid) return;
+    if (!staffUser?.uid || hasRestoredRef.current) return;
+
+    // Order 1: Matching preview/recovery state passed via location state
+    if (location.state?.fromPreview && location.state?.previewData) {
+      setFormData(location.state.previewData);
+      hasRestoredRef.current = true;
+      showToast('Form state restored from preview.', 'info');
+      return;
+    }
+
+    // Order 2: Same-user sessionStorage draft recovery data
     const existingRecovery = getDraftRecovery(staffUser.uid, currentKeyId);
     if (existingRecovery && existingRecovery.formData) {
-      const recNorm = normalizeArticleForm(existingRecovery.formData);
-      const initNorm = normalizeArticleForm(initialFormState);
-      if (JSON.stringify(recNorm) !== JSON.stringify(initNorm)) {
-        setRecoveryData(existingRecovery);
-        setShowRecoveryPrompt(true);
+      if (location.state?.fromPreview) {
+        setFormData(existingRecovery.formData);
+        hasRestoredRef.current = true;
+        showToast('Form state restored from recovery draft.', 'info');
+      } else {
+        const recNorm = normalizeArticleForm(existingRecovery.formData);
+        const initNorm = normalizeArticleForm(initialFormState);
+        if (JSON.stringify(recNorm) !== JSON.stringify(initNorm)) {
+          setRecoveryData(existingRecovery);
+          setShowRecoveryPrompt(true);
+        }
       }
     }
-  }, [staffUser?.uid, currentKeyId, initialFormState]);
+  }, [staffUser?.uid, currentKeyId, location.state, initialFormState, showToast]);
 
   // Window beforeunload listener when dirty
   useEffect(() => {
@@ -422,23 +443,63 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
     }
   };
 
-  const handlePreview = () => {
-    const slugToUse = isEditMode && initialArticle ? initialArticle.slug : formData.slug;
-    if (!slugToUse) {
-      showToast('Please specify a title or slug before previewing.', 'warning');
+  const getSaveAndPreviewLabel = () => {
+    if (language === 'om') return "Olkaa'ii & Dur-ilaali";
+    if (language === 'am') return 'አስቀምጥ እና ቅድመ እይታ';
+    return 'Save & Preview';
+  };
+
+  const handleSaveAndPreview = async () => {
+    if (!staffUser || isSubmittingRef.current) return;
+
+    // 1. Validate slug
+    const slugCheck = validateSlug(formData.slug);
+    if (!slugCheck.valid) {
+      setValidationErrors([slugCheck.error || 'Invalid slug']);
+      showToast('Please fix the URL slug before previewing.', 'error');
       return;
     }
-    // Save draft recovery copy before navigating
-    if (staffUser?.uid) {
-      saveDraftRecovery(
-        staffUser.uid,
-        slugToUse,
-        formData,
-        window.location.pathname,
-        initialArticle?.version
-      );
+
+    // 2. Validate draft minimal fields
+    const draftCheck = validateDraft(formData);
+    if (!draftCheck.valid) {
+      setValidationErrors(draftCheck.errors);
+      showToast('Draft validation failed.', 'error');
+      return;
     }
-    navigate(`/admin/news/${slugToUse}/preview`, { state: { previewData: formData } });
+
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    setValidationErrors([]);
+
+    try {
+      if (isEditMode && initialArticle) {
+        const res = await updateNewsDraft(initialArticle.slug, formData, staffUser, initialArticle.version);
+        if (res.success) {
+          showToast('Draft saved. Opening preview...', 'success');
+          setBaselineForm(normalizeArticleForm(formData));
+          clearDraftRecovery(staffUser.uid, initialArticle.slug);
+          navigate(`/admin/news/${initialArticle.slug}/preview`);
+        } else {
+          showToast(res.error || 'Failed to save draft before preview.', 'error');
+        }
+      } else {
+        const res = await createNewsDraft(formData, staffUser);
+        if (res.success) {
+          showToast('New draft saved. Opening preview...', 'success');
+          setBaselineForm(normalizeArticleForm(formData));
+          clearDraftRecovery(staffUser.uid, res.slug);
+          navigate(`/admin/news/${res.slug}/preview`);
+        } else {
+          showToast(res.error || 'Failed to create draft before preview.', 'error');
+        }
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Error saving draft before preview.', 'error');
+    } finally {
+      setIsSubmitting(false);
+      isSubmittingRef.current = false;
+    }
   };
 
   if (isReadOnlyEditorOnPublished) {
@@ -624,13 +685,19 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Preview Button */}
+          {/* Save & Preview Button */}
           <button
             type="button"
-            onClick={handlePreview}
-            className="px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5"
+            onClick={handleSaveAndPreview}
+            disabled={isSubmitting}
+            className="px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5 disabled:opacity-50"
           >
-            <Eye className="w-3.5 h-3.5 text-blue-500" /> Preview Draft
+            {isSubmitting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+            ) : (
+              <Eye className="w-3.5 h-3.5 text-blue-500" />
+            )}
+            <span>{getSaveAndPreviewLabel()}</span>
           </button>
 
           {/* Save Draft Button */}
