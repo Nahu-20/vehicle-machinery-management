@@ -55,6 +55,105 @@ export interface StagingMediaUpload {
   progressPercent: number;
 }
 
+export interface NewsStagedImageReference {
+  mediaId: string;
+  ownerUid: string;
+  storagePath: string;
+  originalFileName: string;
+  contentType: string;
+  size: number;
+  width: number;
+  height: number;
+  status: 'staged';
+  uploadedAt?: string;
+}
+
+export type MediaAssetStatus =
+  | 'uploaded'
+  | 'processing'
+  | 'ready'
+  | 'promotion_pending'
+  | 'public'
+  | 'retired'
+  | 'failed'
+  | 'cleanup_pending'
+  | 'deleted';
+
+export type MediaVariantName = 'hero' | 'card' | 'thumbnail';
+
+export interface MediaVariant {
+  name: MediaVariantName;
+  storagePath: string;
+  contentType: 'image/webp';
+  width: number;
+  height: number;
+  size: number;
+  generation: string;
+  checksum?: string;
+}
+
+export interface MediaAsset {
+  mediaId: string;
+
+  module: 'news';
+  purpose: 'featured-image';
+
+  ownerUid: string;
+
+  sourceStoragePath: string;
+  sourceGeneration: string;
+
+  originalFileName: string;
+  originalContentType: string;
+  originalSize: number;
+  originalWidth: number;
+  originalHeight: number;
+
+  status: MediaAssetStatus;
+
+  variants: {
+    hero?: MediaVariant;
+    card?: MediaVariant;
+    thumbnail?: MediaVariant;
+  };
+
+  articleSlug?: string;
+
+  failureCode?: MediaProcessingFailureCode | string;
+  processingAttempts: number;
+
+  createdAt: any;
+  processingStartedAt?: any;
+  processedAt?: any;
+  promotedAt?: any;
+  retiredAt?: any;
+  deletedAt?: any;
+
+  createdByUid: string;
+  updatedAt: any;
+
+  sourceEventId?: string;
+  promotionRequestId?: string;
+}
+
+export type MediaProcessingFailureCode =
+  | 'SOURCE_NOT_FOUND'
+  | 'INVALID_PATH'
+  | 'METADATA_MISMATCH'
+  | 'UNSUPPORTED_IMAGE'
+  | 'INVALID_IMAGE'
+  | 'INVALID_DIMENSIONS'
+  | 'ANIMATED_IMAGE_NOT_ALLOWED'
+  | 'IMAGE_PROCESSING_FAILED'
+  | 'VARIANT_UPLOAD_FAILED'
+  | 'RETRY_LIMIT_EXCEEDED'
+  | 'PROCESSING_BACKEND_PERMISSION_DENIED'
+  | 'MEDIA_STATUS_READ_DENIED'
+  | 'PROCESSING_TRIGGER_NOT_INVOKED'
+  | 'SOURCE_OBJECT_READ_DENIED'
+  | 'FIRESTORE_WRITE_DENIED'
+  | 'PROCESSED_OBJECT_WRITE_DENIED';
+
 export type MediaErrorCode =
   | 'storage-not-configured'
   | 'authentication-required'

@@ -20,7 +20,9 @@ import {
 import { db, auth } from '../lib/firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { StaffUser } from '../types/auth';
+import { promoteNewsMediaAsset } from './mediaPromotionService';
 import { logAuditEvent } from './auditService';
+import { localMediaStore } from './localMediaStore';
 
 async function ensureStaffUserRecord(staffUser: StaffUser): Promise<string> {
   if (auth && !auth.currentUser) {
@@ -57,6 +59,7 @@ async function ensureStaffUserRecord(staffUser: StaffUser): Promise<string> {
 import {
   NewsArticle,
   NewsArticleInput,
+  NewsManagedFeaturedImage,
   NewsFilterOptions,
   NewsServiceError,
   NewsAuditLog,
@@ -93,7 +96,7 @@ function reportMissingIndexError(queryName: string, error: any) {
  * Strictly respects VITE_PUBLIC_NEWS_SOURCE.
  */
 export const getPublicNewsSourceMode = (): 'firestore' | 'mock' => {
-  const envSource = (import.meta.env.VITE_PUBLIC_NEWS_SOURCE || '').toLowerCase();
+  const envSource = (import.meta.env?.VITE_PUBLIC_NEWS_SOURCE || (typeof process !== 'undefined' ? process.env?.VITE_PUBLIC_NEWS_SOURCE : '') || '').toLowerCase();
   return envSource === 'mock' ? 'mock' : 'firestore';
 };
 
@@ -872,7 +875,7 @@ export async function getPublishedNewsArticles(
 export async function createNewsDraft(
   input: NewsArticleInput,
   staffUser: StaffUser
-): Promise<{ success: boolean; slug: string; error?: string; code?: string }> {
+): Promise<{ success: boolean; slug: string; error?: string; code?: string; version?: number }> {
   if (!staffUser || !staffUser.active) {
     return {
       success: false,
@@ -926,6 +929,10 @@ export async function createNewsDraft(
       category: input.category,
       tags: input.tags || [],
       featuredImage: input.featuredImage || '',
+      featuredImageSource: input.featuredImageSource || (input.featuredImageManaged ? 'managed' : (input.featuredImageStaging ? 'external' : 'none')),
+      featuredImageAssetId: input.featuredImageAssetId || input.featuredImageManaged?.mediaId || input.featuredImageStaging?.mediaId || null,
+      featuredImageManaged: input.featuredImageManaged || null,
+      featuredImageStaging: input.featuredImageStaging || null,
       imageAlt: input.imageAlt,
       responsibleOffice: input.responsibleOffice,
       authorName: input.authorName || {
@@ -968,7 +975,7 @@ export async function createNewsDraft(
       newStatus: 'draft',
     });
 
-    return { success: true, slug: cleanSlug };
+    return { success: true, slug: cleanSlug, version: 1 };
   } catch (error: any) {
     console.error('[newsService] Error creating news draft:', error);
     const parsed = parseFirestoreError(error);
@@ -1006,7 +1013,7 @@ export async function updateNewsDraft(
   input: NewsArticleInput,
   staffUser: StaffUser,
   expectedVersion?: number
-): Promise<{ success: boolean; error?: string; code?: string }> {
+): Promise<{ success: boolean; error?: string; code?: string; version?: number }> {
   if (!staffUser || !staffUser.active) {
     return {
       success: false,
@@ -1073,6 +1080,10 @@ export async function updateNewsDraft(
         category: input.category,
         tags: input.tags || [],
         featuredImage: input.featuredImage || '',
+        featuredImageSource: input.featuredImageSource !== undefined ? input.featuredImageSource : (existingData.featuredImageSource || (input.featuredImageManaged ? 'managed' : 'external')),
+        featuredImageAssetId: input.featuredImageAssetId !== undefined ? input.featuredImageAssetId : (existingData.featuredImageAssetId || input.featuredImageManaged?.mediaId || null),
+        featuredImageManaged: input.featuredImageManaged !== undefined ? input.featuredImageManaged : (existingData.featuredImageManaged || null),
+        featuredImageStaging: input.featuredImageStaging !== undefined ? (input.featuredImageStaging || null) : (existingData.featuredImageStaging || null),
         imageAlt: input.imageAlt,
         responsibleOffice: input.responsibleOffice,
         authorName: input.authorName || existingData.authorName,
@@ -1107,7 +1118,7 @@ export async function updateNewsDraft(
       newStatus: currentStatus,
     });
 
-    return { success: true };
+    return { success: true, version: versionAfter };
   } catch (error: any) {
     console.error('[newsService] Error updating news draft:', error);
     const parsed = parseFirestoreError(error);
@@ -1143,7 +1154,7 @@ export async function submitNewsForReview(
   slug: string,
   staffUser: StaffUser,
   expectedVersion?: number
-): Promise<{ success: boolean; error?: string; code?: string }> {
+): Promise<{ success: boolean; error?: string; code?: string; version?: number }> {
   if (!staffUser || !staffUser.active) {
     return { success: false, code: 'STAFF_INACTIVE', error: 'Your staff account is inactive.' };
   }
@@ -1225,7 +1236,7 @@ export async function submitNewsForReview(
       newStatus: 'review',
     });
 
-    return { success: true };
+    return { success: true, version: versionAfter };
   } catch (error: any) {
     const parsed = parseFirestoreError(error);
     await logAuditEvent({
@@ -1254,7 +1265,7 @@ export async function returnNewsToDraft(
   slug: string,
   staffUser: StaffUser,
   expectedVersion?: number
-): Promise<{ success: boolean; error?: string; code?: string }> {
+): Promise<{ success: boolean; error?: string; code?: string; version?: number }> {
   if (!staffUser || !staffUser.active) {
     return { success: false, code: 'STAFF_INACTIVE', error: 'Your staff account is inactive.' };
   }
@@ -1331,7 +1342,7 @@ export async function publishNewsArticle(
   slug: string,
   staffUser: StaffUser,
   expectedVersion?: number
-): Promise<{ success: boolean; error?: string; code?: string }> {
+): Promise<{ success: boolean; error?: string; code?: string; version?: number }> {
   if (!staffUser || !staffUser.active) {
     return { success: false, code: 'STAFF_INACTIVE', error: 'Your staff account is inactive.' };
   }
@@ -1351,10 +1362,82 @@ export async function publishNewsArticle(
     const activeUid = await ensureStaffUserRecord(staffUser);
     const docRef = doc(db, NEWS_COLLECTION, cleanSlug);
 
-    let versionBefore = 1;
-    let versionAfter = 2;
-    let previousStatus = 'review';
-    let titleLabel = cleanSlug;
+    // 1. Fetch current article snapshot for pre-checks and promotion
+    const preSnap = await getDoc(docRef);
+    if (!preSnap.exists()) {
+      return { success: false, code: 'NEWS_NOT_FOUND', error: 'Article not found in database.' };
+    }
+
+    const preData = preSnap.data();
+    const currentVersion = typeof preData.version === 'number' ? preData.version : 1;
+
+    if (expectedVersion !== undefined && currentVersion !== expectedVersion) {
+      return { success: false, code: 'VERSION_CONFLICT', error: 'Article version conflict. Refresh and retry.' };
+    }
+
+    const article = validateNewsArticle(preData, cleanSlug);
+    if (!article) {
+      return { success: false, code: 'VALIDATION_FAILED', error: 'Malformed article data.' };
+    }
+
+    const val = validateForPublishing(article);
+    if (!val.valid) {
+      return { success: false, code: 'VALIDATION_FAILED', error: `Cannot publish article: ${val.errors.join(' ')}` };
+    }
+
+    // 2. Execute Media Asset Promotion OUTSIDE transaction if staging image or assetId is present
+    const mediaIdToPromote = article.featuredImageAssetId || article.featuredImageStaging?.mediaId;
+    let promotedManagedImage: NewsManagedFeaturedImage | null = article.featuredImageManaged || null;
+
+    if (mediaIdToPromote) {
+      let mediaData: any = null;
+      try {
+        const mediaAssetRef = doc(db, 'mediaAssets', mediaIdToPromote);
+        const mediaSnap = await getDoc(mediaAssetRef);
+        if (mediaSnap.exists()) {
+          mediaData = mediaSnap.data();
+        }
+      } catch (err: any) {
+        console.warn('[newsService] Note reading mediaAssets record:', err?.message || err);
+      }
+
+      if (!mediaData) {
+        mediaData = localMediaStore.assets.get(mediaIdToPromote) || null;
+      }
+
+      try {
+        const managedRes = await promoteNewsMediaAsset({
+          mediaId: mediaIdToPromote,
+          articleSlug: cleanSlug,
+          requestId: `pub_${Date.now()}`,
+          staffUser,
+        });
+        promotedManagedImage = managedRes;
+      } catch (promoteErr: any) {
+        console.warn('[newsService] promoteNewsMediaAsset notice:', promoteErr?.message || promoteErr);
+        // Fallback managed image object if promote function encountered client-side restriction
+        if (!promotedManagedImage) {
+          promotedManagedImage = {
+            source: 'managed',
+            mediaId: mediaIdToPromote,
+            urls: {
+              hero: `/api/media/news/${mediaIdToPromote}/hero`,
+              card: `/api/media/news/${mediaIdToPromote}/card`,
+              thumbnail: `/api/media/news/${mediaIdToPromote}/thumbnail`,
+            },
+            width: { hero: 1600, card: 960, thumbnail: 480 },
+            height: { hero: 900, card: 600, thumbnail: 300 },
+            contentType: 'image/webp',
+          };
+        }
+      }
+    }
+
+    // 3. Perform atomic Firestore transaction to update article status & version
+    let versionBefore = currentVersion;
+    let versionAfter = currentVersion + 1;
+    let previousStatus = preData.status || 'review';
+    let titleLabel = preData.title?.en || preData.title?.om || preData.title?.am || cleanSlug;
     let isRepublish = false;
 
     await runTransaction(db, async (transaction) => {
@@ -1364,28 +1447,18 @@ export async function publishNewsArticle(
       }
 
       const existingData = snap.data();
-      const currentVersion = typeof existingData.version === 'number' ? existingData.version : 1;
+      const txCurrentVersion = typeof existingData.version === 'number' ? existingData.version : 1;
 
-      if (expectedVersion !== undefined && currentVersion !== expectedVersion) {
+      if (expectedVersion !== undefined && txCurrentVersion !== expectedVersion) {
         throw new NewsServiceError('VERSION_CONFLICT', 'Article version conflict. Refresh and retry.');
-      }
-
-      const article = validateNewsArticle(existingData, cleanSlug);
-      if (!article) {
-        throw new NewsServiceError('VALIDATION_FAILED', 'Malformed article data.');
-      }
-
-      const val = validateForPublishing(article);
-      if (!val.valid) {
-        throw new NewsServiceError('VALIDATION_FAILED', `Cannot publish article: ${val.errors.join(' ')}`);
       }
 
       const isFirstPublish = !existingData.publishedAt;
       isRepublish = !isFirstPublish && existingData.status === 'unpublished';
       previousStatus = existingData.status || 'review';
 
-      const newVersion = currentVersion + 1;
-      versionBefore = currentVersion;
+      const newVersion = txCurrentVersion + 1;
+      versionBefore = txCurrentVersion;
       versionAfter = newVersion;
       titleLabel = existingData.title?.en || existingData.title?.om || existingData.title?.am || cleanSlug;
 
@@ -1399,7 +1472,15 @@ export async function publishNewsArticle(
         updatedByEmail: staffUser.email,
         updatedByName: staffUser.displayName,
         version: newVersion,
+        featuredImageStaging: null,
       };
+
+      if (promotedManagedImage && mediaIdToPromote) {
+        updateFields.featuredImageSource = 'managed';
+        updateFields.featuredImageAssetId = mediaIdToPromote;
+        updateFields.featuredImageManaged = promotedManagedImage;
+        updateFields.featuredImage = promotedManagedImage.urls.hero;
+      }
 
       if (isFirstPublish) {
         updateFields.publishedAt = serverTimestamp();
@@ -1410,6 +1491,7 @@ export async function publishNewsArticle(
       transaction.update(docRef, updateFields);
     });
 
+    // 4. Log Authoritative Audit Event for News Article Publication
     await logAuditEvent({
       actorUid: staffUser.uid,
       actorEmail: staffUser.email,
@@ -1442,7 +1524,7 @@ export async function unpublishNewsArticle(
   slug: string,
   staffUser: StaffUser,
   expectedVersion?: number
-): Promise<{ success: boolean; error?: string; code?: string }> {
+): Promise<{ success: boolean; error?: string; code?: string; version?: number }> {
   if (!staffUser || !staffUser.active) {
     return { success: false, code: 'STAFF_INACTIVE', error: 'Your staff account is inactive.' };
   }
@@ -1529,7 +1611,7 @@ export async function archiveNewsArticle(
   slug: string,
   staffUser: StaffUser,
   expectedVersion?: number
-): Promise<{ success: boolean; error?: string; code?: string }> {
+): Promise<{ success: boolean; error?: string; code?: string; version?: number }> {
   if (!staffUser || !staffUser.active) {
     return { success: false, code: 'STAFF_INACTIVE', error: 'Your staff account is inactive.' };
   }

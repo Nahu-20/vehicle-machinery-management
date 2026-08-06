@@ -36,14 +36,14 @@ if (config) {
         if (
           storage &&
           !storageEmulatorConnected &&
-          import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true' &&
+          import.meta.env?.VITE_USE_FIREBASE_EMULATOR === 'true' &&
           typeof window !== 'undefined' &&
           (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         ) {
           try {
             connectStorageEmulator(storage, '127.0.0.1', 9199);
             storageEmulatorConnected = true;
-            if (import.meta.env.DEV) {
+            if (import.meta.env?.DEV) {
               console.info('[Firebase Storage] Connected to Storage emulator at 127.0.0.1:9199');
             }
           } catch (emulatorErr) {
@@ -100,7 +100,7 @@ export const getStorageDiagnostic = (): StorageDiagnostic => {
   const emulatorEnabled =
     typeof window !== 'undefined' &&
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
-    import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true';
+    import.meta.env?.VITE_USE_FIREBASE_EMULATOR === 'true';
 
   return {
     projectId: currentConfig?.projectId || null,
@@ -111,7 +111,7 @@ export const getStorageDiagnostic = (): StorageDiagnostic => {
   };
 };
 
-if (import.meta.env.DEV) {
+if (import.meta.env?.DEV) {
   const diag = getStorageDiagnostic();
   console.info('[Firebase Storage Diagnostic]', diag);
 }

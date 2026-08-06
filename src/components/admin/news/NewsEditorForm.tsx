@@ -77,6 +77,10 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
         category: initialArticle.category || 'news',
         tags: initialArticle.tags || [],
         featuredImage: initialArticle.featuredImage || '',
+        featuredImageSource: initialArticle.featuredImageSource || (initialArticle.featuredImageManaged ? 'managed' : 'external'),
+        featuredImageAssetId: initialArticle.featuredImageAssetId || null,
+        featuredImageManaged: initialArticle.featuredImageManaged || null,
+        featuredImageStaging: initialArticle.featuredImageStaging || null,
         imageAlt: initialArticle.imageAlt || createEmptyLocalizedText(),
         responsibleOffice: initialArticle.responsibleOffice || createEmptyLocalizedText(),
         authorName: initialArticle.authorName || createEmptyLocalizedText(),
@@ -114,6 +118,14 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingNavigationPath, setPendingNavigationPath] = useState<string | null>(null);
+
+  // Dynamic version state to prevent stale optimistic concurrency checks
+  const currentVersionRef = useRef<number>(initialArticle?.version || 1);
+  useEffect(() => {
+    if (initialArticle?.version) {
+      currentVersionRef.current = initialArticle.version;
+    }
+  }, [initialArticle?.version]);
 
   // Recovery Prompt state
   const [showRecoveryPrompt, setShowRecoveryPrompt] = useState(false);
@@ -203,6 +215,18 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
     }
   }, [authorizationStatus, staffUser, dirty, currentKeyId, formData, initialArticle?.version, showToast]);
 
+  // Re-run publication validation immediately when formData changes if validation errors were active
+  useEffect(() => {
+    if (validationErrors.length > 0) {
+      const pubCheck = validateForPublishing(formData);
+      if (pubCheck.valid) {
+        setValidationErrors([]);
+      } else {
+        setValidationErrors(pubCheck.errors);
+      }
+    }
+  }, [formData]);
+
   // Auto-generate slug for new articles when empty
   const handleTitleChange = (newTitle: any) => {
     const updated = { ...formData, title: newTitle };
@@ -265,8 +289,13 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
 
     try {
       if (isEditMode && initialArticle) {
-        const res = await updateNewsDraft(initialArticle.slug, formData, staffUser, initialArticle.version);
+        const res = await updateNewsDraft(initialArticle.slug, formData, staffUser, currentVersionRef.current);
         if (res.success) {
+          if (res.version) {
+            currentVersionRef.current = res.version;
+          } else {
+            currentVersionRef.current += 1;
+          }
           showToast('Draft updated successfully.', 'success');
           setBaselineForm(normalizeArticleForm(formData));
           clearDraftRecovery(staffUser.uid, initialArticle.slug);
@@ -276,6 +305,9 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
       } else {
         const res = await createNewsDraft(formData, staffUser);
         if (res.success) {
+          if (res.version) {
+            currentVersionRef.current = res.version;
+          }
           showToast('New draft saved successfully.', 'success');
           setBaselineForm(normalizeArticleForm(formData));
           clearDraftRecovery(staffUser.uid, res.slug);
@@ -307,14 +339,19 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
     setIsSubmitting(true);
 
     try {
-      // First update edits
-      const updateRes = await updateNewsDraft(initialArticle.slug, formData, staffUser, initialArticle.version);
+      // First update edits using current ref version
+      const updateRes = await updateNewsDraft(initialArticle.slug, formData, staffUser, currentVersionRef.current);
       if (!updateRes.success) {
         showToast(updateRes.error || 'Failed to save edits prior to submission.', 'error');
         return;
       }
+      if (updateRes.version) {
+        currentVersionRef.current = updateRes.version;
+      } else {
+        currentVersionRef.current += 1;
+      }
 
-      const res = await submitNewsForReview(initialArticle.slug, staffUser, initialArticle.version + 1);
+      const res = await submitNewsForReview(initialArticle.slug, staffUser, currentVersionRef.current);
       if (res.success) {
         showToast('Article submitted for administrator review.', 'success');
         setBaselineForm(normalizeArticleForm(formData));
@@ -357,11 +394,17 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
           showToast(createRes.error || 'Failed to save draft before publishing.', 'error');
           return;
         }
+        if (createRes.version) currentVersionRef.current = createRes.version;
       } else {
-        const updateRes = await updateNewsDraft(targetSlug, formData, staffUser, initialArticle?.version);
+        const updateRes = await updateNewsDraft(targetSlug, formData, staffUser, currentVersionRef.current);
         if (!updateRes.success) {
           showToast(updateRes.error || 'Failed to update article before publishing.', 'error');
           return;
+        }
+        if (updateRes.version) {
+          currentVersionRef.current = updateRes.version;
+        } else {
+          currentVersionRef.current += 1;
         }
       }
 
@@ -391,7 +434,7 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
     setConfirmUnpublishModal(false);
 
     try {
-      const res = await unpublishNewsArticle(initialArticle.slug, staffUser, initialArticle.version);
+      const res = await unpublishNewsArticle(initialArticle.slug, staffUser, currentVersionRef.current);
       if (res.success) {
         showToast('Article unpublished. It is no longer visible to the public.', 'info');
         setBaselineForm(normalizeArticleForm(formData));
@@ -417,7 +460,7 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
     setConfirmArchiveModal(false);
 
     try {
-      const res = await archiveNewsArticle(initialArticle.slug, staffUser, initialArticle.version);
+      const res = await archiveNewsArticle(initialArticle.slug, staffUser, currentVersionRef.current);
       if (res.success) {
         showToast('Article archived.', 'info');
         setBaselineForm(normalizeArticleForm(formData));
@@ -871,6 +914,8 @@ export const NewsEditorForm: React.FC<NewsEditorFormProps> = ({
             setValidationErrors([]);
           }}
           isEditMode={isEditMode}
+          authenticatedUid={staffUser?.uid || ''}
+          currentLanguage={language}
         />
 
         {/* Content Block Editor */}

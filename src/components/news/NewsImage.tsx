@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Sprout } from 'lucide-react';
+import { NewsManagedFeaturedImage } from '../../types/news';
 
 export type NewsImageAspect = 'card' | 'featured' | 'hero' | 'related' | 'preview';
 export type NewsImagePosition = 'center' | 'top' | 'bottom' | 'left' | 'right';
 
 export interface NewsImageProps {
   src?: string;
+  managedImage?: NewsManagedFeaturedImage | null;
   alt?: string;
   aspect?: NewsImageAspect;
   objectPosition?: NewsImagePosition;
@@ -34,6 +36,7 @@ const POSITION_CLASSES: Record<NewsImagePosition, string> = {
 
 export const NewsImage: React.FC<NewsImageProps> = ({
   src,
+  managedImage,
   alt = 'Oromia Agricultural Bureau news image',
   aspect = 'card',
   objectPosition = 'center',
@@ -49,7 +52,18 @@ export const NewsImage: React.FC<NewsImageProps> = ({
   const aspectClass = ASPECT_CLASSES[aspect] || ASPECT_CLASSES.card;
   const positionClass = POSITION_CLASSES[objectPosition] || POSITION_CLASSES.center;
 
-  const showFallback = !src || hasError;
+  let effectiveSrc = src;
+  if (managedImage && managedImage.urls) {
+    if (aspect === 'card' || aspect === 'related') {
+      effectiveSrc = managedImage.urls.card || managedImage.urls.hero;
+    } else if (aspect === 'hero' || aspect === 'featured' || aspect === 'preview') {
+      effectiveSrc = managedImage.urls.hero;
+    } else {
+      effectiveSrc = managedImage.urls.thumbnail || managedImage.urls.card;
+    }
+  }
+
+  const showFallback = !effectiveSrc || hasError;
 
   return (
     <figure className={`w-full ${className}`}>
@@ -65,7 +79,7 @@ export const NewsImage: React.FC<NewsImageProps> = ({
               />
             )}
             <img
-              src={src}
+              src={effectiveSrc}
               alt={alt}
               loading={loading}
               referrerPolicy="no-referrer"

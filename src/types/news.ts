@@ -1,4 +1,7 @@
 import { Timestamp } from 'firebase/firestore';
+import { NewsStagedImageReference } from './media';
+
+export type { NewsStagedImageReference };
 
 export type LocalizedText = {
   om: string;
@@ -51,6 +54,31 @@ export type NewsContentBlock =
       content: LocalizedText;
     };
 
+export interface NewsManagedFeaturedImage {
+  source: 'managed';
+  mediaId: string;
+
+  urls: {
+    hero: string;
+    card: string;
+    thumbnail: string;
+  };
+
+  width: {
+    hero: number;
+    card: number;
+    thumbnail: number;
+  };
+
+  height: {
+    hero: number;
+    card: number;
+    thumbnail: number;
+  };
+
+  contentType: 'image/webp';
+}
+
 export interface NewsArticle {
   slug: string;
   title: LocalizedText;
@@ -61,6 +89,10 @@ export interface NewsArticle {
   tags: string[];
 
   featuredImage: string;
+  featuredImageSource?: 'external' | 'managed' | 'none';
+  featuredImageAssetId?: string | null;
+  featuredImageManaged?: NewsManagedFeaturedImage | null;
+  featuredImageStaging?: NewsStagedImageReference | null;
   imageAlt: LocalizedText;
   imagePosition?: 'center' | 'top' | 'bottom' | 'left' | 'right';
 
@@ -158,6 +190,10 @@ export interface NewsArticleInput {
   category: NewsCategory;
   tags: string[];
   featuredImage: string;
+  featuredImageSource?: 'external' | 'managed' | 'none';
+  featuredImageAssetId?: string | null;
+  featuredImageManaged?: NewsManagedFeaturedImage | null;
+  featuredImageStaging?: NewsStagedImageReference | null;
   imageAlt: LocalizedText;
   imagePosition?: 'center' | 'top' | 'bottom' | 'left' | 'right';
   responsibleOffice: LocalizedText;
@@ -370,6 +406,23 @@ export function normalizeArticleForm(formData: any): any {
     category: formData.category || 'news',
     tags,
     featuredImage: (formData.featuredImage || '').trim(),
+    featuredImageSource: formData.featuredImageSource || (formData.featuredImageManaged ? 'managed' : (formData.featuredImageStaging ? 'external' : 'none')),
+    featuredImageAssetId: formData.featuredImageAssetId || formData.featuredImageManaged?.mediaId || null,
+    featuredImageManaged: formData.featuredImageManaged || null,
+    featuredImageStaging: formData.featuredImageStaging && typeof formData.featuredImageStaging === 'object'
+      ? {
+          mediaId: String(formData.featuredImageStaging.mediaId || ''),
+          ownerUid: String(formData.featuredImageStaging.ownerUid || ''),
+          storagePath: String(formData.featuredImageStaging.storagePath || ''),
+          originalFileName: String(formData.featuredImageStaging.originalFileName || ''),
+          contentType: String(formData.featuredImageStaging.contentType || ''),
+          size: Number(formData.featuredImageStaging.size) || 0,
+          width: Number(formData.featuredImageStaging.width) || 0,
+          height: Number(formData.featuredImageStaging.height) || 0,
+          status: 'staged' as const,
+          uploadedAt: formData.featuredImageStaging.uploadedAt ? String(formData.featuredImageStaging.uploadedAt) : undefined,
+        }
+      : null,
     imageAlt: normalizeLocText(formData.imageAlt),
     responsibleOffice: normalizeLocText(formData.responsibleOffice),
     authorName: formData.authorName ? normalizeLocText(formData.authorName) : { om: '', am: '', en: '' },
@@ -458,7 +511,21 @@ export function validateForPublishing(article: any): ValidationResult {
   const reviewRes = validateForReview(article);
   const errors = [...reviewRes.errors];
 
-  if (!article.featuredImage || !article.featuredImage.trim()) {
+  const hasManagedImage =
+    (article.featuredImageSource === 'managed' &&
+      (!article.featuredImageStaging ||
+        article.featuredImageAssetId === article.featuredImageStaging.mediaId ||
+        Boolean(article.featuredImageAssetId))) ||
+    Boolean(article.featuredImageManaged) ||
+    (typeof article.featuredImage === 'string' && article.featuredImage.startsWith('/api/media/news/'));
+
+  if (hasManagedImage) {
+    // Managed image is processed and ready for publication (allowed even when featuredImageStaging is present)
+  } else if (article.featuredImageStaging) {
+    errors.push(
+      'This uploaded image is still private and must be processed before the article can be published.'
+    );
+  } else if (!article.featuredImage || !article.featuredImage.trim()) {
     errors.push('Featured image URL is required.');
   }
 
@@ -665,6 +732,30 @@ export function validateNewsArticle(data: any, docSlug: string): NewsArticle | n
     });
   }
 
+  let featuredImageStaging: NewsStagedImageReference | null = null;
+  if (data.featuredImageStaging && typeof data.featuredImageStaging === 'object') {
+    const s = data.featuredImageStaging;
+    if (
+      typeof s.mediaId === 'string' &&
+      typeof s.ownerUid === 'string' &&
+      typeof s.storagePath === 'string' &&
+      s.status === 'staged'
+    ) {
+      featuredImageStaging = {
+        mediaId: s.mediaId,
+        ownerUid: s.ownerUid,
+        storagePath: s.storagePath,
+        originalFileName: typeof s.originalFileName === 'string' ? s.originalFileName : 'image',
+        contentType: typeof s.contentType === 'string' ? s.contentType : 'image/jpeg',
+        size: typeof s.size === 'number' ? s.size : 0,
+        width: typeof s.width === 'number' ? s.width : 0,
+        height: typeof s.height === 'number' ? s.height : 0,
+        status: 'staged',
+        uploadedAt: typeof s.uploadedAt === 'string' ? s.uploadedAt : undefined,
+      };
+    }
+  }
+
   return {
     slug,
     title,
@@ -673,6 +764,10 @@ export function validateNewsArticle(data: any, docSlug: string): NewsArticle | n
     category,
     tags: Array.isArray(data.tags) ? data.tags.filter((t: any) => typeof t === 'string') : [],
     featuredImage: typeof data.featuredImage === 'string' ? data.featuredImage : '',
+    featuredImageSource: data.featuredImageSource || (data.featuredImageManaged ? 'managed' : (featuredImageStaging ? 'external' : 'none')),
+    featuredImageAssetId: typeof data.featuredImageAssetId === 'string' ? data.featuredImageAssetId : (data.featuredImageManaged?.mediaId || null),
+    featuredImageManaged: data.featuredImageManaged || null,
+    featuredImageStaging,
     imageAlt,
     imagePosition: ['center', 'top', 'bottom', 'left', 'right'].includes(data.imagePosition)
       ? data.imagePosition

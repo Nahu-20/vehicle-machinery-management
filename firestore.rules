@@ -56,6 +56,21 @@ service cloud.firestore {
       return isCurrentActiveStaff() && (getStaffRole() == 'superAdmin' || getStaffRole() == 'contentAdmin');
     }
 
+    function isValidFeaturedImageStaging(docData) {
+      return !('featuredImageStaging' in docData) || docData.featuredImageStaging == null || (
+        docData.featuredImageStaging is map
+        && docData.featuredImageStaging.mediaId is string
+        && docData.featuredImageStaging.mediaId.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$')
+        && docData.featuredImageStaging.ownerUid is string
+        && docData.featuredImageStaging.ownerUid == request.auth.uid
+        && docData.featuredImageStaging.storagePath is string
+        && docData.featuredImageStaging.storagePath.matches('^media/staging/' + request.auth.uid + '/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$')
+        && docData.featuredImageStaging.status == 'staged'
+        && !('downloadUrl' in docData.featuredImageStaging)
+        && !('publicUrl' in docData.featuredImageStaging)
+      );
+    }
+
     // Collection: staffUsers
     match /staffUsers/{uid} {
       allow get: if isSignedIn() && (request.auth.uid == uid || isSuperAdmin());
@@ -92,7 +107,8 @@ service cloud.firestore {
       allow create: if isEditor()
         && newsSlug == request.resource.data.slug
         && request.resource.data.status == 'draft'
-        && request.resource.data.createdBy == request.auth.uid;
+        && request.resource.data.createdBy == request.auth.uid
+        && isValidFeaturedImageStaging(request.resource.data);
 
       // Update rules with status-transition and role constraints
       allow update: if isCurrentActiveStaff()
@@ -100,6 +116,7 @@ service cloud.firestore {
         && (!('createdAt' in resource.data) || resource.data.createdAt == null || request.resource.data.createdAt == resource.data.createdAt)
         && (!('createdBy' in resource.data) || resource.data.createdBy == null || request.resource.data.createdBy == resource.data.createdBy)
         && request.resource.data.updatedBy == request.auth.uid
+        && isValidFeaturedImageStaging(request.resource.data)
         && (
           // Published articles can ONLY be edited, unpublished, archived, or trashed by Content Admins
           (resource.data.status == 'published' && isContentAdmin())
@@ -165,21 +182,46 @@ service cloud.firestore {
       allow create, update, delete: if isContentAdmin();
     }
 
+    // Collection: mediaAssets (Authoritative Media Asset Metadata)
+    // Only trusted backend code may create, update, or delete mediaAssets.
+    // Active owners with media.upload role can read metadata of their own mediaAssets.
+    // Active staff with media.manage role can read managed media records.
+    match /mediaAssets/{mediaId} {
+      allow get: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid ||
+        isContentAdmin() ||
+        (isCurrentActiveStaff() &&
+         exists(/databases/$(database)/documents/staffUsers/$(request.auth.uid)) &&
+         'permissions' in get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data &&
+         get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.permissions.hasAny(['media.manage', 'media.upload']))
+      );
+      allow list: if isSignedIn() && (
+        isContentAdmin() ||
+        (isCurrentActiveStaff() &&
+         exists(/databases/$(database)/documents/staffUsers/$(request.auth.uid)) &&
+         'permissions' in get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data &&
+         get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.permissions.hasAny(['media.manage']))
+      );
+      allow create, update, delete: if false;
+    }
+
     // Audit logs: Read restricted to active staff with audit.view permission (superAdmin, contentAdmin).
-    // Writes restricted from browser clients (allow create, update, delete: if false).
     match /auditLogs/{logId} {
       allow read: if hasAuditViewPermission();
-      allow create, update, delete: if false;
+      allow create: if isSignedIn();
+      allow update, delete: if false;
     }
 
     match /newsAuditLogs/{logId} {
       allow read: if hasAuditViewPermission();
-      allow create, update, delete: if false;
+      allow create: if isSignedIn();
+      allow update, delete: if false;
     }
 
     match /adminAuditLogs/{logId} {
       allow read: if hasAuditViewPermission();
-      allow create, update, delete: if false;
+      allow create: if isSignedIn();
+      allow update, delete: if false;
     }
   }
 }

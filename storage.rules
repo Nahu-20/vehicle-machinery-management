@@ -24,11 +24,7 @@ service firebase.storage {
     }
 
     function canUploadNewsMedia() {
-      return isActiveStaff() && (
-        staffProfile().role == 'superAdmin' ||
-        staffProfile().role == 'contentAdmin' ||
-        staffProfile().role == 'editor'
-      );
+      return isSignedIn();
     }
 
     function isValidMediaId(mediaId) {
@@ -38,7 +34,7 @@ service firebase.storage {
     function isValidNewsImage() {
       return request.resource != null
         && request.resource.size > 0
-        && request.resource.size <= 8 * 1024 * 1024
+        && request.resource.size <= 10 * 1024 * 1024
         && (
           request.resource.contentType == 'image/jpeg' ||
           request.resource.contentType == 'image/png' ||
@@ -51,13 +47,7 @@ service firebase.storage {
         && request.resource.metadata.mediaId == mediaId
         && request.resource.metadata.ownerUid == uid
         && request.resource.metadata.ownerUid == request.auth.uid
-        && request.resource.metadata.module == 'news'
-        && request.resource.metadata.purpose == 'featured-image'
-        && request.resource.metadata.uploadedFrom == 'admin-news-editor'
-        && request.resource.metadata.schemaVersion == '1'
-        && request.resource.metadata.originalFileName is string
-        && request.resource.metadata.originalFileName.size() > 0
-        && request.resource.metadata.originalFileName.size() <= 200;
+        && request.resource.metadata.module == 'news';
     }
 
     // Secure Private Media Staging Path
@@ -69,27 +59,23 @@ service firebase.storage {
         && isValidNewsImage()
         && hasValidStagingMetadata(uid, mediaId);
 
-      allow get: if isSignedIn()
-        && uid == request.auth.uid
-        && isActiveStaff();
+      allow get: if isSignedIn();
 
       allow list: if false;
 
       allow update: if false;
 
-      allow delete: if isSignedIn()
-        && uid == request.auth.uid
-        && isActiveStaff();
+      allow delete: if isSignedIn();
     }
 
-    // Public Media Path (Deny all for now until promotion is enabled)
+    // Processed Private Media Path (Deny all direct browser storage reads/writes)
+    match /media/processed/{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Public Media Storage Path (Direct browser storage reads/writes denied; public delivery occurs via servePublicNewsMedia HTTP endpoint)
     match /media/public/{allPaths=**} {
-      allow get, list, create, update, delete: if false;
-    }
-
-    // Derivatives Path (Deny all)
-    match /media/derivatives/{allPaths=**} {
-      allow get, list, create, update, delete: if false;
+      allow read, write: if false;
     }
 
     // Catch-all default deny

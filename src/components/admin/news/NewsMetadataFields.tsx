@@ -3,17 +3,25 @@ import { NewsCategory, NewsArticleInput, LocalizedText, sanitizeSlug } from '../
 import { LocalizedTextFields } from './LocalizedTextFields';
 import { NewsImage } from '../../news/NewsImage';
 import { Tag, Building2, User, Image, Link2, Star, AlertCircle, Info } from 'lucide-react';
+import { NewsFeaturedImageUploader } from '../media/NewsFeaturedImageUploader';
+import { LanguageCode } from '../../../i18n/translations';
 
 interface NewsMetadataFieldsProps {
   input: NewsArticleInput;
   onChange: (updated: NewsArticleInput) => void;
   isEditMode?: boolean;
+  authenticatedUid?: string;
+  currentLanguage?: LanguageCode;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 export const NewsMetadataFields: React.FC<NewsMetadataFieldsProps> = ({
   input,
   onChange,
   isEditMode = false,
+  authenticatedUid = '',
+  currentLanguage = 'om',
+  onDirtyChange,
 }) => {
   const handleSlugChange = (rawSlug: string) => {
     const clean = sanitizeSlug(rawSlug);
@@ -106,33 +114,51 @@ export const NewsMetadataFields: React.FC<NewsMetadataFieldsProps> = ({
 
       {/* Featured Image & Alt Text */}
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-          <div className="flex items-center gap-2">
-            <Image className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <h3 className="text-xs font-bold text-slate-900 dark:text-white">Featured Cover Image</h3>
-          </div>
-          <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-800 flex items-center gap-1">
-            <Info className="w-3 h-3" /> External URL or Approved Asset
-          </span>
-        </div>
+        <NewsFeaturedImageUploader
+          authenticatedUid={authenticatedUid}
+          currentLanguage={currentLanguage}
+          existingExternalImageUrl={input.featuredImage}
+          stagedImage={input.featuredImageStaging || null}
+          onStagedImageChange={(staged) => {
+            if (!staged) {
+              onChange({
+                ...input,
+                featuredImageStaging: null,
+                featuredImageSource: 'external',
+                featuredImageManaged: null,
+                featuredImageAssetId: null,
+              });
+            } else {
+              onChange({
+                ...input,
+                featuredImageStaging: staged,
+              });
+            }
+          }}
+          onExternalImageChange={(url) => {
+            onChange({
+              ...input,
+              featuredImage: url,
+              featuredImageSource: 'external',
+              featuredImageStaging: null,
+              featuredImageManaged: null,
+              featuredImageAssetId: null,
+            });
+          }}
+          onManagedReady={(mediaId, managedImg) => {
+            onChange({
+              ...input,
+              featuredImageSource: 'managed',
+              featuredImageAssetId: mediaId,
+              featuredImageManaged: managedImg,
+              featuredImage: managedImg.urls.card || `/api/media/news/${mediaId}/card`,
+            });
+            if (onDirtyChange) onDirtyChange(true);
+          }}
+          onDirtyChange={onDirtyChange}
+        />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2 space-y-2">
-            <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-              Image URL <span className="text-red-500 font-bold">*</span>
-            </label>
-            <input
-              type="url"
-              value={input.featuredImage}
-              onChange={(e) => onChange({ ...input, featuredImage: e.target.value })}
-              placeholder="https://images.unsplash.com/photo-..."
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 text-xs focus:ring-2 focus:ring-emerald-500 transition-all"
-            />
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Note: Direct binary upload will be supported in a future Storage milestone. Please use approved asset URLs or Unsplash links.
-            </p>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
               Image Focus / Position
@@ -152,19 +178,6 @@ export const NewsMetadataFields: React.FC<NewsMetadataFieldsProps> = ({
               Controls focal alignment for cropping.
             </p>
           </div>
-        </div>
-
-        {/* Editor Image Preview */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-            Editor Image Preview
-          </label>
-          <NewsImage
-            src={input.featuredImage}
-            alt={input.imageAlt.en || input.imageAlt.om || 'Featured news cover image'}
-            aspect="card"
-            objectPosition={input.imagePosition || 'center'}
-          />
         </div>
 
         <LocalizedTextFields

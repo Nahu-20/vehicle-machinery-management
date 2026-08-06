@@ -8,13 +8,21 @@ export interface FirebaseEnvConfig {
   appId: string;
 }
 
+const getEnvVar = (metaVal: string | undefined, key: string): string => {
+  if (metaVal && metaVal.trim()) return metaVal.trim();
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return process.env[key]!.trim();
+  }
+  return '';
+};
+
 export const getFirebaseConfig = (): FirebaseEnvConfig | null => {
-  const apiKey = import.meta.env.VITE_FIREBASE_API_KEY?.trim();
-  const authDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN?.trim();
-  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID?.trim();
-  const rawStorageBucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET?.trim() || '';
-  const messagingSenderId = import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID?.trim();
-  const appId = import.meta.env.VITE_FIREBASE_APP_ID?.trim();
+  const apiKey = getEnvVar(import.meta.env?.VITE_FIREBASE_API_KEY, 'VITE_FIREBASE_API_KEY');
+  const authDomain = getEnvVar(import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN, 'VITE_FIREBASE_AUTH_DOMAIN');
+  const projectId = getEnvVar(import.meta.env?.VITE_FIREBASE_PROJECT_ID, 'VITE_FIREBASE_PROJECT_ID');
+  const rawStorageBucket = getEnvVar(import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET, 'VITE_FIREBASE_STORAGE_BUCKET');
+  const messagingSenderId = getEnvVar(import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID, 'VITE_FIREBASE_MESSAGING_SENDER_ID');
+  const appId = getEnvVar(import.meta.env?.VITE_FIREBASE_APP_ID, 'VITE_FIREBASE_APP_ID');
 
   if (!apiKey || !authDomain || !projectId || !appId) {
     return null;
@@ -28,7 +36,7 @@ export const getFirebaseConfig = (): FirebaseEnvConfig | null => {
     projectId,
     storageBucket: effectiveStorageBucket,
     firebaseStorageBucket: effectiveStorageBucket,
-    messagingSenderId: messagingSenderId || '',
+    messagingSenderId,
     appId,
   };
 };
@@ -46,13 +54,13 @@ export const getFirebaseConfigStatus = (): {
   configured: boolean;
   missingKeys: string[];
 } => {
-  const keys: Record<string, string | undefined> = {
-    VITE_FIREBASE_API_KEY: import.meta.env.VITE_FIREBASE_API_KEY?.trim(),
-    VITE_FIREBASE_AUTH_DOMAIN: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN?.trim(),
-    VITE_FIREBASE_PROJECT_ID: import.meta.env.VITE_FIREBASE_PROJECT_ID?.trim(),
-    VITE_FIREBASE_STORAGE_BUCKET: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET?.trim(),
-    VITE_FIREBASE_MESSAGING_SENDER_ID: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID?.trim(),
-    VITE_FIREBASE_APP_ID: import.meta.env.VITE_FIREBASE_APP_ID?.trim(),
+  const keys: Record<string, string> = {
+    VITE_FIREBASE_API_KEY: getEnvVar(import.meta.env?.VITE_FIREBASE_API_KEY, 'VITE_FIREBASE_API_KEY'),
+    VITE_FIREBASE_AUTH_DOMAIN: getEnvVar(import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN, 'VITE_FIREBASE_AUTH_DOMAIN'),
+    VITE_FIREBASE_PROJECT_ID: getEnvVar(import.meta.env?.VITE_FIREBASE_PROJECT_ID, 'VITE_FIREBASE_PROJECT_ID'),
+    VITE_FIREBASE_STORAGE_BUCKET: getEnvVar(import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET, 'VITE_FIREBASE_STORAGE_BUCKET'),
+    VITE_FIREBASE_MESSAGING_SENDER_ID: getEnvVar(import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID, 'VITE_FIREBASE_MESSAGING_SENDER_ID'),
+    VITE_FIREBASE_APP_ID: getEnvVar(import.meta.env?.VITE_FIREBASE_APP_ID, 'VITE_FIREBASE_APP_ID'),
   };
 
   const missingKeys = Object.entries(keys)

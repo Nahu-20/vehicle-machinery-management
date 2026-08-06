@@ -1,5 +1,7 @@
 import { LanguageCode } from '../types';
 
+export type { LanguageCode };
+
 export interface TranslationDictionary {
   [key: string]: string;
 }

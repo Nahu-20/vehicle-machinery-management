@@ -36,7 +36,7 @@ export interface ChatMessage {
  * 3. Forward request parameters (message, language, conversationId) to the webhook
  */
 export async function sendChatMessage(request: ChatRequest): Promise<ChatResponse> {
-  const apiUrl = import.meta.env.VITE_CHAT_API_URL;
+  const apiUrl = import.meta.env?.VITE_CHAT_API_URL || (typeof process !== 'undefined' ? process.env?.VITE_CHAT_API_URL : undefined);
 
   // If a live n8n or Mastra endpoint URL is configured, call it here:
   if (apiUrl && apiUrl.trim() !== '') {
