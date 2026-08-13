@@ -61,7 +61,7 @@ export function SourceDetailModal({ source, onClose }: SourceDetailModalProps) {
               <Calendar className="w-3 h-3 text-purple-600" /> Reference Period
             </span>
             <span className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5 block">
-              {source.referencePeriod?.label || source.referencePeriod?.startYear || 'Not provided'}
+              {source.referencePeriod || 'Not provided'}
             </span>
           </div>
 

@@ -116,7 +116,7 @@ export function SelectedZoneReviewPanel({
           <div className="p-2 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
             <span className="text-[9px] font-bold uppercase text-slate-400 block">Yield</span>
             <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
-              {zv.yieldPerHa !== undefined && zv.yieldPerHa !== null ? `${zv.yieldPerHa} Q/ha` : '—'}
+              {zv.yieldValue !== undefined && zv.yieldValue !== null ? `${zv.yieldValue} Q/ha` : '—'}
             </span>
           </div>
 

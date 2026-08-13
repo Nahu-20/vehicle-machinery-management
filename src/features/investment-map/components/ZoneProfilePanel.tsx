@@ -37,16 +37,19 @@ export interface ZoneProfilePanelProps {
   selectedCommodity?: CommodityKey | null;
   selectedMetric?: ThematicMetric;
   onClearSelection?: () => void;
+  isPublic?: boolean;
   className?: string;
 }
 
 export const ZoneProfilePanel: React.FC<ZoneProfilePanelProps> = ({
   selectedFeature,
-  selectedCommodity,
+  selectedCommodity: rawCommodity,
   selectedMetric = 'production',
   onClearSelection,
+  isPublic = false,
   className = '',
 }) => {
+  const selectedCommodity = rawCommodity;
   if (!selectedFeature) {
     return <ZoneProfileEmptyState className={className} />;
   }
@@ -536,21 +539,21 @@ export const ZoneProfilePanel: React.FC<ZoneProfilePanelProps> = ({
               <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-700/60 pb-1.5">
                 <span className="text-slate-500 font-sans">Dataset</span>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  Synthetic Development Fixture
+                  {isPublic ? 'Candidate Administrative Boundaries (22 Zones)' : 'Synthetic Development Fixture'}
                 </span>
               </div>
 
               <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-700/60 pb-1.5">
                 <span className="text-slate-500 font-sans">Verification</span>
-                <span className="font-bold text-amber-700 dark:text-amber-400">
-                  Demo / Unverified
+                <span className={`font-bold ${isPublic ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                  {isPublic ? 'Passed GIS Validation' : 'Demo / Unverified'}
                 </span>
               </div>
 
               <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-700/60 pb-1.5">
                 <span className="text-slate-500 font-sans">Source</span>
                 <span className="font-bold text-slate-700 dark:text-slate-300">
-                  No official source connected
+                  {isPublic ? 'UN-OCHA COD-AB v04' : 'No official source connected'}
                 </span>
               </div>
 
@@ -561,10 +564,12 @@ export const ZoneProfilePanel: React.FC<ZoneProfilePanelProps> = ({
                 </span>
               </div>
 
-              <div className="pt-1 text-[10px] text-amber-700 dark:text-amber-400 font-sans font-bold flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-amber-600 shrink-0" />
-                <span>DEMO DATA — NOT OFFICIAL OAB DATA</span>
-              </div>
+              {!isPublic && (
+                <div className="pt-1 text-[10px] text-amber-700 dark:text-amber-400 font-sans font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-amber-600 shrink-0" />
+                  <span>DEMO DATA — NOT OFFICIAL OAB DATA</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

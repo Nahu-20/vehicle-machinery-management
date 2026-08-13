@@ -16,7 +16,7 @@ import {
   FileCheck2,
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
-import { OromiaInteractiveMap } from '../investment/OromiaInteractiveMap';
+import { HomepageInvestmentMapPreview } from './HomepageInvestmentMapPreview';
 
 export const AgriculturalInvestmentSection: React.FC = () => {
   const { t } = useLanguage();
@@ -71,7 +71,7 @@ export const AgriculturalInvestmentSection: React.FC = () => {
 
           {/* Primary CTA button */}
           <div className="shrink-0">
-            <Link to="/investment">
+            <Link to="/investment/map">
               <motion.div
                 whileHover={shouldReduceMotion ? undefined : { y: -2, scale: 1.01 }}
                 whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
@@ -98,7 +98,7 @@ export const AgriculturalInvestmentSection: React.FC = () => {
               transition={{ duration: 0.6, ease: 'easeOut' }}
               className="lg:col-span-7 flex flex-col justify-between"
             >
-              <OromiaInteractiveMap className="h-full min-h-[520px]" />
+              <HomepageInvestmentMapPreview className="h-full min-h-[520px]" />
             </motion.div>
 
             {/* RIGHT SIDE COLUMN (2 STACKED CARDS - 5 COLS / ~42%) */}

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { sampleZonePotentials } from '../data/investmentData';
-import { OromiaInteractiveMap } from '../components/investment/OromiaInteractiveMap';
+import { PublicInvestmentMapShell } from '../components/investment/PublicInvestmentMapShell';
 
 export const InvestmentPage: React.FC = () => {
   const { t } = useLanguage();
@@ -118,7 +118,7 @@ export const InvestmentPage: React.FC = () => {
         {/* MAP TAB */}
         {activeTab === 'map' && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-            <OromiaInteractiveMap className="min-h-[600px]" />
+            <PublicInvestmentMapShell />
           </motion.div>
         )}
 

@@ -11,6 +11,7 @@ import { StaffAuthorizationProvider } from './context/StaffAuthorizationContext'
 
 // Public Layout & Components
 import { ScrollProgress } from './components/common/scroll';
+import { BackToTopButton } from './components/common/BackToTopButton';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { HomePage } from './pages/HomePage';
@@ -91,6 +92,7 @@ function PublicLayout() {
         <Outlet />
       </main>
       <Footer />
+      <BackToTopButton />
       <ChatLauncher isOpen={isChatOpen} onClick={() => setIsChatOpen(true)} />
       <ChatPanel
         isOpen={isChatOpen}

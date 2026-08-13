@@ -98,8 +98,8 @@ export const Header: React.FC = () => {
         {t('skip_to_content')}
       </a>
 
-      {/* STICKY HEADER WRAPPER CONTAINER */}
-      <header className="sticky top-0 z-40 w-full transition-all duration-300">
+      {/* NON-STICKY HEADER WRAPPER CONTAINER */}
+      <header className="relative z-40 w-full transition-all duration-300">
         
         {/* LAYER 1: FULL-WIDTH DARK-GREEN REGIONAL UTILITY BAR */}
         <div className="w-full bg-[linear-gradient(105deg,#063d28_0%,#0c5634_45%,#347622_100%)] text-white py-1.5 sm:py-2 px-4 sm:px-6 lg:px-8 border-b border-[#042d1e] relative z-30 shadow-xs">

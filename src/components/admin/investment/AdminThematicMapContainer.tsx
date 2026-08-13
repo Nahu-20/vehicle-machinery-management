@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Map from 'ol/Map.js';
+import OLMap from 'ol/Map.js';
 import View from 'ol/View.js';
 import GeoJSON from 'ol/format/GeoJSON.js';
 import VectorLayer from 'ol/layer/Vector.js';
@@ -100,7 +100,7 @@ export function AdminThematicMapContainer({
   const isDark = theme === 'dark';
 
   const mapElementRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<Map | null>(null);
+  const mapRef = useRef<OLMap | null>(null);
   const vectorSourceRef = useRef<VectorSource | null>(null);
 
   const [gisError, setGisError] = useState<string | null>(null);
@@ -251,13 +251,13 @@ export function AdminThematicMapContainer({
 
     loadAndValidateOromiaGeoJSON()
       .then((res) => {
-        if (!res.valid || !res.geoJson) {
-          setGisError(res.checksumError || 'Canonical GIS GeoJSON verification failed.');
+        if (!res.isValid || !res.data) {
+          setGisError(res.errors.join(', ') || 'Canonical GIS GeoJSON verification failed.');
           return;
         }
 
         const format = new GeoJSON();
-        const features = format.readFeatures(res.geoJson, {
+        const features = format.readFeatures(res.data, {
           dataProjection: 'EPSG:4326',
           featureProjection: 'EPSG:3857',
         });
@@ -270,7 +270,7 @@ export function AdminThematicMapContainer({
           style: (feature) => getStyleForFeature(feature),
         });
 
-        const olMap = new Map({
+        const olMap = new OLMap({
           target: mapElementRef.current!,
           layers: [vLayer],
           controls: defaultControls({ zoom: false, rotate: false, attribution: false }),

@@ -73,7 +73,7 @@ export const InvestmentMapLabPage: React.FC = () => {
           </div>
 
           <Link
-            to="/investment"
+            to="/investment/map"
             className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3.5 py-2 rounded-xl shadow-2xs transition-colors self-start sm:self-auto"
           >
             <ArrowLeft className="w-4 h-4" />
