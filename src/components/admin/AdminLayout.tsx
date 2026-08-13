@@ -20,6 +20,8 @@ import {
   ExternalLink,
   ChevronRight,
   Info,
+  Award,
+  Database,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useStaffAuthorization } from '../../hooks/useStaffAuthorization';
@@ -66,11 +68,18 @@ export const AdminLayout: React.FC = () => {
       permission: 'content.view',
     },
     {
+      id: 'achievements',
+      label: 'Achievements',
+      href: '/admin/achievements',
+      icon: Award,
+      permission: 'achievement.view',
+    },
+    {
       id: 'alerts',
       label: 'Agricultural Alerts',
       href: '/admin/alerts',
       icon: Bell,
-      permission: 'alerts.manage',
+      permission: 'alert.view',
     },
     {
       id: 'market',
@@ -78,6 +87,13 @@ export const AdminLayout: React.FC = () => {
       href: '/admin/market',
       icon: TrendingUp,
       permission: 'market.manage',
+    },
+    {
+      id: 'investment',
+      label: 'Investment CMS',
+      href: '/admin/investment',
+      icon: Database,
+      permission: 'investment.view',
     },
     {
       id: 'resources',

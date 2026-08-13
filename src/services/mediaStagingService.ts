@@ -220,6 +220,8 @@ export async function startNewsImageStagingUpload(
   };
 }
 
+export const startAlertImageStagingUpload = startNewsImageStagingUpload;
+
 export interface DeleteStagingMediaOptions {
   authenticatedUid: string;
   mediaId: string;

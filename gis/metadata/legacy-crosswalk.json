@@ -1,0 +1,156 @@
+[
+  {
+    "legacy_id": "kellem-wellega",
+    "canonical_zone_id": "kelem_wellega",
+    "pcode": "ET0418",
+    "name_en": "Kelem Wellega",
+    "notes": "Legacy prototype ID kellem-wellega mapped to canonical kelem_wellega"
+  },
+  {
+    "legacy_id": "w-wellega",
+    "canonical_zone_id": "west_wellega",
+    "pcode": "ET0401",
+    "name_en": "West Wellega",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": "e-wellega",
+    "canonical_zone_id": "east_wellega",
+    "pcode": "ET0402",
+    "name_en": "East Wellega",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": "horo-gudru",
+    "canonical_zone_id": "horo_gudru_wellega",
+    "pcode": "ET0419",
+    "name_en": "Horo Gudru Wellega",
+    "notes": "Legacy prototype ID horo-gudru mapped to canonical horo_gudru_wellega"
+  },
+  {
+    "legacy_id": "ilu-aba-bora",
+    "canonical_zone_id": "ilu_aba_bora",
+    "pcode": "ET0403",
+    "name_en": "Ilu Aba Bora",
+    "notes": "Phonetic/hyphen standardisation"
+  },
+  {
+    "legacy_id": "buno-bedele",
+    "canonical_zone_id": "buno_bedele",
+    "pcode": "ET0416",
+    "name_en": "Buno Bedele",
+    "notes": "Hyphen to underscore standardisation"
+  },
+  {
+    "legacy_id": "jimma",
+    "canonical_zone_id": "jimma",
+    "pcode": "ET0404",
+    "name_en": "Jimma",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": "w-shewa",
+    "canonical_zone_id": "west_shewa",
+    "pcode": "ET0405",
+    "name_en": "West Shewa",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": "sw-shewa",
+    "canonical_zone_id": "south_west_shewa",
+    "pcode": "ET0413",
+    "name_en": "South West Shewa",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": "n-shewa",
+    "canonical_zone_id": "north_shewa",
+    "pcode": "ET0406",
+    "name_en": "North Shewa",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": "finfinne-special",
+    "canonical_zone_id": "shager_city",
+    "pcode": "ET0420",
+    "name_en": "Shager City",
+    "notes": "Replaced prototype finfinne-special with official UN-OCHA v04 Shager City"
+  },
+  {
+    "legacy_id": "e-shewa",
+    "canonical_zone_id": "east_shewa",
+    "pcode": "ET0407",
+    "name_en": "East Shewa",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": "arsi",
+    "canonical_zone_id": "arsi",
+    "pcode": "ET0408",
+    "name_en": "Arsi",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": "w-arsi",
+    "canonical_zone_id": "west_arsi",
+    "pcode": "ET0417",
+    "name_en": "West Arsi",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": "bale",
+    "canonical_zone_id": "bale",
+    "pcode": "ET0411",
+    "name_en": "Bale",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": "e-bale",
+    "canonical_zone_id": "east_bale",
+    "pcode": "ET0421",
+    "name_en": "East Bale",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": "w-hararge",
+    "canonical_zone_id": "west_hararghe",
+    "pcode": "ET0409",
+    "name_en": "West Hararghe",
+    "notes": "Spelling alignment (Hararghe)"
+  },
+  {
+    "legacy_id": "e-hararge",
+    "canonical_zone_id": "east_hararghe",
+    "pcode": "ET0410",
+    "name_en": "East Hararghe",
+    "notes": "Spelling alignment (Hararghe)"
+  },
+  {
+    "legacy_id": "w-guji",
+    "canonical_zone_id": "west_guji",
+    "pcode": "ET0415",
+    "name_en": "West Guji",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": "guji",
+    "canonical_zone_id": "guji",
+    "pcode": "ET0414",
+    "name_en": "Guji",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": "borena",
+    "canonical_zone_id": "borena",
+    "pcode": "ET0412",
+    "name_en": "Borena",
+    "notes": "Direct 1:1 mapping"
+  },
+  {
+    "legacy_id": null,
+    "canonical_zone_id": "east_borena",
+    "pcode": "ET0422",
+    "name_en": "East Borena",
+    "notes": "NO prototype record in src/data/investmentData.ts \u2014 newly established ADM2 in UN-OCHA v04 release"
+  }
+]

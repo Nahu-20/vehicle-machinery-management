@@ -1,4 +1,39 @@
 export * from './news';
+export {
+  validateZoneId,
+  validateZoneValue,
+  validateDatasetForPublishing,
+  toPublicZoneProfile,
+  toPublicDataset,
+  toPublicZoneValue,
+  toPublicSource,
+  toPublicOpportunity,
+} from './investment';
+export type {
+  InvestmentZoneProfile,
+  InvestmentDataset,
+  InvestmentZoneValue,
+  InvestmentSource,
+  InvestmentMethodology,
+  InvestmentOpportunity,
+  InvestmentInfrastructure,
+  InvestmentMapConfig,
+  InvestmentAuditLog,
+  PublicInvestmentZoneProfile,
+  PublicInvestmentDataset,
+  PublicInvestmentZoneValue,
+  PublicInvestmentSource,
+  PublicInvestmentOpportunity,
+  PublicInvestmentMapConfig,
+  InvestmentOpportunityFeature,
+  InvestmentZonePotential,
+  VerificationStatus,
+  LifecycleStatus,
+  DatasetCategory,
+  CommodityKey,
+  DatasetUnit,
+  InvestmentValidationResult,
+} from './investment';
 export type LanguageCode = 'om' | 'am' | 'en';
 
 export type LocalizedText = {

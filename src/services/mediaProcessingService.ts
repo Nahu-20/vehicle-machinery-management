@@ -32,6 +32,9 @@ export interface ProcessMediaOptions {
   mediaId: string;
   ownerUid: string;
   sourceStoragePath: string;
+  module?: 'news' | 'achievement' | 'alert';
+  purpose?: 'featured-image' | 'gallery-image';
+  galleryItemId?: string;
   eventId?: string;
   forceRetry?: boolean;
 }
@@ -83,11 +86,16 @@ function classifyError(err: any): { code: MediaProcessingFailureCode; message: s
   };
 }
 
+export const processNewsMediaStaging = processMediaStaging;
+
 /**
- * Processes a staged news image into WebP variants safely and idempotently using Firebase Admin SDK.
+ * Processes a staged media image into WebP variants safely and idempotently using Firebase Admin SDK.
  */
-export async function processNewsMediaStaging(options: ProcessMediaOptions): Promise<MediaAsset> {
+export async function processMediaStaging(options: ProcessMediaOptions): Promise<MediaAsset> {
   const { mediaId, ownerUid, sourceStoragePath, eventId, forceRetry } = options;
+  const moduleName = options.module || 'news';
+  const purposeName = options.purpose || 'featured-image';
+  const galleryItemId = options.galleryItemId || undefined;
 
   if (!isValidUuidV4(mediaId)) {
     throw new Error('INVALID_PATH: Invalid mediaId UUID format');
@@ -126,6 +134,9 @@ export async function processNewsMediaStaging(options: ProcessMediaOptions): Pro
         currentAttempts = (data.processingAttempts || 0) + 1;
         transaction.update(assetRef, {
           status: 'processing' as MediaAssetStatus,
+          module: moduleName,
+          purpose: purposeName,
+          ...(galleryItemId ? { galleryItemId } : {}),
           processingStartedAt: FieldValue.serverTimestamp(),
           processingAttempts: currentAttempts,
           updatedAt: FieldValue.serverTimestamp(),
@@ -136,10 +147,11 @@ export async function processNewsMediaStaging(options: ProcessMediaOptions): Pro
         currentAttempts = 1;
         const initialAsset = {
           mediaId,
-          module: 'news',
-          purpose: 'featured-image',
+          module: moduleName,
+          purpose: purposeName,
           ownerUid,
           sourceStoragePath,
+          ...(galleryItemId ? { galleryItemId } : {}),
           originalFileName: 'staged-image',
           originalContentType: 'image/jpeg',
           originalSize: 0,
@@ -181,8 +193,8 @@ export async function processNewsMediaStaging(options: ProcessMediaOptions): Pro
 
     const failedAsset: MediaAsset = {
       mediaId,
-      module: 'news',
-      purpose: 'featured-image',
+      module: moduleName,
+      purpose: purposeName,
       ownerUid,
       sourceStoragePath,
       sourceGeneration: '1',

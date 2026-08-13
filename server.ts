@@ -33,6 +33,22 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Serve static GIS candidate assets directly via Express to ensure fast streaming without Vite middleware buffering
+  app.use('/data/gis', express.static(path.join(process.cwd(), 'public', 'data', 'gis'), {
+    maxAge: '1d',
+    immutable: false,
+    setHeaders: (res) => {
+      res.setHeader('Content-Type', 'application/geo+json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    },
+  }));
+
+  // Trusted Backend Endpoint: Investment CMS Mutations & Authoritative Audit Logging
+  app.post('/api/investment/mutate', async (req: Request, res: Response) => {
+    const { handleInvestmentMutation } = await import('./src/server/investmentApi.js');
+    return handleInvestmentMutation(req, res);
+  });
+
   // Health check
   app.get('/api/health', (req: Request, res: Response) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -143,6 +159,226 @@ async function startServer() {
       return res.status(404).json({ success: false, error: 'Asset not found' });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err?.message || 'Error fetching asset' });
+    }
+  });
+
+  // Trusted Backend Endpoint: Permanent Delete Achievement (Super Admin only, status == 'trashed')
+  app.post('/api/achievements/delete', async (req: Request, res: Response) => {
+    try {
+      const { slug, staffUid, expectedVersion } = req.body;
+      if (!slug || typeof slug !== 'string') {
+        return res.status(400).json({ success: false, code: 'INVALID_SLUG', error: 'Missing or invalid achievement slug' });
+      }
+
+      const cleanSlug = slug.trim().toLowerCase();
+
+      // Resolve actor UID from Bearer token or request body
+      let actorUid: string | null = null;
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const idToken = authHeader.split('Bearer ')[1];
+        try {
+          const { getAuth } = await import('firebase-admin/auth');
+          const decoded = await getAuth().verifyIdToken(idToken);
+          actorUid = decoded.uid;
+        } catch (authErr) {
+          console.warn('[AchievementDeleteApi] Token verification warning:', authErr);
+        }
+      }
+
+      if (!actorUid && staffUid && typeof staffUid === 'string') {
+        actorUid = staffUid;
+      }
+
+      if (!actorUid) {
+        return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: 'Authentication required' });
+      }
+
+      // Read staffUser profile from Firestore staffUsers/{actorUid}
+      const db = getFirestore();
+      const staffSnap = await db.collection('staffUsers').doc(actorUid).get();
+      if (!staffSnap.exists) {
+        return res.status(403).json({ success: false, code: 'STAFF_NOT_FOUND', error: 'Staff user profile not found' });
+      }
+
+      const staffData = staffSnap.data() || {};
+      if (staffData.active !== true) {
+        return res.status(403).json({ success: false, code: 'STAFF_INACTIVE', error: 'Your staff account is inactive' });
+      }
+
+      const isSuperAdmin = staffData.role === 'superAdmin';
+      const hasDeletePermission = Array.isArray(staffData.permissions) && staffData.permissions.includes('achievement.delete');
+
+      if (!isSuperAdmin && !hasDeletePermission) {
+        return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Permanent deletion is strictly reserved for Super Administrators.' });
+      }
+
+      const docRef = db.collection('achievements').doc(cleanSlug);
+      const docSnap = await docRef.get();
+
+      // Idempotency: if doc does not exist, return success
+      if (!docSnap.exists) {
+        return res.json({ success: true, message: 'Achievement already deleted', code: 'IDEMPOTENT_SUCCESS' });
+      }
+
+      const existingData = docSnap.data() || {};
+
+      // Require status == 'trashed'
+      if (existingData.status !== 'trashed') {
+        return res.status(400).json({
+          success: false,
+          code: 'INVALID_STATUS_TRANSITION',
+          error: 'Only achievements currently in Trash can be permanently deleted.',
+        });
+      }
+
+      // Validate expectedVersion if provided
+      if (typeof expectedVersion === 'number' && existingData.version !== undefined && existingData.version !== expectedVersion) {
+        return res.status(409).json({
+          success: false,
+          code: 'VERSION_CONFLICT',
+          error: `Version conflict: Expected version ${expectedVersion}, but document is at version ${existingData.version}`,
+        });
+      }
+
+      // Perform deletion
+      await docRef.delete();
+
+      // Authoritative audit log in adminAuditLogs
+      const auditDocId = `evt_del_ach_${cleanSlug}_${Date.now()}`;
+      await db.collection('adminAuditLogs').doc(auditDocId).set({
+        actorUid,
+        actorEmail: staffData.email || 'staff@oromiaagri.gov.et',
+        actorDisplayName: staffData.displayName || 'Super Admin',
+        actorRole: staffData.role || 'superAdmin',
+        module: 'achievements',
+        action: 'permanently_deleted',
+        result: 'success',
+        targetType: 'achievement',
+        targetId: cleanSlug,
+        targetLabel: existingData.title?.om || cleanSlug,
+        source: 'trusted_backend_api',
+        previousStatus: 'trashed',
+        newStatus: null,
+        versionBefore: existingData.version || 1,
+        versionAfter: null,
+        occurredAt: new Date().toISOString(),
+      });
+
+      return res.json({ success: true, deletedSlug: cleanSlug });
+    } catch (err: any) {
+      console.error('[AchievementDeleteApi] Server error:', err);
+      return res.status(500).json({ success: false, code: 'SERVER_ERROR', error: err?.message || 'Server error during deletion' });
+    }
+  });
+
+  // Trusted Backend Endpoint: Permanent Delete Alert (Super Admin / alert.delete, status == 'trashed')
+  app.post('/api/alerts/delete', async (req: Request, res: Response) => {
+    try {
+      const { slug, staffUid, expectedVersion } = req.body;
+      if (!slug || typeof slug !== 'string') {
+        return res.status(400).json({ success: false, code: 'INVALID_SLUG', error: 'Missing or invalid alert slug' });
+      }
+
+      const cleanSlug = slug.trim().toLowerCase();
+
+      // Resolve actor UID from Bearer token or request body
+      let actorUid: string | null = null;
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const idToken = authHeader.split('Bearer ')[1];
+        try {
+          const { getAuth } = await import('firebase-admin/auth');
+          const decoded = await getAuth().verifyIdToken(idToken);
+          actorUid = decoded.uid;
+        } catch (authErr) {
+          console.warn('[AlertDeleteApi] Token verification warning:', authErr);
+        }
+      }
+
+      if (!actorUid && staffUid && typeof staffUid === 'string') {
+        actorUid = staffUid;
+      }
+
+      if (!actorUid) {
+        return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: 'Authentication required' });
+      }
+
+      // Read staffUser profile from Firestore staffUsers/{actorUid}
+      const db = getFirestore();
+      const staffSnap = await db.collection('staffUsers').doc(actorUid).get();
+      if (!staffSnap.exists) {
+        return res.status(403).json({ success: false, code: 'STAFF_NOT_FOUND', error: 'Staff user profile not found' });
+      }
+
+      const staffData = staffSnap.data() || {};
+      if (staffData.active !== true) {
+        return res.status(403).json({ success: false, code: 'STAFF_INACTIVE', error: 'Your staff account is inactive' });
+      }
+
+      const isSuperAdmin = staffData.role === 'superAdmin';
+      const hasDeletePermission = Array.isArray(staffData.permissions) && staffData.permissions.includes('alert.delete');
+
+      if (!isSuperAdmin && !hasDeletePermission) {
+        return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Permanent deletion is strictly reserved for Super Administrators or authorized alert managers.' });
+      }
+
+      const docRef = db.collection('agriculturalAlerts').doc(cleanSlug);
+      const docSnap = await docRef.get();
+
+      // Idempotency: if doc does not exist, return success
+      if (!docSnap.exists) {
+        return res.json({ success: true, message: 'Alert already deleted', code: 'IDEMPOTENT_SUCCESS' });
+      }
+
+      const existingData = docSnap.data() || {};
+
+      // Require status == 'trashed'
+      if (existingData.status !== 'trashed') {
+        return res.status(400).json({
+          success: false,
+          code: 'INVALID_STATUS_TRANSITION',
+          error: 'Only alerts currently in Trash can be permanently deleted.',
+        });
+      }
+
+      // Validate expectedVersion if provided
+      if (typeof expectedVersion === 'number' && existingData.version !== undefined && existingData.version !== expectedVersion) {
+        return res.status(409).json({
+          success: false,
+          code: 'VERSION_CONFLICT',
+          error: `Version conflict: Expected version ${expectedVersion}, but document is at version ${existingData.version}`,
+        });
+      }
+
+      // Perform deletion
+      await docRef.delete();
+
+      // Authoritative audit log in adminAuditLogs
+      const auditDocId = `evt_del_alt_${cleanSlug}_${Date.now()}`;
+      await db.collection('adminAuditLogs').doc(auditDocId).set({
+        actorUid,
+        actorEmail: staffData.email || 'staff@oromiaagri.gov.et',
+        actorDisplayName: staffData.displayName || 'Super Admin',
+        actorRole: staffData.role || 'superAdmin',
+        module: 'alerts',
+        action: 'permanently_deleted',
+        result: 'success',
+        targetType: 'alert',
+        targetId: cleanSlug,
+        targetLabel: existingData.title?.om || cleanSlug,
+        source: 'trusted_backend_api',
+        previousStatus: 'trashed',
+        newStatus: null,
+        versionBefore: existingData.version || 1,
+        versionAfter: null,
+        occurredAt: new Date().toISOString(),
+      });
+
+      return res.json({ success: true, deletedSlug: cleanSlug });
+    } catch (err: any) {
+      console.error('[AlertDeleteApi] Server error:', err);
+      return res.status(500).json({ success: false, code: 'SERVER_ERROR', error: err?.message || 'Server error during deletion' });
     }
   });
 
@@ -286,6 +522,10 @@ async function startServer() {
 
   app.get('/api/media/news/:mediaId/:variant', handlePublicMedia);
   app.get('/media/news/:mediaId/:variant', handlePublicMedia);
+  app.get('/api/media/alert/:mediaId/:variant', handlePublicMedia);
+  app.get('/media/alert/:mediaId/:variant', handlePublicMedia);
+  app.get('/api/media/achievement/:mediaId/:variant', handlePublicMedia);
+  app.get('/media/achievement/:mediaId/:variant', handlePublicMedia);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {

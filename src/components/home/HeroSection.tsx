@@ -1,178 +1,173 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { motion, useScroll, useTransform } from 'motion/react';
 import { useLanguage } from '../../context/LanguageContext';
+import { CountUpStat } from '../common/scroll/CountUpStat';
+import { AgriPillBadge } from '../common/AgriPillBadge';
 import {
-  ArrowRight,
+  ArrowUpRight,
   ShieldCheck,
-  CheckCircle2,
   Sprout,
-  Building2,
-  Users,
-  TrendingUp,
   CloudSun,
   MapPin,
+  TrendingUp,
 } from 'lucide-react';
 
 import heroFarmlandImg from '../../assets/images/oromia_hero_farmland_1785782697065.jpg';
 
 export const HeroSection: React.FC = () => {
   const { t } = useLanguage();
+  const sectionRef = useRef<HTMLElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start start', 'end start'],
+  });
+
+  const bgY = useTransform(scrollYProgress, [0, 1], [0, 35]);
+  const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.035]);
+  const textY = useTransform(scrollYProgress, [0, 1], [0, -18]);
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.85], [1, 0.85]);
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-[#021810] via-[#063D2A] to-[#0A5439] text-white min-h-0 md:min-h-[660px] lg:min-h-[720px] flex items-center py-8 sm:py-12 md:py-16 lg:py-20">
-      {/* Background Image with Rich Linear & Radial Gradient Overlays */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        <img
-          src={heroFarmlandImg}
-          alt="Oromia Agricultural Farmland"
-          referrerPolicy="no-referrer"
-          className="h-full w-full object-cover object-center scale-105 opacity-45 transition-transform duration-1000 ease-out hover:scale-100"
-        />
-        {/* Multilayer linear gradients */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#021810] via-[#063D2A]/85 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#021810] via-transparent to-[#021810]/70" />
-        {/* Modern glowing ambient lights */}
-        <div className="absolute -top-24 left-1/4 h-96 w-96 rounded-full bg-[#087A4B]/35 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 right-10 h-96 w-96 rounded-full bg-[#D7A928]/20 blur-3xl pointer-events-none" />
-      </div>
-
-      <div className="relative z-10 max-w-[1360px] mx-auto px-5 sm:px-6 lg:px-8 w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
-          {/* Left Column: Headlines & Actions */}
-          <div className="lg:col-span-7 space-y-4 sm:space-y-6 lg:space-y-7">
-            {/* Bureau Badge with Gradient Border */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#D7A928]/50 bg-gradient-to-r from-white/15 via-white/10 to-white/5 px-3.5 py-1.5 text-[11px] sm:text-xs font-black text-[#D7A928] backdrop-blur-md shadow-lg shadow-black/10 max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
-              <Sprout className="h-4 w-4 text-[#D7A928] shrink-0 animate-bounce" />
-              <span className="truncate">{t('hero_badge')}</span>
+    <section
+      ref={sectionRef}
+      className="relative overflow-hidden bg-[#F6F7F3] dark:bg-[#0B1912] py-10 sm:py-14 md:py-20 transition-colors duration-300"
+    >
+      <motion.div
+        style={{ y: textY, opacity: contentOpacity }}
+        className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 w-full"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          {/* Left Column: Asymmetrical Editorial Headline & Actions */}
+          <div className="lg:col-span-7 space-y-6 sm:space-y-8">
+            {/* Small Eyebrow Badge */}
+            <div className="flex items-center gap-3">
+              <AgriPillBadge variant="lime" icon={<Sprout className="h-3.5 w-3.5 text-[#0A1912]" />}>
+                {t('hero_badge')}
+              </AgriPillBadge>
+              <span className="text-xs font-semibold text-[#56635B] dark:text-[#94A39A] uppercase tracking-wider">
+                {t('gov_name')}
+              </span>
             </div>
 
-            {/* Main Headline with clamp text sizing & tight line-height */}
-            <h1 className="text-[clamp(2.25rem,11vw,3.25rem)] sm:text-5xl lg:text-[58px] font-black tracking-tight text-white leading-[1.02] sm:leading-[1.12] break-words hyphens-none">
-              <span className="bg-gradient-to-r from-white via-emerald-100 to-[#EAF7F0] bg-clip-text text-transparent">
-                {t('hero_headline')}
-              </span>
+            {/* Editorial Headline */}
+            <h1 className="text-[clamp(2.5rem,5.5vw,5.2rem)] font-extrabold tracking-tight text-[#111310] dark:text-white leading-[1.06] hyphens-none">
+              {t('hero_headline')}
             </h1>
 
-            {/* Sub-paragraph */}
-            <p className="text-sm sm:text-base md:text-lg text-emerald-100/90 max-w-xl leading-relaxed font-normal">
+            {/* Supporting paragraph */}
+            <p className="text-base sm:text-lg text-[#56635B] dark:text-[#A7F3D0]/80 max-w-2xl leading-relaxed font-normal">
               {t('hero_supporting')}
             </p>
 
-            {/* Action Buttons (Stacked full-width on mobile) */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 pt-1 sm:pt-2 w-full sm:w-auto">
+            {/* Reference-style Button Duo: [ Main CTA ] + [ Circular Arrow ] */}
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-2">
               <a
                 href="#services"
-                className="flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#087A4B] via-[#09995E] to-[#087A4B] hover:from-[#09995E] hover:to-[#063D2A] text-white font-black text-sm sm:text-base h-12 sm:h-14 px-7 shadow-xl shadow-[#087A4B]/40 border border-emerald-400/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 min-h-[44px] w-full sm:w-auto text-center"
+                className="inline-flex items-center justify-center gap-2.5 rounded-full bg-[#A3E635] hover:bg-[#92D022] text-[#0A1912] font-extrabold text-base h-13 px-8 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0"
               >
                 <span>{t('hero_btn_services')}</span>
-                <ArrowRight className="h-5 w-5 text-[#D7A928]" />
+              </a>
+
+              <a
+                href="#services"
+                className="inline-flex items-center justify-center rounded-full bg-[#0A1912] dark:bg-emerald-800 hover:bg-[#063D2A] text-[#A3E635] h-13 w-13 transition-all duration-200 transform hover:scale-105 shadow-sm"
+                aria-label="Explore Services"
+              >
+                <ArrowUpRight className="h-6 w-6 stroke-[2.5]" />
               </a>
 
               <a
                 href="#programs"
-                className="flex items-center justify-center gap-2.5 rounded-2xl border border-white/30 bg-gradient-to-r from-white/10 via-white/15 to-white/10 hover:bg-white/20 text-white font-extrabold text-sm sm:text-base h-12 sm:h-14 px-7 backdrop-blur-md transition-all shadow-md min-h-[44px] w-full sm:w-auto text-center"
+                className="ml-2 inline-flex items-center gap-2 text-sm font-bold text-[#063D2A] dark:text-emerald-300 hover:text-[#087A4B] dark:hover:text-emerald-200 transition-colors py-2 px-4 rounded-full border border-gray-200 dark:border-emerald-800/80 bg-white/80 dark:bg-black/20"
               >
                 <span>{t('hero_btn_programs')}</span>
               </a>
             </div>
 
-            {/* Desktop Statistics bar (Visible on ≥1024px) */}
-            <div className="hidden lg:grid pt-6 border-t border-white/15 grid-cols-3 gap-4 max-w-xl">
-              <div className="rounded-xl bg-white/5 p-3 backdrop-blur-xs border border-white/10">
-                <p className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">12.4M+</p>
-                <p className="text-xs text-emerald-200/80 font-bold mt-0.5">Farming Households</p>
+            {/* Quick Stat Highlights Bar */}
+            <div className="pt-8 border-t border-[#E2E8E3] dark:border-[#183327] grid grid-cols-3 gap-6 max-w-xl">
+              <div>
+                <p className="text-2xl sm:text-3xl font-extrabold text-[#111310] dark:text-white tracking-tight">
+                  <CountUpStat value="12.4M+" />
+                </p>
+                <p className="text-xs text-[#56635B] dark:text-emerald-300/80 font-medium mt-1">
+                  Farming Families
+                </p>
               </div>
-              <div className="rounded-xl bg-white/5 p-3 backdrop-blur-xs border border-white/10">
-                <p className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-[#F7C948] to-[#D7A928] bg-clip-text text-transparent">21</p>
-                <p className="text-xs text-emerald-200/80 font-bold mt-0.5">Zonal Offices</p>
+
+              <div>
+                <p className="text-2xl sm:text-3xl font-extrabold text-[#087A4B] dark:text-[#A3E635] tracking-tight">
+                  <CountUpStat value="21" />
+                </p>
+                <p className="text-xs text-[#56635B] dark:text-emerald-300/80 font-medium mt-1">
+                  Zonal Hubs
+                </p>
               </div>
-              <div className="rounded-xl bg-white/5 p-3 backdrop-blur-xs border border-white/10">
-                <p className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">15,000+</p>
-                <p className="text-xs text-emerald-200/80 font-bold mt-0.5">Extension Workers</p>
+
+              <div>
+                <p className="text-2xl sm:text-3xl font-extrabold text-[#111310] dark:text-white tracking-tight">
+                  <CountUpStat value="15,000+" />
+                </p>
+                <p className="text-xs text-[#56635B] dark:text-emerald-300/80 font-medium mt-1">
+                  Extension Agents
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Floating Advisory & Market Snapshot Card */}
-          <div className="lg:col-span-5 space-y-4 w-full">
-            {/* Primary Glassmorphic Hero Card */}
-            <div className="rounded-3xl border border-white/25 bg-gradient-to-b from-white/20 via-white/10 to-black/30 p-5 sm:p-7 backdrop-blur-2xl shadow-2xl space-y-4 sm:space-y-5 w-full">
-              <div className="flex items-center justify-between border-b border-white/15 pb-3.5 sm:pb-4 gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#F7C948] to-[#D7A928] text-[#063D2A] font-black shadow-md">
-                    <CloudSun className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-xs font-black uppercase tracking-wider bg-gradient-to-r from-[#F7C948] to-[#D7A928] bg-clip-text text-transparent block truncate">
-                      Live Regional Advisory
+          {/* Right Column: Hero Visual Container with Scroll Parallax */}
+          <div className="lg:col-span-5 relative w-full">
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-black/10 aspect-[4/5] sm:aspect-[4/3] lg:aspect-[4/5] max-h-[580px] w-full">
+              <motion.img
+                src={heroFarmlandImg}
+                alt="Oromia Agricultural Farmland"
+                referrerPolicy="no-referrer"
+                style={{ scale: bgScale, y: bgY }}
+                className="h-full w-full object-cover object-center will-change-transform"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+
+              {/* Floating Quick Advisory Card */}
+              <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 rounded-2xl bg-[#0A1912]/90 backdrop-blur-md p-4 sm:p-5 border border-white/15 text-white shadow-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CloudSun className="h-4 w-4 text-[#A3E635]" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#A3E635]">
+                      Live Regional Network
                     </span>
-                    <span className="text-[11px] text-emerald-100 flex items-center gap-1 truncate">
-                      <MapPin className="h-3 w-3 text-[#3FAE5A] shrink-0" />
-                      Oromia Regional Network
-                    </span>
+                  </div>
+                  <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full font-medium text-emerald-200">
+                    Oromia Wide
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <div>
+                    <p className="text-xs text-gray-300">Seasonal Advisory Window</p>
+                    <p className="text-sm font-semibold text-white">Wheat & Maize Sowing</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-300">Optimal Moisture</p>
+                    <p className="text-sm font-bold text-[#A3E635]">Arsi & Shewa</p>
                   </div>
                 </div>
-                <span className="shrink-0 rounded-full bg-gradient-to-r from-[#087A4B]/40 to-emerald-600/40 px-2.5 py-1 text-[10px] font-black text-emerald-200 border border-emerald-400/40">
-                  Updated Today
-                </span>
-              </div>
 
-              {/* Weather & Advisory Snippet */}
-              <div className="rounded-2xl bg-gradient-to-r from-black/40 to-black/20 p-3.5 sm:p-4 border border-white/10 space-y-1.5 sm:space-y-2">
-                <div className="flex flex-wrap items-center justify-between text-xs font-bold text-white gap-1">
-                  <span>Seasonal Planting Window:</span>
-                  <span className="text-[#D7A928]">Arsi & Shewa</span>
+                <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs text-emerald-200/90">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <ShieldCheck className="h-3.5 w-3.5 text-[#A3E635]" />
+                    {t('hero_trust_text')}
+                  </span>
+                  <a href="#market" className="text-[#A3E635] font-semibold hover:underline flex items-center gap-0.5 text-[11px]">
+                    Market Rates <ArrowUpRight className="h-3 w-3" />
+                  </a>
                 </div>
-                <p className="text-xs text-emerald-100/90 leading-relaxed">
-                  Optimal soil humidity detected for early wheat and maize sowing. Ensure certified seed applications before mid-week precipitation.
-                </p>
-              </div>
-
-              {/* Market Quick Row */}
-              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-                <div className="rounded-2xl bg-gradient-to-b from-white/15 to-white/5 p-3.5 sm:p-4 border border-white/15 shadow-inner min-w-0">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-emerald-200">
-                    <span className="truncate">Teff Agamsa</span>
-                    <TrendingUp className="h-3.5 w-3.5 text-[#3FAE5A] shrink-0" />
-                  </div>
-                  <p className="text-base sm:text-lg font-black text-white mt-1">ETB 11,200</p>
-                  <p className="text-[10px] text-emerald-300 font-semibold truncate">Per Quintal (Bishoftu)</p>
-                </div>
-
-                <div className="rounded-2xl bg-gradient-to-b from-white/15 to-white/5 p-3.5 sm:p-4 border border-white/15 shadow-inner min-w-0">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-emerald-200">
-                    <span className="truncate">White Wheat</span>
-                    <TrendingUp className="h-3.5 w-3.5 text-[#3FAE5A] shrink-0" />
-                  </div>
-                  <p className="text-base sm:text-lg font-black text-white mt-1">ETB 6,450</p>
-                  <p className="text-[10px] text-emerald-300 font-semibold truncate">Per Quintal (Asella)</p>
-                </div>
-              </div>
-
-              {/* Trust Badge footer */}
-              <div className="flex items-center gap-2 pt-1 text-xs text-emerald-200">
-                <ShieldCheck className="h-4 w-4 text-[#D7A928] shrink-0" />
-                <span className="font-semibold leading-tight">{t('hero_trust_text')}</span>
-              </div>
-            </div>
-
-            {/* Mobile Statistics Grid (Visible on <1024px) */}
-            <div className="grid lg:hidden grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4 pt-1 sm:pt-2">
-              <div className="rounded-xl bg-white/5 p-3 backdrop-blur-xs border border-white/10">
-                <p className="text-xl sm:text-2xl font-black bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">12.4M+</p>
-                <p className="text-[11px] sm:text-xs text-emerald-200/90 font-bold mt-0.5">Farming Households</p>
-              </div>
-              <div className="rounded-xl bg-white/5 p-3 backdrop-blur-xs border border-white/10">
-                <p className="text-xl sm:text-2xl font-black bg-gradient-to-r from-[#F7C948] to-[#D7A928] bg-clip-text text-transparent">21</p>
-                <p className="text-[11px] sm:text-xs text-emerald-200/90 font-bold mt-0.5">Zonal Offices</p>
-              </div>
-              <div className="col-span-2 sm:col-span-1 rounded-xl bg-white/5 p-3 backdrop-blur-xs border border-white/10">
-                <p className="text-xl sm:text-2xl font-black bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">15,000+</p>
-                <p className="text-[11px] sm:text-xs text-emerald-200/90 font-bold mt-0.5">Extension Workers</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 };
+

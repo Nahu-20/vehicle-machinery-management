@@ -14,9 +14,9 @@ export const MEDIA_ALLOWED_IMAGE_TYPES = [
 
 export type MediaAllowedImageType = (typeof MEDIA_ALLOWED_IMAGE_TYPES)[number];
 
-export type MediaModule = 'news';
+export type MediaModule = 'news' | 'achievement' | 'alert';
 
-export type MediaPurpose = 'featured-image';
+export type MediaPurpose = 'featured-image' | 'gallery-image';
 
 export type MediaUploadState =
   | 'validating'
@@ -41,8 +41,9 @@ export interface StagingMediaUpload {
   mediaId: string;
   ownerUid: string;
   storagePath: string;
-  module: 'news';
-  purpose: 'featured-image';
+  module: MediaModule;
+  purpose: MediaPurpose;
+  galleryItemId?: string;
   originalFileName: string;
   sanitizedFileName: string;
   contentType: string;
@@ -55,10 +56,13 @@ export interface StagingMediaUpload {
   progressPercent: number;
 }
 
-export interface NewsStagedImageReference {
+export interface StagedMediaReference {
   mediaId: string;
   ownerUid: string;
   storagePath: string;
+  module?: MediaModule;
+  purpose?: MediaPurpose;
+  galleryItemId?: string;
   originalFileName: string;
   contentType: string;
   size: number;
@@ -66,6 +70,33 @@ export interface NewsStagedImageReference {
   height: number;
   status: 'staged';
   uploadedAt?: string;
+}
+
+export type NewsStagedImageReference = StagedMediaReference;
+
+export interface ManagedFeaturedImage {
+  source: 'managed';
+  mediaId: string;
+
+  urls: {
+    hero: string;
+    card: string;
+    thumbnail: string;
+  };
+
+  width: {
+    hero: number;
+    card: number;
+    thumbnail: number;
+  };
+
+  height: {
+    hero: number;
+    card: number;
+    thumbnail: number;
+  };
+
+  contentType: 'image/webp';
 }
 
 export type MediaAssetStatus =
@@ -79,7 +110,7 @@ export type MediaAssetStatus =
   | 'cleanup_pending'
   | 'deleted';
 
-export type MediaVariantName = 'hero' | 'card' | 'thumbnail';
+export type MediaVariantName = 'hero' | 'card' | 'thumbnail' | 'large' | 'medium';
 
 export interface MediaVariant {
   name: MediaVariantName;
@@ -95,8 +126,8 @@ export interface MediaVariant {
 export interface MediaAsset {
   mediaId: string;
 
-  module: 'news';
-  purpose: 'featured-image';
+  module: MediaModule;
+  purpose: MediaPurpose;
 
   ownerUid: string;
 
@@ -115,9 +146,14 @@ export interface MediaAsset {
     hero?: MediaVariant;
     card?: MediaVariant;
     thumbnail?: MediaVariant;
+    large?: MediaVariant;
+    medium?: MediaVariant;
   };
 
   articleSlug?: string;
+  achievementSlug?: string;
+  alertSlug?: string;
+  galleryItemId?: string;
 
   failureCode?: MediaProcessingFailureCode | string;
   processingAttempts: number;

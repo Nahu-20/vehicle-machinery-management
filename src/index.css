@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -6,22 +7,24 @@
   --color-forest: #063D2A;
   --color-primary: #087A4B;
   --color-bright: #3FAE5A;
+  --color-lime: #A3E635;
   --color-gold: #D7A928;
   --color-soft-green: #EFF8F2;
-  --color-warm-white: #FAFAF7;
+  --color-warm-white: #F6F7F3;
+  --color-dark-editorial: #0A1912;
   --color-white: #FFFFFF;
-  --color-text-primary: #14251D;
-  --color-text-muted: #637069;
-  --color-border: #DDE8E1;
+  --color-text-primary: #111310;
+  --color-text-muted: #56635B;
+  --color-border: #E2E8E3;
   --font-size-multiplier: 1;
 }
 
 html.dark {
   color-scheme: dark;
-  --color-warm-white: #061810;
-  --color-text-primary: #F0FDF4;
-  --color-text-muted: #A7F3D0;
-  --color-border: #133A29;
+  --color-warm-white: #0B1912;
+  --color-text-primary: #F2F7F4;
+  --color-text-muted: #94A39A;
+  --color-border: #183327;
 }
 
 body {
@@ -35,26 +38,29 @@ body {
 }
 
 html.dark body {
-  background: radial-gradient(circle at 50% 0%, #0E291C 0%, #061810 50%, #030E09 100%);
-  background-attachment: fixed;
+  background: #08140E;
 }
 
 /* Custom design system utilities */
 .bg-forest { background-color: #063D2A; }
 .bg-primary-green { background-color: #087A4B; }
 .bg-bright-green { background-color: #3FAE5A; }
+.bg-agri-lime { background-color: #A3E635; }
 .bg-agri-gold { background-color: #D7A928; }
 .bg-soft-green { background-color: #EFF8F2; }
-.bg-warm-white { background-color: #FAFAF7; }
+.bg-warm-white { background-color: #F6F7F3; }
+.bg-dark-editorial { background-color: #0A1912; }
 
 .text-forest { color: #063D2A; }
 .text-primary-green { color: #087A4B; }
 .text-bright-green { color: #3FAE5A; }
+.text-agri-lime { color: #A3E635; }
 .text-agri-gold { color: #D7A928; }
-.text-dark-primary { color: #14251D; }
-.text-muted-green { color: #637069; }
+.text-dark-primary { color: #111310; }
+.text-muted-green { color: #56635B; }
 
-.border-agri { border-color: #DDE8E1; }
+.border-agri { border-color: #E2E8E3; }
+.border-agri-lime { border-color: #A3E635; }
 
 /* Vibrant Dark Mode Linear Gradients & Glowing Utilities */
 .dark-gradient-card {

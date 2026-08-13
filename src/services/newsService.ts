@@ -37,21 +37,42 @@ async function ensureStaffUserRecord(staffUser: StaffUser): Promise<string> {
   if (db && activeUid) {
     try {
       const staffDocRef = doc(db, 'staffUsers', activeUid);
-      await setDoc(
-        staffDocRef,
-        {
+      const snap = await getDoc(staffDocRef);
+
+      const defaultEmail = staffUser?.email || 'staff@oromiaagri.gov.et';
+      const defaultName = staffUser?.displayName || 'Staff Member';
+      const defaultRole = staffUser?.role || 'superAdmin';
+
+      if (!snap.exists()) {
+        await setDoc(staffDocRef, {
           uid: activeUid,
-          email: staffUser.email || 'staff@oromiaagri.gov.et',
-          displayName: staffUser.displayName || 'Staff Member',
-          role: staffUser.role || 'superAdmin',
+          email: defaultEmail,
+          displayName: defaultName,
+          role: defaultRole,
           active: true,
-          preferredLanguage: staffUser.preferredLanguage || 'om',
+          preferredLanguage: staffUser?.preferredLanguage || 'om',
+          createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+        });
+      } else {
+        const existingData = snap.data();
+        if (!existingData || existingData.active !== true || !existingData.role) {
+          await setDoc(
+            staffDocRef,
+            {
+              uid: activeUid,
+              email: existingData?.email || defaultEmail,
+              displayName: existingData?.displayName || defaultName,
+              active: true,
+              role: existingData?.role || defaultRole,
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+        }
+      }
     } catch (err) {
-      console.warn('[newsService] Note setting staff profile document:', err);
+      console.warn('[newsService] Error ensuring staff profile document:', err);
     }
   }
   return activeUid;

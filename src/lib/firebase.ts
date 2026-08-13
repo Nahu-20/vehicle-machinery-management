@@ -60,11 +60,15 @@ if (config) {
 
     // Connection validation as required by skill guidelines
     if (db) {
-      getDoc(doc(db, 'test', 'connection')).catch((error) => {
+      const connTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Firestore connection timeout')), 2500)
+      );
+      Promise.race([getDoc(doc(db, 'test', 'connection')), connTimeout]).catch((error) => {
         const errMsg = error instanceof Error ? error.message : String(error);
         if (
           errMsg.includes('offline') ||
           errMsg.includes('unavailable') ||
+          errMsg.includes('timeout') ||
           (error && typeof error === 'object' && 'code' in error && (error as any).code === 'unavailable')
         ) {
           console.warn('Firebase client is operating in offline or fallback mode.');

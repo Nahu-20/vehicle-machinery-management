@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { mockMarketPrices } from '../../data/mockData';
 import { MarketPrice } from '../../types';
+import { SectionHeaderReveal } from '../common/scroll/SectionHeaderReveal';
+import { ScrollReveal } from '../common/scroll/ScrollReveal';
+import { StaggerContainer, StaggerItem } from '../common/scroll/StaggerContainer';
 import { TrendingUp, TrendingDown, AlertCircle, RefreshCw, Filter, Sparkles } from 'lucide-react';
 
 export const MarketPriceCardList: React.FC<{ items: MarketPrice[] }> = ({ items }) => {
@@ -177,18 +180,24 @@ export const MarketSnapshotSection: React.FC = () => {
       <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 w-full min-w-0">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 min-w-0">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D7A928]/20 dark:bg-[#D7A928]/30 text-[#063D2A] dark:text-[#FDE68A] text-xs font-extrabold mb-3 border border-[#D7A928]/30">
-              <Sparkles className="h-3.5 w-3.5 text-[#D7A928]" />
-              <span>Oromia Regional Market Intelligence</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#14251D] dark:text-emerald-100 tracking-tight overflow-wrap-anywhere">
-              {t('market_title')}
-            </h2>
-            <p className="text-sm sm:text-base text-[#637069] dark:text-emerald-300/80 mt-2 max-w-2xl">
-              {t('market_subtitle')}
-            </p>
-          </div>
+          <SectionHeaderReveal
+            eyebrow={
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D7A928]/20 dark:bg-[#D7A928]/30 text-[#063D2A] dark:text-[#FDE68A] text-xs font-extrabold border border-[#D7A928]/30">
+                <Sparkles className="h-3.5 w-3.5 text-[#D7A928]" />
+                <span>Oromia Regional Market Intelligence</span>
+              </div>
+            }
+            title={
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#14251D] dark:text-emerald-100 tracking-tight overflow-wrap-anywhere">
+                {t('market_title')}
+              </h2>
+            }
+            description={
+              <p className="text-sm sm:text-base text-[#637069] dark:text-emerald-300/80">
+                {t('market_subtitle')}
+              </p>
+            }
+          />
 
           <div className="flex items-center gap-2 text-xs font-bold text-[#063D2A] dark:text-emerald-200 bg-[#EFF8F2] dark:bg-[#12281D] px-4 py-2 rounded-xl border border-[#DDE8E1] dark:border-emerald-800/60 shrink-0 self-start md:self-auto">
             <RefreshCw className="h-4 w-4 text-[#087A4B] dark:text-[#D7A928]" />
@@ -218,56 +227,62 @@ export const MarketSnapshotSection: React.FC = () => {
         </div>
 
         {/* Prominent Disclaimer Notice */}
-        <div className="mb-8 rounded-2xl bg-amber-50 dark:bg-amber-950/40 p-4 border border-amber-200 dark:border-amber-800/60 flex items-center gap-3 text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-200 shadow-2xs min-w-0">
-          <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
-          <span className="overflow-wrap-anywhere">{t('market_disclaimer')}</span>
-        </div>
+        <ScrollReveal variant="fade-up" duration={0.5}>
+          <div className="mb-8 rounded-2xl bg-amber-50 dark:bg-amber-950/40 p-4 border border-amber-200 dark:border-amber-800/60 flex items-center gap-3 text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-200 shadow-2xs min-w-0">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="overflow-wrap-anywhere">{t('market_disclaimer')}</span>
+          </div>
+        </ScrollReveal>
 
         {/* Featured Price Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 min-w-0">
+        <StaggerContainer staggerDelay={0.08} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 min-w-0">
           {mockMarketPrices.slice(0, 4).map((item) => {
             const commName = item.commodity ? getLocalizedText(item.commodity) : (item.commodityKey ? t(item.commodityKey) : '');
             const mktName = getLocalizedText(item.market);
             const zName = getLocalizedText(item.zone);
 
             return (
-              <div key={item.id} className="rounded-2xl border border-[#DDE8E1] dark:border-emerald-900/60 bg-[#FAFAF7] dark:bg-[#12281D] p-5 card-hover min-w-0 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between text-xs font-bold text-[#637069] dark:text-emerald-400/80 gap-2">
-                    <span className="truncate">{zName} ({mktName})</span>
-                    <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-[#087A4B] dark:text-emerald-300 px-2 py-0.5 rounded-full shrink-0">Active</span>
-                  </div>
-                  <h3 className="text-base font-black text-[#063D2A] dark:text-emerald-100 mt-2 overflow-wrap-anywhere leading-snug">{commName}</h3>
-                </div>
-                <div className="mt-4 flex items-baseline justify-between pt-2 border-t border-[#DDE8E1]/60 dark:border-emerald-900/40">
+              <StaggerItem key={item.id}>
+                <div className="rounded-2xl border border-[#DDE8E1] dark:border-emerald-900/60 bg-[#FAFAF7] dark:bg-[#12281D] p-5 card-hover min-w-0 flex flex-col justify-between h-full">
                   <div>
-                    <span className="text-2xl font-black text-[#14251D] dark:text-white">{item.priceETB.toLocaleString()}</span>
-                    <span className="text-xs font-bold text-[#637069] dark:text-emerald-400/80 ml-1">ETB</span>
+                    <div className="flex items-center justify-between text-xs font-bold text-[#637069] dark:text-emerald-400/80 gap-2">
+                      <span className="truncate">{zName} ({mktName})</span>
+                      <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-[#087A4B] dark:text-emerald-300 px-2 py-0.5 rounded-full shrink-0">Active</span>
+                    </div>
+                    <h3 className="text-base font-black text-[#063D2A] dark:text-emerald-100 mt-2 overflow-wrap-anywhere leading-snug">{commName}</h3>
                   </div>
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-extrabold shrink-0 ${
-                      item.changePercent > 0
-                        ? 'bg-emerald-100 dark:bg-emerald-900/80 text-[#087A4B] dark:text-emerald-300'
-                        : 'bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300'
-                    }`}
-                  >
-                    {item.changePercent > 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                    {item.changePercent > 0 ? `+${item.changePercent}%` : `${item.changePercent}%`}
-                  </span>
+                  <div className="mt-4 flex items-baseline justify-between pt-2 border-t border-[#DDE8E1]/60 dark:border-emerald-900/40">
+                    <div>
+                      <span className="text-2xl font-black text-[#14251D] dark:text-white">{item.priceETB.toLocaleString()}</span>
+                      <span className="text-xs font-bold text-[#637069] dark:text-emerald-400/80 ml-1">ETB</span>
+                    </div>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-extrabold shrink-0 ${
+                        item.changePercent > 0
+                          ? 'bg-emerald-100 dark:bg-emerald-900/80 text-[#087A4B] dark:text-emerald-300'
+                          : 'bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300'
+                      }`}
+                    >
+                      {item.changePercent > 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                      {item.changePercent > 0 ? `+${item.changePercent}%` : `${item.changePercent}%`}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerContainer>
 
         {/* Responsive Market Section: Card list on mobile (<768px), Table on tablet/desktop (>=768px) */}
-        <div className="block md:hidden w-full max-w-full">
-          <MarketPriceCardList items={filteredPrices} />
-        </div>
+        <ScrollReveal variant="fade-up" duration={0.6}>
+          <div className="block md:hidden w-full max-w-full">
+            <MarketPriceCardList items={filteredPrices} />
+          </div>
 
-        <div className="hidden md:block w-full">
-          <MarketPriceTable items={filteredPrices} />
-        </div>
+          <div className="hidden md:block w-full">
+            <MarketPriceTable items={filteredPrices} />
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   );

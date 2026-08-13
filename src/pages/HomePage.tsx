@@ -3,8 +3,10 @@ import { HeroSection } from '../components/home/HeroSection';
 import { QuickServicesSection } from '../components/home/QuickServicesSection';
 import { FeaturedProgramsSection } from '../components/home/FeaturedProgramsSection';
 import { MarketSnapshotSection } from '../components/home/MarketSnapshotSection';
+import { AgriculturalInvestmentSection } from '../components/home/AgriculturalInvestmentSection';
 import { AchievementsSection } from '../components/achievements/AchievementsSection';
 import { NewsAnnouncementsSection } from '../components/home/NewsAnnouncementsSection';
+import { InvestorsPartnersSection } from '../components/home/InvestorsPartnersSection';
 import { FarmerResourcesSection } from '../components/home/FarmerResourcesSection';
 import { ContactFeedbackCTA } from '../components/home/ContactFeedbackCTA';
 
@@ -23,16 +25,22 @@ export const HomePage: React.FC = () => {
       {/* 4. Agricultural market snapshot */}
       <MarketSnapshotSection />
 
-      {/* 5. Achievements and Impact section */}
+      {/* 5. Agricultural Investment Opportunities */}
+      <AgriculturalInvestmentSection />
+
+      {/* 6. Achievements and Impact section */}
       <AchievementsSection />
 
       {/* 6. Latest news and announcements */}
       <NewsAnnouncementsSection />
 
-      {/* 7. Farmer resources */}
+      {/* 7. Investors and Partners marquee */}
+      <InvestorsPartnersSection />
+
+      {/* 8. Farmer resources */}
       <FarmerResourcesSection />
 
-      {/* 8. Contact and feedback call-to-action */}
+      {/* 9. Contact and feedback call-to-action */}
       <ContactFeedbackCTA />
     </div>
   );

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { mockAlerts } from '../../data/mockData';
 import { AgriculturalAlert, AlertSeverity } from '../../types';
+import { ScrollReveal } from '../common/scroll/ScrollReveal';
 import {
   AlertTriangle,
   Info,
@@ -99,11 +100,12 @@ export const AlertStrip: React.FC = () => {
   const style = getSeverityStyle(topAlert.severity);
 
   return (
-    <div
-      role="region"
-      aria-label="Active High Priority Emergency Alert"
-      className={`relative w-full border-b py-2.5 px-4 sm:px-6 lg:px-8 transition-all ${style.bannerBg}`}
-    >
+    <ScrollReveal variant="fade-up" duration={0.5}>
+      <div
+        role="region"
+        aria-label="Active High Priority Emergency Alert"
+        className={`relative w-full border-b py-2.5 px-4 sm:px-6 lg:px-8 transition-all ${style.bannerBg}`}
+      >
       <div className="max-w-[1360px] mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         {/* Left Info Group */}
         <div className="flex flex-wrap items-center gap-2.5 min-w-0 flex-1">
@@ -187,5 +189,6 @@ export const AlertStrip: React.FC = () => {
         </div>
       </div>
     </div>
+    </ScrollReveal>
   );
 };

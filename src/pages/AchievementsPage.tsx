@@ -1,108 +1,143 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Award,
   Search,
-  Filter,
   ArrowRight,
-  Download,
-  FileText,
   Calendar,
-  MapPin,
-  CheckCircle2,
-  Sprout,
-  Droplets,
-  Beef,
-  Trees,
-  GraduationCap,
-  Users,
-  RefreshCw,
-  Quote,
-  TrendingUp,
   Building2,
   ChevronRight,
   SlidersHorizontal,
+  RefreshCw,
+  TrendingUp,
+  Sprout,
+  Beef,
+  Trees,
+  Droplets,
+  GraduationCap,
+  Users,
+  ChevronLeft,
+  Quote,
+  FileText,
+  Download,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import {
-  mockAchievements,
   mockTimeline,
   mockProgramImpacts,
-  mockReports,
   mockBeforeAfter,
+  mockReports,
 } from '../data/mockData';
+import { PublicAchievement, AchievementCategory } from '../types/achievement';
+import { getPublishedAchievementsPaginated } from '../services/achievementService';
+import { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export const AchievementsPage: React.FC = () => {
-  const { language, t } = useLanguage();
+  const { language, t, getLocalizedText } = useLanguage();
 
-  // Filters State
+  // Filters & State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedZone, setSelectedZone] = useState<string>('all');
-  const [selectedYear, setSelectedYear] = useState<string>('all');
+  
+  // Pagination state
+  const [achievements, setAchievements] = useState<PublicAchievement[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState<number>(1);
+  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [cursorStack, setCursorStack] = useState<(QueryDocumentSnapshot | null)[]>([null]);
 
-  // Before & After Interactive state
-  const [showAfter, setShowAfter] = useState<boolean>(true);
-
-  // Filter Categories list
+  // Categories list
   const categories: { key: string; label: string }[] = [
-    { key: 'all', label: t('achievements_all_programs') },
-    { key: 'crop', label: 'Crop Production' },
+    { key: 'all', label: t('achievements_all_programs') || 'All Programs' },
+    { key: 'productivity', label: 'Productivity & Crop Output' },
     { key: 'irrigation', label: 'Irrigation & Water' },
-    { key: 'livestock', label: 'Livestock Health' },
-    { key: 'resource', label: 'Natural Resources' },
-    { key: 'training', label: 'Agronomy Training' },
-    { key: 'empowerment', label: 'Youth & Women' },
+    { key: 'livestock', label: 'Livestock & Health' },
+    { key: 'extension', label: 'Agronomy Extension' },
+    { key: 'mechanization', label: 'Mechanization' },
+    { key: 'natural-resources', label: 'Natural Resources' },
+    { key: 'market-access', label: 'Market Access' },
+    { key: 'youth-and-women', label: 'Youth & Women' },
+    { key: 'other', label: 'Other Initiatives' },
   ];
 
-  // Available Zones
-  const zones = useMemo(() => {
-    const list = Array.from(new Set(mockAchievements.map((a) => a.zone[language])));
-    return ['all', ...list];
-  }, [language]);
+  // Fetch paginated achievements
+  useEffect(() => {
+    let isMounted = true;
+    async function loadAchievements() {
+      setLoading(true);
+      setError(null);
+      try {
+        const catFilter = selectedCategory === 'all' ? undefined : (selectedCategory as AchievementCategory);
+        const lastDoc = cursorStack[page - 1] || undefined;
+        
+        const result = await getPublishedAchievementsPaginated(
+          {
+            category: catFilter,
+            searchQuery: searchQuery.trim() || undefined,
+          },
+          9,
+          lastDoc
+        );
 
-  // Available Years
-  const years = useMemo(() => {
-    const list = Array.from(new Set(mockAchievements.map((a) => a.year))).sort().reverse();
-    return ['all', ...list];
-  }, []);
-
-  // Filtered achievements
-  const filteredAchievements = useMemo(() => {
-    return mockAchievements.filter((item) => {
-      // Category filter
-      if (selectedCategory !== 'all' && item.category !== selectedCategory) {
-        return false;
-      }
-      // Zone filter
-      if (selectedZone !== 'all' && item.zone[language] !== selectedZone) {
-        return false;
-      }
-      // Year filter
-      if (selectedYear !== 'all' && item.year !== selectedYear) {
-        return false;
-      }
-      // Search query filter
-      if (searchQuery.trim() !== '') {
-        const query = searchQuery.toLowerCase();
-        const titleMatch = item.title[language].toLowerCase().includes(query);
-        const excerptMatch = item.excerpt[language].toLowerCase().includes(query);
-        const zoneMatch = item.zone[language].toLowerCase().includes(query);
-        const programMatch = item.program[language].toLowerCase().includes(query);
-        if (!titleMatch && !excerptMatch && !zoneMatch && !programMatch) {
-          return false;
+        if (isMounted) {
+          setAchievements(result.achievements);
+          setHasMore(result.hasMore);
+          if (result.hasMore && result.lastDocSnapshot && cursorStack.length <= page) {
+            setCursorStack((prev) => {
+              const next = [...prev];
+              next[page] = result.lastDocSnapshot;
+              return next;
+            });
+          }
+          setLoading(false);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          console.error('[AchievementsPage] Failed to load achievements:', err);
+          setError(err.message || 'Failed to load achievements.');
+          setAchievements([]);
+          setLoading(false);
         }
       }
-      return true;
-    });
-  }, [selectedCategory, selectedZone, selectedYear, searchQuery, language]);
+    }
+
+    loadAchievements();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCategory, searchQuery, page]);
+
+  const handleCategoryChange = (cat: string) => {
+    setSelectedCategory(cat);
+    setPage(1);
+    setCursorStack([null]);
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setPage(1);
+    setCursorStack([null]);
+  };
 
   const resetFilters = () => {
     setSearchQuery('');
     setSelectedCategory('all');
-    setSelectedZone('all');
-    setSelectedYear('all');
+    setPage(1);
+    setCursorStack([null]);
+  };
+
+  const nextPage = () => {
+    if (hasMore) {
+      setPage((prev) => prev + 1);
+    }
+  };
+
+  const prevPage = () => {
+    if (page > 1) {
+      setPage((prev) => prev - 1);
+    }
   };
 
   // Helper function to render Program Icon
@@ -180,7 +215,7 @@ export const AchievementsPage: React.FC = () => {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder={t('achievements_filter_search')}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
               />
@@ -196,7 +231,7 @@ export const AchievementsPage: React.FC = () => {
               {/* Category Dropdown */}
               <select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                onChange={(e) => handleCategoryChange(e.target.value)}
                 className="px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               >
                 {categories.map((cat) => (
@@ -206,36 +241,8 @@ export const AchievementsPage: React.FC = () => {
                 ))}
               </select>
 
-              {/* Zone Dropdown */}
-              <select
-                value={selectedZone}
-                onChange={(e) => setSelectedZone(e.target.value)}
-                className="px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              >
-                <option value="all">{t('achievements_all_zones')}</option>
-                {zones.filter((z) => z !== 'all').map((z) => (
-                  <option key={z} value={z}>
-                    {z}
-                  </option>
-                ))}
-              </select>
-
-              {/* Year Dropdown */}
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-                className="px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              >
-                <option value="all">{t('achievements_all_years')}</option>
-                {years.filter((y) => y !== 'all').map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-
               {/* Clear Filters Button */}
-              {(selectedCategory !== 'all' || selectedZone !== 'all' || selectedYear !== 'all' || searchQuery !== '') && (
+              {(selectedCategory !== 'all' || searchQuery !== '') && (
                 <button
                   onClick={resetFilters}
                   className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors"
@@ -257,18 +264,46 @@ export const AchievementsPage: React.FC = () => {
               <span>{t('achievements_in_action')}</span>
             </h2>
             <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-              Showing {filteredAchievements.length} Portfolio Articles
+              Page {page} {achievements.length > 0 ? `(${achievements.length} items)` : ''}
             </span>
           </div>
 
-          {filteredAchievements.length === 0 ? (
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[1, 2, 3, 4, 5, 6].map((idx) => (
+                <div key={idx} className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 animate-pulse space-y-4">
+                  <div className="h-48 bg-slate-200 dark:bg-slate-700 rounded-xl" />
+                  <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-3/4" />
+                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full" />
+                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-2/3" />
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 dark:bg-red-950/40 rounded-2xl p-8 text-center border border-red-200 dark:border-red-800/60">
+              <Award className="w-12 h-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-red-900 dark:text-red-200">
+                Failed to load achievements
+              </h3>
+              <p className="text-sm text-red-700 dark:text-red-300 mt-2 max-w-md mx-auto">
+                {error}
+              </p>
+              <button
+                onClick={resetFilters}
+                className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-medium text-sm transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Retry</span>
+              </button>
+            </div>
+          ) : achievements.length === 0 ? (
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 text-center border border-slate-200 dark:border-slate-700">
               <Award className="w-12 h-12 text-slate-400 mx-auto mb-4" />
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                 {t('achievements_no_results')}
               </h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-md mx-auto">
-                Try clearing your search query or adjusting your program and zonal filters.
+                No published achievements found matching your selected filters.
               </p>
               <button
                 onClick={resetFilters}
@@ -279,94 +314,128 @@ export const AchievementsPage: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredAchievements.map((item) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.3 }}
-                  className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group"
-                >
-                  {/* Image Container */}
-                  <div className="relative h-48 sm:h-52 overflow-hidden bg-slate-100 dark:bg-slate-700">
-                    <img
-                      src={item.featuredImage}
-                      alt={item.imageAlt[language]}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
-                    
-                    <div className="absolute top-3 left-3 flex flex-wrap gap-2">
-                      <span className="px-2.5 py-1 rounded-md bg-emerald-950/80 text-emerald-300 font-bold text-xs backdrop-blur-md border border-emerald-500/30">
-                        {item.zone[language]}
-                      </span>
-                      {item.featured && (
-                        <span className="px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-bold text-xs shadow">
-                          Featured
-                        </span>
-                      )}
-                    </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {achievements.map((item) => {
+                  const title = getLocalizedText(item.title);
+                  const summary = getLocalizedText(item.summary);
+                  const imageAlt = getLocalizedText(item.imageAlt) || title;
+                  const office = getLocalizedText(item.responsibleOffice);
+                  const displayImage = item.featuredImage || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&auto=format&fit=crop&q=80';
 
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white">
-                      <span className="font-semibold text-emerald-300">
-                        {item.program[language]}
-                      </span>
-                      <span className="font-bold px-2 py-0.5 rounded bg-slate-900/60 backdrop-blur-sm">
-                        {item.year}
-                      </span>
-                    </div>
-                  </div>
+                  return (
+                    <motion.div
+                      key={item.slug}
+                      initial={{ opacity: 0, y: 15 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.3 }}
+                      className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group"
+                    >
+                      {/* Image Container */}
+                      <div className="relative h-48 sm:h-52 overflow-hidden bg-slate-100 dark:bg-slate-700">
+                        <img
+                          src={displayImage}
+                          alt={imageAlt}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
+                        
+                        <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+                          <span className="px-2.5 py-1 rounded-md bg-emerald-950/80 text-emerald-300 font-bold text-xs backdrop-blur-md border border-emerald-500/30 capitalize">
+                            {item.category}
+                          </span>
+                          {item.featured && (
+                            <span className="px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-bold text-xs shadow">
+                              Featured
+                            </span>
+                          )}
+                        </div>
 
-                  {/* Card Content */}
-                  <div className="p-6 flex-1 flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-2 mb-3">
-                        <Link to={`/achievements/${item.slug}`}>
-                          {item.title[language]}
-                        </Link>
-                      </h3>
-
-                      <p className="text-slate-600 dark:text-slate-300 text-sm line-clamp-3 mb-6">
-                        {item.excerpt[language]}
-                      </p>
-                    </div>
-
-                    <div>
-                      {/* Key metrics pill preview */}
-                      <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/60 mb-6">
-                        {item.metrics.slice(0, 2).map((m, idx) => (
-                          <div key={idx} className="text-center">
-                            <div className="text-sm font-extrabold text-slate-900 dark:text-white">
-                              {m.value}
-                            </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                              {m.label[language]}
-                            </div>
+                        {item.publishedAt && (
+                          <div className="absolute bottom-3 right-3 text-xs text-white font-bold px-2 py-0.5 rounded bg-slate-900/60 backdrop-blur-sm">
+                            {new Date(item.publishedAt).getFullYear()}
                           </div>
-                        ))}
+                        )}
                       </div>
 
-                      <div className="pt-4 border-t border-slate-100 dark:border-slate-700/80 flex items-center justify-between">
-                        <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                          <Building2 className="w-3.5 h-3.5" />
-                          <span className="truncate max-w-[140px]">{item.responsibleOffice[language]}</span>
-                        </span>
+                      {/* Card Content */}
+                      <div className="p-6 flex-1 flex flex-col justify-between">
+                        <div>
+                          <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-2 mb-3">
+                            <Link to={`/achievements/${item.slug}`}>
+                              {title}
+                            </Link>
+                          </h3>
 
-                        <Link
-                          to={`/achievements/${item.slug}`}
-                          className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 group-hover:translate-x-1 transition-transform"
-                        >
-                          <span>{t('view_full_story')}</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </Link>
+                          <p className="text-slate-600 dark:text-slate-300 text-sm line-clamp-3 mb-6">
+                            {summary}
+                          </p>
+                        </div>
+
+                        <div>
+                          {/* Key metrics pill preview */}
+                          {item.metrics && item.metrics.length > 0 && (
+                            <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700/60 mb-6">
+                              {item.metrics.slice(0, 2).map((m, idx) => (
+                                <div key={m.id || idx} className="text-center">
+                                  <div className="text-sm font-extrabold text-slate-900 dark:text-white">
+                                    {m.value}
+                                  </div>
+                                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                                    {getLocalizedText(m.label)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="pt-4 border-t border-slate-100 dark:border-slate-700/80 flex items-center justify-between">
+                            <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                              <Building2 className="w-3.5 h-3.5" />
+                              <span className="truncate max-w-[140px]">{office}</span>
+                            </span>
+
+                            <Link
+                              to={`/achievements/${item.slug}`}
+                              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 group-hover:translate-x-1 transition-transform"
+                            >
+                              <span>{t('view_full_story')}</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </Link>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Pagination Bar */}
+              <div className="flex items-center justify-between pt-8 border-t border-slate-200 dark:border-slate-700 mt-12">
+                <button
+                  onClick={prevPage}
+                  disabled={page <= 1}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Previous Page</span>
+                </button>
+
+                <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                  Page {page}
+                </span>
+
+                <button
+                  onClick={nextPage}
+                  disabled={!hasMore}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <span>Next Page</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </>
           )}
         </section>
 

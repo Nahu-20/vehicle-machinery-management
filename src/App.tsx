@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+
+// Lazy-loaded GIS Lab Page
+const InvestmentMapLabPage = lazy(() => import('./pages/InvestmentMapLabPage'));
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ToastProvider } from './context/ToastContext';
@@ -7,6 +10,7 @@ import { AuthProvider } from './context/AuthContext';
 import { StaffAuthorizationProvider } from './context/StaffAuthorizationContext';
 
 // Public Layout & Components
+import { ScrollProgress } from './components/common/scroll';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { HomePage } from './pages/HomePage';
@@ -21,6 +25,7 @@ import { AlertsPage } from './pages/AlertsPage';
 import { AlertDetailPage } from './pages/AlertDetailPage';
 import { AchievementsPage } from './pages/AchievementsPage';
 import { AchievementDetailPage } from './pages/AchievementDetailPage';
+import { InvestmentPage } from './pages/InvestmentPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ChatLauncher } from './components/chat/ChatLauncher';
 import { ChatPanel } from './components/chat/ChatPanel';
@@ -44,11 +49,35 @@ import { AdminNewsEditPage } from './pages/admin/news/AdminNewsEditPage';
 import { AdminNewsPreviewPage } from './pages/admin/news/AdminNewsPreviewPage';
 import { AdminNewsHistoryPage } from './pages/admin/news/AdminNewsHistoryPage';
 import { AdminNewsActivityPage } from './pages/admin/news/AdminNewsActivityPage';
-import { AlertsManagementPage } from './pages/admin/AlertsManagementPage';
+import { AdminAchievementListPage } from './pages/admin/achievements/AdminAchievementListPage';
+import { AdminAchievementTrashPage } from './pages/admin/achievements/AdminAchievementTrashPage';
+import { AdminAchievementCreatePage } from './pages/admin/achievements/AdminAchievementCreatePage';
+import { AdminAchievementEditPage } from './pages/admin/achievements/AdminAchievementEditPage';
+import { AdminAchievementPreviewPage } from './pages/admin/achievements/AdminAchievementPreviewPage';
+import { AdminAchievementHistoryPage } from './pages/admin/achievements/AdminAchievementHistoryPage';
+import { AdminAlertListPage } from './pages/admin/alerts/AdminAlertListPage';
+import { AdminAlertTrashPage } from './pages/admin/alerts/AdminAlertTrashPage';
+import { AdminAlertCreatePage } from './pages/admin/alerts/AdminAlertCreatePage';
+import { AdminAlertEditPage } from './pages/admin/alerts/AdminAlertEditPage';
+import { AdminAlertPreviewPage } from './pages/admin/alerts/AdminAlertPreviewPage';
+import { AdminAlertHistoryPage } from './pages/admin/alerts/AdminAlertHistoryPage';
 import { MarketManagementPage } from './pages/admin/MarketManagementPage';
 import { ResourcesManagementPage } from './pages/admin/ResourcesManagementPage';
 import { StaffManagementPage } from './pages/admin/StaffManagementPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
+import { InvestmentAdminLayout } from './pages/admin/investment/InvestmentAdminLayout';
+import { AdminInvestmentOverviewPage } from './pages/admin/investment/AdminInvestmentOverviewPage';
+import { AdminDatasetsPage } from './pages/admin/investment/AdminDatasetsPage';
+import { AdminDatasetCreatePage } from './pages/admin/investment/AdminDatasetCreatePage';
+import { AdminDatasetDetailPage } from './pages/admin/investment/AdminDatasetDetailPage';
+import { AdminDatasetPreviewPage } from './pages/admin/investment/AdminDatasetPreviewPage';
+import { AdminSourcesPage } from './pages/admin/investment/AdminSourcesPage';
+import { AdminZoneProfilesPage } from './pages/admin/investment/AdminZoneProfilesPage';
+import { AdminOpportunitiesPage } from './pages/admin/investment/AdminOpportunitiesPage';
+import { AdminInfrastructurePage } from './pages/admin/investment/AdminInfrastructurePage';
+import { AdminMapConfigPage } from './pages/admin/investment/AdminMapConfigPage';
+import { AdminInvestmentActivityPage } from './pages/admin/investment/AdminInvestmentActivityPage';
+import { AdminInvestmentTestsPage } from './pages/admin/investment/AdminInvestmentTestsPage';
 
 function PublicLayout() {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -56,6 +85,7 @@ function PublicLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#FAFAF7] dark:bg-[#0B1912] text-[#17211B] dark:text-[#E6F0EA] selection:bg-[#D7A928] selection:text-[#063D2A] transition-colors duration-200">
+      <ScrollProgress />
       <Header />
       <main id="main-content" className="flex-1 focus:outline-none" tabIndex={-1}>
         <Outlet />
@@ -183,14 +213,137 @@ export default function App() {
                         </RequirePermission>
                       }
                     />
+
+                    {/* Achievement Management Routes */}
+                    <Route
+                      path="achievements"
+                      element={
+                        <RequirePermission
+                          requiredPermission="achievement.view"
+                          moduleTitle="Achievement Management"
+                        >
+                          <AdminAchievementListPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="achievements/trash"
+                      element={
+                        <RequirePermission
+                          requiredPermission="achievement.view"
+                          moduleTitle="Achievements Trash"
+                        >
+                          <AdminAchievementTrashPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="achievements/new"
+                      element={
+                        <RequirePermission
+                          requiredPermission="achievement.create"
+                          moduleTitle="Create Achievement"
+                        >
+                          <AdminAchievementCreatePage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="achievements/:achievementSlug/edit"
+                      element={
+                        <RequirePermission
+                          requiredPermission="achievement.edit"
+                          moduleTitle="Edit Achievement"
+                        >
+                          <AdminAchievementEditPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="achievements/:achievementSlug/preview"
+                      element={
+                        <RequirePermission
+                          requiredPermission="achievement.view"
+                          moduleTitle="Preview Achievement"
+                        >
+                          <AdminAchievementPreviewPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="achievements/:achievementSlug/history"
+                      element={
+                        <RequirePermission
+                          requiredPermission="achievement.view"
+                          moduleTitle="Achievement Audit History"
+                        >
+                          <AdminAchievementHistoryPage />
+                        </RequirePermission>
+                      }
+                    />
                     <Route
                       path="alerts"
                       element={
                         <RequirePermission
-                          requiredPermission="alerts.manage"
-                          moduleTitle="Agricultural Alerts Management"
+                          requiredPermission="alert.view"
+                          moduleTitle="Agricultural Alerts & Advisories Directory"
                         >
-                          <AlertsManagementPage />
+                          <AdminAlertListPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="alerts/trash"
+                      element={
+                        <RequirePermission
+                          requiredPermission="alert.view"
+                          moduleTitle="Agricultural Alerts Trash"
+                        >
+                          <AdminAlertTrashPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="alerts/new"
+                      element={
+                        <RequirePermission
+                          requiredPermission="alert.create"
+                          moduleTitle="Create Agricultural Alert"
+                        >
+                          <AdminAlertCreatePage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="alerts/:slug/edit"
+                      element={
+                        <RequirePermission
+                          requiredPermission="alert.edit"
+                          moduleTitle="Edit Agricultural Alert"
+                        >
+                          <AdminAlertEditPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="alerts/:slug/preview"
+                      element={
+                        <RequirePermission
+                          requiredPermission="alert.view"
+                          moduleTitle="Preview Agricultural Alert"
+                        >
+                          <AdminAlertPreviewPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="alerts/:slug/history"
+                      element={
+                        <RequirePermission
+                          requiredPermission="alert.view"
+                          moduleTitle="Agricultural Alert Audit History"
+                        >
+                          <AdminAlertHistoryPage />
                         </RequirePermission>
                       }
                     />
@@ -227,6 +380,31 @@ export default function App() {
                         </RequirePermission>
                       }
                     />
+                    {/* Investment CMS Workspace Routes */}
+                    <Route
+                      path="investment"
+                      element={
+                        <RequirePermission
+                          requiredPermission="investment.view"
+                          moduleTitle="Investment CMS"
+                        >
+                          <InvestmentAdminLayout />
+                        </RequirePermission>
+                      }
+                    >
+                      <Route index element={<AdminInvestmentOverviewPage />} />
+                      <Route path="zones" element={<AdminZoneProfilesPage />} />
+                      <Route path="datasets" element={<AdminDatasetsPage />} />
+                      <Route path="datasets/new" element={<AdminDatasetCreatePage />} />
+                      <Route path="datasets/:datasetId" element={<AdminDatasetDetailPage />} />
+                      <Route path="datasets/:datasetId/preview" element={<AdminDatasetPreviewPage />} />
+                      <Route path="sources" element={<AdminSourcesPage />} />
+                      <Route path="opportunities" element={<AdminOpportunitiesPage />} />
+                      <Route path="infrastructure" element={<AdminInfrastructurePage />} />
+                      <Route path="config" element={<AdminMapConfigPage />} />
+                      <Route path="activity" element={<AdminInvestmentActivityPage />} />
+                      <Route path="tests" element={<AdminInvestmentTestsPage />} />
+                    </Route>
                     <Route
                       path="settings"
                       element={
@@ -256,6 +434,22 @@ export default function App() {
                     <Route path="/resources" element={<ResourcesPage />} />
                     <Route path="/news" element={<NewsPage />} />
                     <Route path="/news/:newsSlug" element={<NewsDetailPage />} />
+                    <Route
+                      path="/investment/map-lab"
+                      element={
+                        <Suspense fallback={
+                          <div className="min-h-screen flex items-center justify-center p-8 bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400">
+                            <div className="flex items-center gap-3">
+                              <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                              <span>Loading GIS Lab...</span>
+                            </div>
+                          </div>
+                        }>
+                          <InvestmentMapLabPage />
+                        </Suspense>
+                      }
+                    />
+                    <Route path="/investment/*" element={<InvestmentPage />} />
                     <Route path="/contact" element={<ContactPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Route>
