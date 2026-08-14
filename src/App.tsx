@@ -12,6 +12,7 @@ import { StaffAuthorizationProvider } from './context/StaffAuthorizationContext'
 // Public Layout & Components
 import { ScrollProgress } from './components/common/scroll';
 import { BackToTopButton } from './components/common/BackToTopButton';
+import { ScrollToTop } from './components/common/ScrollToTop';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { HomePage } from './pages/HomePage';
@@ -112,6 +113,7 @@ export default function App() {
           <AuthProvider>
             <StaffAuthorizationProvider>
               <BrowserRouter>
+                <ScrollToTop />
                 <Routes>
                   {/* Admin Authentication & Authorization Routes */}
                   <Route path="/admin/login" element={<AdminSignInPage />} />

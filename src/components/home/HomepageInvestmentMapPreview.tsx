@@ -108,13 +108,8 @@ export const HomepageInvestmentMapPreview: React.FC<HomepageInvestmentMapPreview
         const result = await loadAndValidateOromiaGeoJSON();
         if (!isMounted) return;
         setValidationResult(result);
-        if (result.isValid && result.data) {
+        if (result.data) {
           setGisData(result.data);
-        } else {
-          // Fallback fetch if validation wrapped data differently
-          const res = await fetch('/data/gis/oromia-zones-candidate.geojson');
-          const data = await res.json();
-          setGisData(data);
         }
       } catch (err) {
         console.error('Failed to load candidate GeoJSON for homepage preview:', err);
@@ -129,15 +124,19 @@ export const HomepageInvestmentMapPreview: React.FC<HomepageInvestmentMapPreview
   }, []);
 
   const zonePaths = useMemo(() => {
-    if (!gisData) return [];
+    if (!gisData || !gisData.features) return [];
     return gisData.features.map((feature) => {
       const path = featureToSvgPath(feature);
       const centroid = calculateCentroid(feature);
+      const props = (feature.properties || {}) as any;
+      const rawName = props.name_en || props.zone_name || props.name || props.zone_id || 'Unknown';
+      const cleanName = String(rawName).replace(' (OR)', '');
+      const pcode = props.pcode || props.zone_pcode || '';
       return {
         feature,
-        zoneId: feature.properties.zone_id,
-        name: feature.properties.zone_name,
-        pcode: feature.properties.zone_pcode,
+        zoneId: props.zone_id,
+        name: cleanName,
+        pcode,
         path,
         centroid,
       };
