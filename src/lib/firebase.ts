@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore, doc, getDoc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, Firestore, doc, getDoc } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator, FirebaseStorage } from 'firebase/storage';
 import { getFirebaseConfig, getFirebaseConfigStatus } from '../config/env';
 
@@ -25,7 +25,16 @@ if (config) {
 
     app = getApps().length > 0 ? getApp() : initializeApp(appConfig);
     auth = getAuth(app);
-    db = getFirestore(app);
+
+    // Initialize Firestore with autoDetectLongPolling to work reliably in iframe/proxy environments
+    try {
+      db = initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
+        ignoreUndefinedProperties: true,
+      });
+    } catch {
+      db = getFirestore(app);
+    }
 
     // Initialize Storage safely only if firebaseStorageBucket is configured
     if (config.firebaseStorageBucket) {
@@ -58,24 +67,26 @@ if (config) {
       storage = null;
     }
 
-    // Connection validation as required by skill guidelines
+    // Non-blocking connection validation
     if (db) {
-      const connTimeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Firestore connection timeout')), 2500)
-      );
-      Promise.race([getDoc(doc(db, 'test', 'connection')), connTimeout]).catch((error) => {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        if (
-          errMsg.includes('offline') ||
-          errMsg.includes('unavailable') ||
-          errMsg.includes('timeout') ||
-          (error && typeof error === 'object' && 'code' in error && (error as any).code === 'unavailable')
-        ) {
-          console.warn('Firebase client is operating in offline or fallback mode.');
-        } else {
-          console.warn('Firebase connection test info:', errMsg);
-        }
-      });
+      getDoc(doc(db, 'test', 'connection'))
+        .then(() => {
+          if (import.meta.env?.DEV) {
+            console.info('[Firestore] Connected successfully to Cloud Firestore.');
+          }
+        })
+        .catch((error) => {
+          const errMsg = error instanceof Error ? error.message : String(error);
+          if (
+            errMsg.includes('offline') ||
+            errMsg.includes('unavailable') ||
+            errMsg.includes('timeout') ||
+            errMsg.includes('failed-precondition') ||
+            (error && typeof error === 'object' && 'code' in error && (error as any).code === 'unavailable')
+          ) {
+            console.info('[Firestore] Operating in offline/cached fallback mode.');
+          }
+        });
     }
   } catch (err) {
     console.error('Failed to initialize Firebase SDK:', err);
