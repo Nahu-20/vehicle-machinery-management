@@ -2,8 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { UnifiedMapContainer } from '../../features/investment-map/components/UnifiedMapContainer';
 import { ZoneProfilePanel } from '../../features/investment-map/components/ZoneProfilePanel';
-import { ThematicSelectorBar } from '../../features/investment-map/components/ThematicSelectorBar';
-import { CommodityKey, ThematicMetric } from '../../features/investment-map/types/thematic';
 import { GisValidationResult } from '../../features/investment-map/types/gis';
 import { loadAndValidateOromiaGeoJSON, getZoneFeatureById } from '../../features/investment-map/services/gisLoader';
 import { Compass, ShieldCheck } from 'lucide-react';
@@ -14,8 +12,6 @@ export const PublicInvestmentMapShell: React.FC = () => {
 
   const [gisResult, setGisResult] = useState<GisValidationResult | null>(null);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(zoneParam);
-  const [selectedCommodity, setSelectedCommodity] = useState<CommodityKey | null>('coffee');
-  const [selectedMetric, setSelectedMetric] = useState<ThematicMetric>('production');
 
   // Sync selectedZoneId when URL search parameter changes
   useEffect(() => {
@@ -56,7 +52,7 @@ export const PublicInvestmentMapShell: React.FC = () => {
             Official Public Investment Map
           </h2>
           <p className="text-sm text-[#4E5E53] dark:text-emerald-100/80 leading-relaxed">
-            Select any of Oromia's 22 administrative zones on the interactive map to inspect GIS candidate boundaries, commodity potentials, and zone identity details.
+            Select any of Oromia's 22 administrative zones on the interactive map to inspect GIS candidate boundaries and zone identity details.
           </p>
         </div>
 
@@ -66,15 +62,6 @@ export const PublicInvestmentMapShell: React.FC = () => {
         </div>
       </div>
 
-      {/* AGRICULTURAL POTENTIAL THEMATIC SELECTOR BAR */}
-      <ThematicSelectorBar
-        selectedCommodity={selectedCommodity}
-        selectedMetric={selectedMetric}
-        onSelectCommodity={setSelectedCommodity}
-        onSelectMetric={setSelectedMetric}
-        titleEyebrow="AGRICULTURAL POTENTIAL MAP"
-      />
-
       {/* MAP & ZONE PROFILE PANEL GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* MAP CONTAINER (LEFT / TOP - 7 OR 8 COLS) */}
@@ -82,8 +69,6 @@ export const PublicInvestmentMapShell: React.FC = () => {
           <UnifiedMapContainer
             height="620px"
             selectedZoneId={selectedZoneId}
-            selectedCommodity={selectedCommodity}
-            selectedMetric={selectedMetric}
             onSelectZone={handleSelectZone}
             onGisVerified={handleGisVerified}
             className="rounded-3xl overflow-hidden shadow-sm border border-[#063D2A]/10 dark:border-emerald-800/30"
@@ -94,8 +79,6 @@ export const PublicInvestmentMapShell: React.FC = () => {
         <div className="lg:col-span-5 xl:col-span-4">
           <ZoneProfilePanel
             selectedFeature={selectedFeature}
-            selectedCommodity={selectedCommodity}
-            selectedMetric={selectedMetric}
             onClearSelection={handleClearSelection}
             isPublic={true}
           />

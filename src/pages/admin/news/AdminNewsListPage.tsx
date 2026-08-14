@@ -783,7 +783,7 @@ export const AdminNewsListPage: React.FC = () => {
         isOpen={!!restoreModalTarget}
         articleTitle={restoreModalTarget ? getLocalizedText(restoreModalTarget.title) : ''}
         articleSlug={restoreModalTarget?.slug || ''}
-        previousStatus={restoreModalTarget?.previousStatusBeforeTrash}
+        previousStatus={restoreModalTarget?.statusBeforeTrash}
         onClose={() => setRestoreModalTarget(null)}
         onConfirm={handleConfirmRestore}
       />

@@ -75,7 +75,7 @@ export const staggerContainer = (staggerDelay = 0.08, delayChildren = 0.04): Var
 export const buttonHoverTap = {
   whileHover: { y: -2 },
   whileTap: { scale: 0.98 },
-  transition: { duration: 0.2, ease: 'easeOut' },
+  transition: { duration: 0.2, ease: 'easeOut' as const },
 };
 
 /**
@@ -83,7 +83,7 @@ export const buttonHoverTap = {
  */
 export const cardHover = {
   whileHover: { y: -3 },
-  transition: { duration: 0.25, ease: 'easeOut' },
+  transition: { duration: 0.25, ease: 'easeOut' as const },
 };
 
 /**
@@ -91,7 +91,7 @@ export const cardHover = {
  */
 export const imageHover = {
   whileHover: { scale: 1.025 },
-  transition: { duration: 0.4, ease: [0.21, 0.47, 0.32, 0.98] },
+  transition: { duration: 0.4, ease: [0.21, 0.47, 0.32, 0.98] as const },
 };
 
 /**

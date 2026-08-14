@@ -1555,17 +1555,14 @@ export const AlertEditorForm: React.FC<AlertEditorFormProps> = ({
       </div>
 
       {/* Version Conflict Modal */}
-      {showVersionConflictModal && (
-        <AlertVersionConflictModal
-          expectedVersion={version}
-          actualVersion={version + 1}
-          onClose={() => setShowVersionConflictModal(false)}
-          onReload={() => {
-            setShowVersionConflictModal(false);
-            window.location.reload();
-          }}
-        />
-      )}
+      <AlertVersionConflictModal
+        isOpen={showVersionConflictModal}
+        onClose={() => setShowVersionConflictModal(false)}
+        onRefresh={() => {
+          setShowVersionConflictModal(false);
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };

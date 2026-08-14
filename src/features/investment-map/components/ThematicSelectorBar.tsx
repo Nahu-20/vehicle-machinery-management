@@ -8,7 +8,6 @@ export interface ThematicSelectorBarProps {
   selectedMetric: ThematicMetric;
   onSelectCommodity: (commodity: CommodityKey | null) => void;
   onSelectMetric: (metric: ThematicMetric) => void;
-  titleEyebrow?: string;
   className?: string;
 }
 
@@ -17,7 +16,6 @@ export const ThematicSelectorBar: React.FC<ThematicSelectorBarProps> = ({
   selectedMetric,
   onSelectCommodity,
   onSelectMetric,
-  titleEyebrow = 'AGRICULTURAL INVESTMENT FILTER',
   className = '',
 }) => {
   const getCommodityIcon = (key: CommodityKey) => {
@@ -50,7 +48,7 @@ export const ThematicSelectorBar: React.FC<ThematicSelectorBarProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 font-mono block">
-            {titleEyebrow}
+            M6A GIS Thematic Map Engine
           </span>
           <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-50 tracking-tight">
             Explore Agricultural Potential

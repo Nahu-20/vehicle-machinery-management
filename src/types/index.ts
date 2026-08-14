@@ -1,4 +1,11 @@
 export * from './news';
+
+export type LocalizedText = {
+  om?: string;
+  am?: string;
+  en?: string;
+} | string;
+
 export {
   validateZoneId,
   validateZoneValue,
@@ -36,12 +43,6 @@ export type {
 } from './investment';
 export type LanguageCode = 'om' | 'am' | 'en';
 
-export type LocalizedText = {
-  om?: string;
-  am?: string;
-  en?: string;
-} | string;
-
 export interface Language {
   code: LanguageCode;
   name: string;
@@ -78,72 +79,6 @@ export interface Program {
   imageUrl: string;
   status: 'active' | 'upcoming' | 'ongoing';
   badgeKey?: string;
-}
-
-export type NewsContentBlock =
-  | {
-      type: 'paragraph';
-      content: LocalizedText;
-    }
-  | {
-      type: 'heading';
-      level: 2 | 3;
-      content: LocalizedText;
-    }
-  | {
-      type: 'image';
-      src: string;
-      alt: LocalizedText;
-      caption?: LocalizedText;
-    }
-  | {
-      type: 'quote';
-      content: LocalizedText;
-      source?: LocalizedText;
-    }
-  | {
-      type: 'list';
-      ordered: boolean;
-      items: LocalizedText[];
-    }
-  | {
-      type: 'highlight';
-      title?: LocalizedText;
-      content: LocalizedText;
-    }
-  | {
-      type: 'relatedLink';
-      title: LocalizedText;
-      url: string;
-    };
-
-export interface NewsArticle {
-  id: string;
-  slug: string;
-  title: LocalizedText;
-  excerpt: LocalizedText;
-  fullContent: NewsContentBlock[];
-  category: 'news' | 'training' | 'tender' | 'event';
-  featuredImage: string;
-  imageAlt: LocalizedText;
-  publishedAt: string;
-  updatedAt?: string;
-  author: LocalizedText;
-  responsibleOffice?: LocalizedText;
-  readingTime: string;
-  tags: string[];
-  relatedArticleIds: string[];
-  featured?: boolean;
-  status: 'published' | 'draft';
-  translations?: Partial<Record<LanguageCode, boolean>>;
-  
-  // Legacy / convenience fields for backward compatibility
-  titleKey?: string;
-  summaryKey?: string;
-  contentKey?: string;
-  date?: string;
-  imageUrl?: string;
-  readTime?: string;
 }
 
 export interface Announcement {

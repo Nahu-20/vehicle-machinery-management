@@ -99,11 +99,11 @@ export function AdminOpportunitiesPage() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {opportunities.map((opp) => (
                   <tr key={opp.opportunityId}>
-                    <td className="py-3 px-4 font-bold">{opp.title?.en || opp.title}</td>
+                    <td className="py-3 px-4 font-bold">{opp.title}</td>
                     <td className="py-3 px-4">
                       {opp.zoneIds?.map((z) => CANONICAL_ZONE_METADATA[z as keyof typeof CANONICAL_ZONE_METADATA]?.displayName || z).join(', ')}
                     </td>
-                    <td className="py-3 px-4 capitalize">{opp.commodity}</td>
+                    <td className="py-3 px-4 capitalize">{opp.commodityKeys?.join(', ') || 'N/A'}</td>
                     <td className="py-3 px-4 capitalize">{opp.opportunityType}</td>
                     <td className="py-3 px-4">{opp.verificationStatus}</td>
                     <td className="py-3 px-4">{opp.lifecycleStatus}</td>

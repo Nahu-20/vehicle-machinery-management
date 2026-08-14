@@ -2,7 +2,7 @@ import React from 'react';
 
 interface AgriPillBadgeProps {
   children: React.ReactNode;
-  variant?: 'lime' | 'dark' | 'outline' | 'forest';
+  variant?: 'lime' | 'dark' | 'outline' | 'forest' | 'emerald' | 'amber';
   className?: string;
   icon?: React.ReactNode;
 }
@@ -18,6 +18,8 @@ export const AgriPillBadge: React.FC<AgriPillBadgeProps> = ({
     dark: 'bg-[#0A1912] text-[#A3E635] border border-[#A3E635]/30',
     outline: 'border border-[#063D2A]/30 dark:border-[#A3E635]/30 text-[#063D2A] dark:text-[#A3E635] bg-white/60 dark:bg-black/30 backdrop-blur-sm',
     forest: 'bg-[#063D2A] text-white font-medium',
+    emerald: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-semibold',
+    amber: 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 font-semibold',
   };
 
   return (

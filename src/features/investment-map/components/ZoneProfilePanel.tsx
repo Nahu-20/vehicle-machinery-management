@@ -49,7 +49,7 @@ export const ZoneProfilePanel: React.FC<ZoneProfilePanelProps> = ({
   isPublic = false,
   className = '',
 }) => {
-  const selectedCommodity = rawCommodity;
+  const selectedCommodity = isPublic ? null : rawCommodity;
   if (!selectedFeature) {
     return <ZoneProfileEmptyState className={className} />;
   }

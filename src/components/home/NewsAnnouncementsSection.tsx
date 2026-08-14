@@ -53,7 +53,7 @@ export const NewsAnnouncementsSection: React.FC = () => {
   const dominantFeatured = featuredArticle || (latestArticles.length > 0 ? latestArticles[0] : null);
 
   const sideNewsArticles = latestArticles
-    .filter((art) => !dominantFeatured || (art.id !== dominantFeatured.id && art.slug !== dominantFeatured.slug))
+    .filter((art) => !dominantFeatured || art.slug !== dominantFeatured.slug)
     .slice(0, 3);
 
   const getCategoryBadgeVariant = (category: string): 'lime' | 'emerald' | 'amber' => {
@@ -76,7 +76,7 @@ export const NewsAnnouncementsSection: React.FC = () => {
           initial={isReducedMotion ? undefined : { opacity: 0, y: 20 }}
           whileInView={isReducedMotion ? undefined : { opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.15 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
+          transition={{ duration: 0.5, ease: 'easeOut' as const }}
           className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12"
         >
           <div className="space-y-3 max-w-2xl">
@@ -94,7 +94,7 @@ export const NewsAnnouncementsSection: React.FC = () => {
           </div>
 
           <div className="shrink-0 flex items-center gap-3">
-            <motion.div {...(isReducedMotion ? {} : buttonHoverTap)}>
+            <motion.div {...(isReducedMotion ? {} : { whileHover: buttonHoverTap.whileHover, whileTap: buttonHoverTap.whileTap, transition: buttonHoverTap.transition })}>
               <Link
                 to="/news"
                 className="inline-flex items-center gap-2.5 rounded-full bg-[#0A1912] dark:bg-emerald-800 text-white hover:bg-[#063D2A] px-6 py-3.5 text-sm font-extrabold transition-all duration-200 shadow-sm"
@@ -102,7 +102,7 @@ export const NewsAnnouncementsSection: React.FC = () => {
                 <span>View All News</span>
               </Link>
             </motion.div>
-            <motion.div {...(isReducedMotion ? {} : buttonHoverTap)}>
+            <motion.div {...(isReducedMotion ? {} : { whileHover: buttonHoverTap.whileHover, whileTap: buttonHoverTap.whileTap, transition: buttonHoverTap.transition })}>
               <Link
                 to="/news"
                 className="inline-flex items-center justify-center rounded-full bg-[#A3E635] text-[#0A1912] hover:bg-[#92D022] h-12 w-12 transition-all duration-200"
@@ -242,7 +242,7 @@ export const NewsAnnouncementsSection: React.FC = () => {
                     <motion.div
                       key={article.slug}
                       variants={fadeUp}
-                      {...(isReducedMotion ? {} : cardHover)}
+                      {...(isReducedMotion ? {} : { whileHover: cardHover.whileHover, transition: cardHover.transition })}
                     >
                       <Link
                         to={`/news/${article.slug}`}

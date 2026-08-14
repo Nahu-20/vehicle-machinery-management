@@ -32,7 +32,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
     : mockServices.slice(0, 3);
 
   const filteredNews = query.trim()
-    ? mockNews.filter((n) => t(n.titleKey).toLowerCase().includes(query.toLowerCase()))
+    ? mockNews.filter((n) => {
+        const text = typeof n.title === 'string' ? n.title : getLocalizedText(n.title) || (n.titleKey ? t(n.titleKey) : '');
+        return text.toLowerCase().includes(query.toLowerCase());
+      })
     : mockNews.slice(0, 2);
 
   const filteredPubs = query.trim()
