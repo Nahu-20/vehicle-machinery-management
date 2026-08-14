@@ -50,17 +50,6 @@ async function getGeoJsonFromAnySource(): Promise<OromiaGeoJSONCollection | null
     }
   }
 
-  // Fallback: load directly from bundled asset
-  try {
-    const bundled = await import('../data/oromiaZonesCandidate.json');
-    const data = (bundled.default || bundled) as unknown as OromiaGeoJSONCollection;
-    if (data && data.type === 'FeatureCollection' && Array.isArray(data.features)) {
-      return data;
-    }
-  } catch (err) {
-    console.warn('[gisLoader] Failed to load bundled fallback GeoJSON:', err);
-  }
-
   return null;
 }
 
