@@ -5,6 +5,7 @@ import {
   GisValidationResult,
   GisMetadata,
 } from '../types/gis';
+import { EMBEDDED_OROMIA_GEOJSON } from '../data/embeddedOromiaGeoJson';
 
 export const OFFICIAL_GIS_METADATA: GisMetadata = {
   datasetId: 'cod-ab-eth-v04',
@@ -22,7 +23,7 @@ export const OFFICIAL_GIS_METADATA: GisMetadata = {
 
 let cachedGisResultPromise: Promise<GisValidationResult> | null = null;
 
-async function getGeoJsonFromAnySource(): Promise<OromiaGeoJSONCollection | null> {
+async function getGeoJsonFromAnySource(): Promise<OromiaGeoJSONCollection> {
   const candidateUrls = [
     '/data/gis/oromia-zones-candidate.geojson',
     './data/gis/oromia-zones-candidate.geojson',
@@ -38,9 +39,9 @@ async function getGeoJsonFromAnySource(): Promise<OromiaGeoJSONCollection | null
       });
       if (response.ok) {
         const text = await response.text();
-        if (text && text.trim()) {
+        if (text && text.trim() && !text.trim().startsWith('<')) {
           const parsed = JSON.parse(text) as OromiaGeoJSONCollection;
-          if (parsed && parsed.type === 'FeatureCollection' && Array.isArray(parsed.features) && parsed.features.length > 0) {
+          if (parsed && parsed.type === 'FeatureCollection' && Array.isArray(parsed.features) && parsed.features.length === 22) {
             return parsed;
           }
         }
@@ -50,7 +51,8 @@ async function getGeoJsonFromAnySource(): Promise<OromiaGeoJSONCollection | null
     }
   }
 
-  return null;
+  // Instant infallible fallback: return the bundled high-precision dataset
+  return EMBEDDED_OROMIA_GEOJSON as unknown as OromiaGeoJSONCollection;
 }
 
 /**
