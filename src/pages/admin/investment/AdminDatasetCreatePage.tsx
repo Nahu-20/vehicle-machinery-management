@@ -4,7 +4,7 @@ import { Database, ArrowLeft, Save, AlertCircle } from 'lucide-react';
 import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
 import { hasPermission } from '../../../lib/permissions';
 import { createDataset } from '../../../services/investment/investmentDatasetService';
-import { CommodityKey, DatasetCategory, DatasetUnit } from '../../../types/investment';
+import { CommodityKey } from '../../../types/investment';
 
 export function AdminDatasetCreatePage() {
   const { staffUser } = useStaffAuthorizationContext();
@@ -14,10 +14,10 @@ export function AdminDatasetCreatePage() {
 
   const [title, setTitle] = useState('');
   const [datasetId, setDatasetId] = useState('');
-  const [category, setCategory] = useState<DatasetCategory>('production');
+  const [category, setCategory] = useState<'production' | 'suitability' | 'investment_potential' | 'infrastructure'>('production');
   const [commodity, setCommodity] = useState<CommodityKey>('coffee');
   const [metric, setMetric] = useState('production');
-  const [unit, setUnit] = useState<DatasetUnit>('tonne');
+  const [unit, setUnit] = useState('tonne');
   const [periodType, setPeriodType] = useState<'year' | 'season' | 'fiscal_year' | 'multi_year'>('year');
   const [periodLabel, setPeriodLabel] = useState('2024/2025 Meher Season');
   const [startYear, setStartYear] = useState<number>(2024);
@@ -218,7 +218,7 @@ export function AdminDatasetCreatePage() {
               required
               placeholder="e.g. tonne, kg, quintal, hectare, score"
               value={unit}
-              onChange={(e) => setUnit(e.target.value as DatasetUnit)}
+              onChange={(e) => setUnit(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-emerald-500"
             />
           </div>

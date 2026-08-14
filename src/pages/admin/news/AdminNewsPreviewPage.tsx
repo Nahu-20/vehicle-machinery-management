@@ -176,7 +176,7 @@ export const AdminNewsPreviewPage: React.FC = () => {
         <div className="space-y-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-sm leading-relaxed">
           {article.content && article.content.length > 0 ? (
             article.content.map((block) => {
-              const text = 'content' in block ? getLocalizedText((block as any).content) : '';
+              const text = getLocalizedText(block.content);
               if (block.type === 'heading') {
                 return (
                   <h2 key={block.id} className="text-lg font-bold text-slate-900 dark:text-white mt-6 mb-2">

@@ -31,6 +31,7 @@ interface SvgMapContainerProps {
   selectedMetric?: ThematicMetric;
   onSelectZone?: (zoneId: string) => void;
   onGisVerified?: (result: GisValidationResult) => void;
+  allowDemoData?: boolean;
   className?: string;
 }
 

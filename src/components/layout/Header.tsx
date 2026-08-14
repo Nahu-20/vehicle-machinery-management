@@ -52,6 +52,7 @@ export const Header: React.FC = () => {
   const isReducedMotion = useReducedMotionPreference();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [activeDesktopMenu, setActiveDesktopMenu] = useState<'language' | 'theme' | null>(null);
 
   // Global Keyboard Shortcut: ⌘K or Ctrl+K triggers Search Modal
   useEffect(() => {
@@ -179,7 +180,7 @@ export const Header: React.FC = () => {
 
         {/* LAYER 2: ROUNDED MAIN BUREAU NAVIGATION PANEL */}
         <div className="px-2 sm:px-3.5 lg:px-5 py-2 sm:py-2.5 transition-all duration-300">
-          <div className="w-[calc(100%-0.5rem)] sm:w-[calc(100%-1rem)] max-w-[1860px] mx-auto rounded-[24px] sm:rounded-[30px] lg:rounded-[36px] bg-[linear-gradient(110deg,#ffffff_0%,#ffffff_48%,#f1f8ec_100%)] dark:bg-[linear-gradient(110deg,#0E241B_0%,#0E241B_48%,#081C14_100%)] border border-[#14502D]/10 dark:border-[#183327] shadow-xs relative overflow-hidden p-3.5 sm:p-4 lg:p-4.5 transition-all duration-300">
+          <div className="w-[calc(100%-0.5rem)] sm:w-[calc(100%-1rem)] max-w-[1860px] mx-auto rounded-[24px] sm:rounded-[30px] lg:rounded-[36px] bg-[linear-gradient(110deg,#ffffff_0%,#ffffff_48%,#f1f8ec_100%)] dark:bg-[linear-gradient(110deg,#0E241B_0%,#0E241B_48%,#081C14_100%)] border border-[#14502D]/10 dark:border-[#183327] shadow-xs relative p-3.5 sm:p-4 lg:p-4.5 transition-all duration-300">
             
             {/* SUBTLE BOTANICAL DECORATION ARTWORK (RIGHT SIDE ONLY) */}
             <div
@@ -217,19 +218,19 @@ export const Header: React.FC = () => {
             {/* PANEL CONTENT RELATIVE Z-10 */}
             <div className="relative z-10 flex flex-col gap-2.5 sm:gap-3">
               
-              {/* ROW 1: BUREAU IDENTITY (LEFT) & CONTROLS/SEARCH/CTA (RIGHT) */}
-              <div className="flex flex-col min-[1180px]:flex-row items-start min-[1180px]:items-center justify-between gap-3 pb-2.5 border-b border-[#14502D]/10 dark:border-[#183327]/80">
+              {/* ROW 1: BUREAU IDENTITY (LEFT) & CONTROLS/SEARCH/CTA (RIGHT) - HIGHER Z-INDEX FOR DROPDOWNS */}
+              <div className="relative z-30 flex flex-col min-[1180px]:flex-row items-start min-[1180px]:items-center justify-between gap-3 pb-2.5 border-b border-[#14502D]/10 dark:border-[#183327]/80">
                 
                 {/* LEFT: BUREAU IDENTITY LOGO & TITLE */}
-                <Link to="/" className="flex items-center gap-3.5 sm:gap-4 group focus:outline-none min-w-0">
+                <Link to="/" className="flex items-center gap-3 sm:gap-4 group focus:outline-none shrink-0 min-w-0">
                   <img
                     src={officialLogoUrl}
                     alt="Official Oromia Bureau of Agriculture Seal"
-                    className="h-14 w-14 sm:h-18 sm:w-18 lg:h-22 lg:w-22 object-contain shrink-0 transition-transform duration-300 group-hover:scale-[1.02]"
-                    style={{ maxHeight: '88px' }}
+                    className="h-14 w-14 sm:h-18 sm:w-18 lg:h-20 lg:w-20 object-contain shrink-0 transition-transform duration-300 group-hover:scale-[1.02]"
+                    style={{ maxHeight: '84px' }}
                   />
                   <div className="flex flex-col min-w-0">
-                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#0A1912] dark:text-white tracking-tight leading-tight truncate">
+                    <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-extrabold text-[#0A1912] dark:text-white tracking-tight leading-tight min-[1180px]:whitespace-nowrap">
                       {t('bureau_title')}
                     </h1>
                     <p className="text-xs sm:text-sm lg:text-base font-semibold text-[#56635B] dark:text-[#A7F3D0]/80 mt-0.5 truncate">
@@ -242,13 +243,21 @@ export const Header: React.FC = () => {
                 <div className="hidden min-[1180px]:flex items-center gap-2 lg:gap-2.5 shrink-0">
                   
                   {/* THEME CONTROL */}
-                  <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }}>
-                    <ThemeToggle compact />
+                  <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} className="relative z-40">
+                    <ThemeToggle
+                      compact
+                      isOpen={activeDesktopMenu === 'theme'}
+                      onToggle={(open) => setActiveDesktopMenu(open ? 'theme' : null)}
+                    />
                   </motion.div>
 
                   {/* LANGUAGE SELECTOR */}
-                  <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }}>
-                    <LanguageSelector compact />
+                  <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} className="relative z-40">
+                    <LanguageSelector
+                      compact
+                      isOpen={activeDesktopMenu === 'language'}
+                      onToggle={(open) => setActiveDesktopMenu(open ? 'language' : null)}
+                    />
                   </motion.div>
 
                   {/* NOTIFICATION BELL */}
@@ -257,9 +266,12 @@ export const Header: React.FC = () => {
                   {/* SEARCH FIELD TRIGGER */}
                   <button
                     type="button"
-                    onClick={() => setIsSearchModalOpen(true)}
+                    onClick={() => {
+                      setActiveDesktopMenu(null);
+                      setIsSearchModalOpen(true);
+                    }}
                     aria-label={t('search_title')}
-                    className="flex items-center gap-2.5 rounded-full border border-gray-200 dark:border-[#183327] bg-white/90 dark:bg-[#0B1912]/90 px-3.5 py-1.5 text-xs font-semibold text-[#56635B] dark:text-[#94A39A] hover:border-[#087A4B] dark:hover:border-[#A3E635] hover:bg-white dark:hover:bg-[#122E22] transition-all h-10 w-64 lg:w-72 justify-between shadow-xs"
+                    className="flex items-center gap-2.5 rounded-full border border-gray-200 dark:border-[#183327] bg-white/90 dark:bg-[#0B1912]/90 px-3.5 py-1.5 text-xs font-semibold text-[#56635B] dark:text-[#94A39A] hover:border-[#087A4B] dark:hover:border-[#A3E635] hover:bg-white dark:hover:bg-[#122E22] transition-all h-10 w-44 lg:w-56 xl:w-72 shrink min-w-[150px] justify-between shadow-xs"
                   >
                     <div className="flex items-center gap-2 truncate">
                       <Search className="h-4 w-4 text-[#087A4B] dark:text-[#A3E635] shrink-0" />
@@ -276,7 +288,7 @@ export const Header: React.FC = () => {
                     whileHover={{ y: -2, scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
                     transition={{ duration: 0.15 }}
-                    className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(110deg,#003d27,#006338)] hover:bg-[linear-gradient(110deg,#002c1c,#004f2d)] text-white px-4.5 py-2 text-xs font-extrabold transition-all duration-200 shadow-xs group h-10 shrink-0"
+                    className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(110deg,#003d27,#006338)] hover:bg-[linear-gradient(110deg,#002c1c,#004f2d)] text-white px-3.5 xl:px-4.5 py-2 text-xs font-extrabold transition-all duration-200 shadow-xs group h-10 shrink-0"
                   >
                     <span>{t('eservices_btn') || 'e-Services Portal'}</span>
                     <ArrowUpRight className="h-4 w-4 text-[#A3E635] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 stroke-[2.5]" />
@@ -309,8 +321,8 @@ export const Header: React.FC = () => {
                 </div>
               </div>
 
-              {/* ROW 2: PRIMARY NAVIGATION LINKS - HORIZONTALLY CENTERED (DESKTOP ≥1180px) */}
-              <div className="hidden min-[1180px]:flex items-center justify-center w-full pt-1 pb-0.5">
+              {/* ROW 2: PRIMARY NAVIGATION LINKS - HORIZONTALLY CENTERED (DESKTOP ≥1180px) - LOWER Z-INDEX */}
+              <div className="hidden min-[1180px]:flex items-center justify-center w-full pt-1 pb-0.5 relative z-10">
                 <nav className="w-full flex items-center justify-center">
                   <div className="flex items-center justify-center gap-6 xl:gap-9 flex-wrap max-w-full">
                     {navigationItems.map((item) => {

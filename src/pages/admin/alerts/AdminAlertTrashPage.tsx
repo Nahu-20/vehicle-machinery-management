@@ -73,7 +73,7 @@ export const AdminAlertTrashPage: React.FC = () => {
     if (!restoreTargetAlert || !staffUser) return;
     setIsRestoring(true);
     try {
-      await restoreAlert(restoreTargetAlert.slug, restoreTargetAlert.version, staffUser);
+      await restoreAlert(restoreTargetAlert.slug, staffUser, restoreTargetAlert.version);
       setRestoreTargetAlert(null);
       fetchTrashedAlerts();
     } catch (err: any) {
@@ -92,7 +92,7 @@ export const AdminAlertTrashPage: React.FC = () => {
     if (!deleteTargetAlert || !staffUser) return;
     setIsDeleting(true);
     try {
-      await permanentlyDeleteAlert(deleteTargetAlert.slug, deleteTargetAlert.version, staffUser);
+      await permanentlyDeleteAlert(deleteTargetAlert.slug, staffUser, deleteTargetAlert.version);
       setDeleteTargetAlert(null);
       fetchTrashedAlerts();
     } catch (err: any) {

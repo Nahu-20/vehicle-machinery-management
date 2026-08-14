@@ -1,5 +1,5 @@
 import React from 'react';
-import { Coffee, Wheat, Sprout, Sparkles, BarChart3, Sun, Layers } from 'lucide-react';
+import { Coffee, Wheat, Sprout, Sparkles, BarChart3, Sun, Layers, AlertCircle } from 'lucide-react';
 import { CommodityKey, ThematicMetric } from '../types/thematic';
 import { SUPPORTED_COMMODITIES, SUPPORTED_METRICS } from '../data/demoThematicData';
 
@@ -8,6 +8,9 @@ export interface ThematicSelectorBarProps {
   selectedMetric: ThematicMetric;
   onSelectCommodity: (commodity: CommodityKey | null) => void;
   onSelectMetric: (metric: ThematicMetric) => void;
+  titleEyebrow?: string;
+  isPublic?: boolean;
+  isThematicActive?: boolean;
   className?: string;
 }
 
@@ -16,6 +19,9 @@ export const ThematicSelectorBar: React.FC<ThematicSelectorBarProps> = ({
   selectedMetric,
   onSelectCommodity,
   onSelectMetric,
+  titleEyebrow = 'AGRICULTURAL POTENTIAL MAP',
+  isPublic = false,
+  isThematicActive = false,
   className = '',
 }) => {
   const getCommodityIcon = (key: CommodityKey) => {
@@ -40,6 +46,19 @@ export const ThematicSelectorBar: React.FC<ThematicSelectorBarProps> = ({
     }
   };
 
+  const selectedCommodityObj = SUPPORTED_COMMODITIES.find((c) => c.key === selectedCommodity);
+
+  const getNoDataMessage = () => {
+    const label = selectedCommodityObj?.labelEn || 'this commodity';
+    if (selectedMetric === 'production') {
+      return `Verified production data is not yet available for ${label}.`;
+    }
+    if (selectedMetric === 'suitability') {
+      return `No verified suitability dataset is currently available for ${label}.`;
+    }
+    return `No verified investment-potential dataset is currently available for ${label}.`;
+  };
+
   return (
     <div
       className={`bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4 ${className}`}
@@ -48,7 +67,7 @@ export const ThematicSelectorBar: React.FC<ThematicSelectorBarProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 font-mono block">
-            M6A GIS Thematic Map Engine
+            {titleEyebrow}
           </span>
           <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-50 tracking-tight">
             Explore Agricultural Potential
@@ -56,14 +75,15 @@ export const ThematicSelectorBar: React.FC<ThematicSelectorBarProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {selectedCommodity ? (
+          {isThematicActive ? (
             <span className="bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Thematic Layer Active</span>
             </span>
           ) : (
-            <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 text-xs font-medium px-2.5 py-1 rounded-lg">
-              Neutral Zone Map
+            <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 text-xs font-medium px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+              <span>Base GIS View</span>
             </span>
           )}
         </div>
@@ -134,6 +154,21 @@ export const ThematicSelectorBar: React.FC<ThematicSelectorBarProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Public Interim Notice Banner when Commodity Selected without Active Dataset */}
+      {isPublic && selectedCommodity !== null && !isThematicActive && (
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 text-amber-900 dark:text-amber-200 text-xs px-3.5 py-2.5 rounded-xl flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="font-medium">{getNoDataMessage()}</span>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 px-2 py-0.5 rounded text-amber-800 dark:text-amber-300 shrink-0 font-mono">
+              Coming When Verified
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

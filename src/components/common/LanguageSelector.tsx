@@ -3,26 +3,58 @@ import { useLanguage } from '../../context/LanguageContext';
 import { Globe, Check, ChevronDown } from 'lucide-react';
 import { LanguageCode } from '../../types';
 
-export const LanguageSelector: React.FC<{ compact?: boolean; dropdownDirection?: 'up' | 'down' }> = ({
+interface LanguageSelectorProps {
+  compact?: boolean;
+  dropdownDirection?: 'up' | 'down';
+  isOpen?: boolean;
+  onToggle?: (isOpen: boolean) => void;
+}
+
+export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   compact = false,
   dropdownDirection = 'down',
+  isOpen: externalIsOpen,
+  onToggle,
 }) => {
   const { currentLang, setLanguage, languages } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+
+  const isControlled = typeof externalIsOpen === 'boolean';
+  const isOpen = isControlled ? externalIsOpen : internalIsOpen;
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const currentObj = languages.find((l) => l.code === currentLang) || languages[0];
 
+  const handleToggle = () => {
+    const nextState = !isOpen;
+    if (onToggle) {
+      onToggle(nextState);
+    }
+    if (!isControlled) {
+      setInternalIsOpen(nextState);
+    }
+  };
+
+  const handleClose = () => {
+    if (onToggle) {
+      onToggle(false);
+    }
+    if (!isControlled) {
+      setInternalIsOpen(false);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
+        handleClose();
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
+        handleClose();
         buttonRef.current?.focus();
       }
     };
@@ -41,7 +73,7 @@ export const LanguageSelector: React.FC<{ compact?: boolean; dropdownDirection?:
 
   const handleSelect = (code: LanguageCode) => {
     setLanguage(code);
-    setIsOpen(false);
+    handleClose();
     buttonRef.current?.focus();
   };
 
@@ -51,17 +83,22 @@ export const LanguageSelector: React.FC<{ compact?: boolean; dropdownDirection?:
         ref={buttonRef}
         type="button"
         id={`language-selector-button-${compact ? 'compact' : 'full'}`}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-label="Select language"
-        className={`flex items-center gap-1.5 rounded-lg border border-emerald-700/30 bg-white/95 px-3 py-1.5 text-xs font-semibold text-[#075D3A] shadow-xs transition-all hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-[#087A4B] min-h-[32px] ${
-          compact ? 'px-2 py-1 text-xs min-h-[28px]' : ''
+        className={`flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-emerald-800/60 bg-white dark:bg-[#12281D] px-3 py-1.5 text-xs font-bold text-[#075D3A] dark:text-emerald-100 shadow-xs transition-all hover:bg-emerald-50 dark:hover:bg-[#1A382A] focus:outline-none focus:ring-2 focus:ring-[#087A4B] min-h-[44px] cursor-pointer ${
+          compact ? 'px-2.5 py-1 text-xs' : ''
         }`}
       >
-        <Globe className="h-4 w-4 text-[#075D3A] shrink-0" aria-hidden="true" />
-        <span className="font-bold">{currentObj.nativeName}</span>
-        <ChevronDown className="h-3.5 w-3.5 opacity-70 shrink-0" aria-hidden="true" />
+        <Globe className="h-4 w-4 text-[#075D3A] dark:text-emerald-400 shrink-0" aria-hidden="true" />
+        <span className="font-extrabold">{currentObj.nativeName}</span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 transition-transform duration-200 text-[#075D3A] dark:text-emerald-400 shrink-0 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+          aria-hidden="true"
+        />
       </button>
 
       {isOpen && (
@@ -69,32 +106,38 @@ export const LanguageSelector: React.FC<{ compact?: boolean; dropdownDirection?:
           role="menu"
           aria-orientation="vertical"
           aria-labelledby={`language-selector-button-${compact ? 'compact' : 'full'}`}
-          className={`absolute right-0 z-[100] min-w-[190px] rounded-xl border border-emerald-100 bg-white py-1.5 shadow-2xl ring-1 ring-black/10 animate-in fade-in duration-100 ${
-            dropdownDirection === 'up' ? 'bottom-full mb-1 origin-bottom-right' : 'top-full mt-1 origin-top-right'
+          className={`absolute right-0 z-[100] min-w-[200px] sm:min-w-[220px] rounded-2xl border border-emerald-200/90 dark:border-emerald-800/80 bg-white dark:bg-[#12281D] py-2 shadow-2xl ring-1 ring-black/10 dark:ring-white/10 animate-in fade-in slide-in-from-top-2 duration-150 ${
+            dropdownDirection === 'up' ? 'bottom-full mb-2 origin-bottom-right' : 'top-full mt-2 origin-top-right'
           }`}
         >
-          <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#5E6B63] border-b border-emerald-100/60 pb-1.5 mb-1">
+          <div className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-800/70 dark:text-emerald-300/70 border-b border-emerald-100 dark:border-emerald-800/60 pb-2 mb-1">
             Filannoo Afaanii / Language
           </div>
-          {languages.map((lang) => (
-            <button
-              key={lang.code}
-              type="button"
-              role="menuitem"
-              onClick={() => handleSelect(lang.code as LanguageCode)}
-              className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs transition-colors hover:bg-[#EAF5EE] focus:bg-[#EAF5EE] focus:outline-none ${
-                currentLang === lang.code ? 'font-black text-[#075D3A] bg-emerald-50' : 'text-[#17211B] font-medium'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm">{lang.flagEmoji}</span>
-                <span>{lang.nativeName}</span>
-              </div>
-              {currentLang === lang.code && <Check className="h-4 w-4 text-[#075D3A]" aria-hidden="true" />}
-            </button>
-          ))}
+          {languages.map((lang) => {
+            const isSelected = currentLang === lang.code;
+            return (
+              <button
+                key={lang.code}
+                type="button"
+                role="menuitem"
+                onClick={() => handleSelect(lang.code as LanguageCode)}
+                className={`flex w-full items-center justify-between px-3.5 py-2.5 text-left text-xs transition-colors min-h-[44px] cursor-pointer ${
+                  isSelected
+                    ? 'font-extrabold text-[#075D3A] dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/40'
+                    : 'text-[#17211B] dark:text-emerald-100 font-semibold hover:bg-emerald-50/80 dark:hover:bg-[#1A382A]'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base shrink-0">{lang.flagEmoji}</span>
+                  <span>{lang.nativeName}</span>
+                </div>
+                {isSelected && <Check className="h-4 w-4 text-[#075D3A] dark:text-emerald-400 shrink-0" aria-hidden="true" />}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
   );
 };
+

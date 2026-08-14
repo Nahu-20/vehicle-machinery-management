@@ -318,7 +318,7 @@ export const MapLibreContainer: React.FC<MapLibreContainerProps> = ({
 
         {/* Candidate Oromia GeoJSON Source & Layers */}
         {gisResult?.data && (
-          <Source id="oromia-candidate-source" type="geojson" data={gisResult.data as any}>
+          <Source id="oromia-candidate-source" type="geojson" data={gisResult.data}>
             {/* Layer 1: Uniform Neutral Agricultural Fill */}
             <Layer id="zone-fill" type="fill" paint={fillStyle} />
 

@@ -136,8 +136,8 @@ export const HomepageInvestmentMapPreview: React.FC<HomepageInvestmentMapPreview
       return {
         feature,
         zoneId: feature.properties.zone_id,
-        name: feature.properties.name_en || (feature.properties as any).zone_name,
-        pcode: feature.properties.pcode || (feature.properties as any).zone_pcode,
+        name: feature.properties.zone_name,
+        pcode: feature.properties.zone_pcode,
         path,
         centroid,
       };

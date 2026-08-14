@@ -49,7 +49,7 @@ export const ZoneProfilePanel: React.FC<ZoneProfilePanelProps> = ({
   isPublic = false,
   className = '',
 }) => {
-  const selectedCommodity = isPublic ? null : rawCommodity;
+  const selectedCommodity = rawCommodity;
   if (!selectedFeature) {
     return <ZoneProfileEmptyState className={className} />;
   }
@@ -122,7 +122,7 @@ export const ZoneProfilePanel: React.FC<ZoneProfilePanelProps> = ({
             <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-md">
               zone_id: {properties.zone_id}
             </span>
-            {selectedCommodity && (
+            {selectedCommodity && !isPublic && (
               <span className="bg-amber-500/20 text-amber-900 dark:text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-md font-bold flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                 <span>DEMO DATA — NOT OFFICIAL OAB DATA</span>
@@ -135,10 +135,10 @@ export const ZoneProfilePanel: React.FC<ZoneProfilePanelProps> = ({
             <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div className="space-y-0.5">
               <p className="font-bold">
-                {selectedCommodity ? 'Synthetic Development Fixtures Active' : 'Candidate GIS — Technical Validation Passed'}
+                {selectedCommodity && !isPublic ? 'Synthetic Development Fixtures Active' : 'Candidate GIS — Technical Validation Passed'}
               </p>
               <p className="text-[11px] text-amber-900/90 dark:text-amber-300/90 leading-normal">
-                {selectedCommodity
+                {selectedCommodity && !isPublic
                   ? 'Values displayed are synthetic development test fixtures created for interface validation.'
                   : 'Formal Bureau GIS acceptance pending. Afaan Oromo / Amharic naming signoff pending.'}
               </p>
@@ -146,8 +146,30 @@ export const ZoneProfilePanel: React.FC<ZoneProfilePanelProps> = ({
           </div>
         </div>
 
-        {/* 2. Metric-Specific Profile Hierarchy */}
-        {selectedCommodity && (
+        {/* 2. Public No-Dataset Block when in Public Mode */}
+        {selectedCommodity && isPublic && (
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 text-center space-y-2">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center mx-auto">
+              <FileCheck className="w-5 h-5" />
+            </div>
+            <h4 className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
+              No Verified Dataset Published
+            </h4>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-xs mx-auto">
+              {selectedMetric === 'production'
+                ? `Verified production data is not yet available for ${commodityObj?.labelEn || 'this commodity'}.`
+                : selectedMetric === 'suitability'
+                ? `No verified suitability dataset is currently available for ${commodityObj?.labelEn || 'this commodity'}.`
+                : `No verified investment-potential dataset is currently available for ${commodityObj?.labelEn || 'this commodity'}.`}
+            </p>
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 italic pt-1">
+              Data will appear here once published and verified by the Oromia Agricultural Bureau.
+            </p>
+          </div>
+        )}
+
+        {/* 2. Metric-Specific Profile Hierarchy (Dev / Lab Mode Only) */}
+        {selectedCommodity && !isPublic && (
           <div className="space-y-4">
             {/* A. PRODUCTION METRIC PROFILE (WHEN SELECTED METRIC IS PRODUCTION) */}
             {selectedMetric === 'production' && derivedStats && (

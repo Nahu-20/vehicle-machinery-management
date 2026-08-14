@@ -26,46 +26,32 @@ export type NewsCategory =
 
 export type NewsContentBlock =
   | {
-      id?: string;
+      id: string;
       type: 'paragraph';
       content: LocalizedText;
     }
   | {
-      id?: string;
+      id: string;
       type: 'heading';
-      level?: 2 | 3;
+      level: 2 | 3;
       content: LocalizedText;
     }
   | {
-      id?: string;
-      type: 'image';
-      src: string;
-      alt: LocalizedText;
-      caption?: LocalizedText;
-    }
-  | {
-      id?: string;
+      id: string;
       type: 'quote';
       content: LocalizedText;
       source?: LocalizedText;
     }
   | {
-      id?: string;
+      id: string;
       type: 'list';
-      ordered?: boolean;
+      ordered: boolean;
       items: LocalizedText[];
     }
   | {
-      id?: string;
+      id: string;
       type: 'highlight';
-      title?: LocalizedText;
       content: LocalizedText;
-    }
-  | {
-      id?: string;
-      type: 'relatedLink';
-      title: LocalizedText;
-      url: string;
     };
 
 export interface NewsManagedFeaturedImage {
@@ -94,18 +80,15 @@ export interface NewsManagedFeaturedImage {
 }
 
 export interface NewsArticle {
-  id?: string;
   slug: string;
   title: LocalizedText;
   excerpt: LocalizedText;
-  content?: NewsContentBlock[];
-  fullContent?: NewsContentBlock[];
+  content: NewsContentBlock[];
 
   category: NewsCategory;
   tags: string[];
 
   featuredImage: string;
-  imageUrl?: string;
   featuredImageSource?: 'external' | 'managed' | 'none';
   featuredImageAssetId?: string | null;
   featuredImageManaged?: NewsManagedFeaturedImage | null;
@@ -114,16 +97,7 @@ export interface NewsArticle {
   imagePosition?: 'center' | 'top' | 'bottom' | 'left' | 'right';
 
   responsibleOffice: LocalizedText;
-  author?: LocalizedText;
   authorName?: LocalizedText;
-  readingTime?: string;
-  readTime?: string;
-  date?: string;
-  relatedArticleIds?: string[];
-  titleKey?: string;
-  summaryKey?: string;
-  contentKey?: string;
-  translations?: Partial<Record<string, boolean>>;
 
   status: NewsStatus;
   featured: boolean;
@@ -132,14 +106,14 @@ export interface NewsArticle {
   republishedAt?: any;
   scheduledFor?: any;
 
-  createdAt?: any;
-  createdBy?: string;
-  createdByEmail?: string;
+  createdAt: any;
+  createdBy: string;
+  createdByEmail: string;
   createdByName?: string;
 
-  updatedAt?: any;
-  updatedBy?: string;
-  updatedByEmail?: string;
+  updatedAt: any;
+  updatedBy: string;
+  updatedByEmail: string;
   updatedByName?: string;
 
   submittedForReviewByUid?: string;
@@ -173,7 +147,7 @@ export interface NewsArticle {
   trashReason?: string;
   statusBeforeTrash?: NewsStatus;
 
-  version?: number;
+  version: number;
 }
 
 export type NewsAuditAction =

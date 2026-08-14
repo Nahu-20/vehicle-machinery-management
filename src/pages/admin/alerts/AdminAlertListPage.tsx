@@ -290,7 +290,7 @@ export const AdminAlertListPage: React.FC = () => {
     if (!trashTargetAlert || !staffUser) return;
     setIsTrashing(true);
     try {
-      await moveAlertToTrash(trashTargetAlert.slug, trashTargetAlert.version, staffUser, reason);
+      await moveAlertToTrash(trashTargetAlert.slug, staffUser, trashTargetAlert.version, reason);
       setTrashTargetAlert(null);
       handleRefresh();
     } catch (err: any) {
@@ -566,14 +566,10 @@ export const AdminAlertListPage: React.FC = () => {
                             {titleText}
                           </button>
                           {alertItem.pinned && (
-                            <span title="Pinned Alert">
-                              <Pin className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                            </span>
+                            <Pin className="w-3.5 h-3.5 text-indigo-500 shrink-0" title="Pinned Alert" />
                           )}
                           {alertItem.featured && (
-                            <span title="Featured Alert">
-                              <Award className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                            </span>
+                            <Award className="w-3.5 h-3.5 text-amber-500 shrink-0" title="Featured Alert" />
                           )}
                         </div>
 

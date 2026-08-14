@@ -1,36 +1,69 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTheme, Theme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { Sun, Moon, Monitor, Check } from 'lucide-react';
+import { Sun, Moon, Monitor, Check, ChevronDown } from 'lucide-react';
 
 interface ThemeToggleProps {
   compact?: boolean;
+  isOpen?: boolean;
+  onToggle?: (isOpen: boolean) => void;
 }
 
-export const ThemeToggle: React.FC<ThemeToggleProps> = ({ compact = false }) => {
+export const ThemeToggle: React.FC<ThemeToggleProps> = ({
+  compact = false,
+  isOpen: externalIsOpen,
+  onToggle,
+}) => {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const { t } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+
+  const isControlled = typeof externalIsOpen === 'boolean';
+  const isOpen = isControlled ? externalIsOpen : internalIsOpen;
+
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const handleToggle = () => {
+    const nextState = !isOpen;
+    if (onToggle) {
+      onToggle(nextState);
+    }
+    if (!isControlled) {
+      setInternalIsOpen(nextState);
+    }
+  };
+
+  const handleClose = () => {
+    if (onToggle) {
+      onToggle(false);
+    }
+    if (!isControlled) {
+      setInternalIsOpen(false);
+    }
+  };
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        handleClose();
       }
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isOpen) {
-        setIsOpen(false);
+        handleClose();
+        buttonRef.current?.focus();
       }
     };
 
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
       document.addEventListener('keydown', handleKeyDown);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
@@ -44,12 +77,13 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ compact = false }) => 
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-label={`${t('theme_title')} (${t(`theme_${theme}`)})`}
-        className={`flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-emerald-800/60 bg-white dark:bg-[#12281D] px-2.5 py-1.5 text-xs font-bold text-[#14251D] dark:text-emerald-100 hover:bg-emerald-50 dark:hover:bg-[#1A382A] transition-colors focus:outline-none min-h-[44px] ${
+        className={`flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-emerald-800/60 bg-white dark:bg-[#12281D] px-2.5 py-1.5 text-xs font-bold text-[#14251D] dark:text-emerald-100 hover:bg-emerald-50 dark:hover:bg-[#1A382A] transition-colors focus:outline-none min-h-[44px] cursor-pointer ${
           compact ? 'px-2 py-1' : ''
         }`}
       >
@@ -61,6 +95,12 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ compact = false }) => 
         <span className="hidden md:inline text-[11px] font-bold capitalize">
           {t(`theme_${theme}`)}
         </span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 transition-transform duration-200 text-gray-500 dark:text-emerald-400 shrink-0 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+          aria-hidden="true"
+        />
       </button>
 
       {isOpen && (
@@ -68,10 +108,10 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ compact = false }) => 
           role="menu"
           aria-orientation="vertical"
           aria-label={t('theme_title')}
-          className="absolute right-0 mt-2 w-44 origin-top-right rounded-xl border border-gray-200 dark:border-emerald-800/80 bg-white dark:bg-[#12281D] p-1.5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 focus:outline-none z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+          className="absolute right-0 mt-2 min-w-[180px] sm:min-w-[190px] origin-top-right rounded-2xl border border-emerald-200/90 dark:border-emerald-800/80 bg-white dark:bg-[#12281D] p-2 shadow-2xl ring-1 ring-black/10 dark:ring-white/10 focus:outline-none z-[100] animate-in fade-in slide-in-from-top-2 duration-150"
         >
-          <div className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-emerald-400/70 border-b border-gray-100 dark:border-emerald-900/40 mb-1">
-            {t('theme_title')}
+          <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-800/70 dark:text-emerald-300/70 border-b border-emerald-100 dark:border-emerald-800/60 mb-1">
+            HAALA HALLUU / THEME
           </div>
 
           {options.map((opt) => {
@@ -83,19 +123,20 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ compact = false }) => 
                 role="menuitem"
                 onClick={() => {
                   setTheme(opt.value);
-                  setIsOpen(false);
+                  handleClose();
+                  buttonRef.current?.focus();
                 }}
-                className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-bold transition-colors min-h-[44px] ${
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-xs font-extrabold transition-colors min-h-[44px] cursor-pointer ${
                   isSelected
-                    ? 'bg-[#087A4B] text-white'
+                    ? 'bg-[#087A4B] text-white shadow-xs'
                     : 'text-[#14251D] dark:text-emerald-100 hover:bg-emerald-50 dark:hover:bg-[#1A382A]'
                 }`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   {opt.icon}
                   <span>{t(opt.labelKey)}</span>
                 </div>
-                {isSelected && <Check className="h-4 w-4 text-white" />}
+                {isSelected && <Check className="h-4 w-4 text-white shrink-0" />}
               </button>
             );
           })}
@@ -104,3 +145,4 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ compact = false }) => 
     </div>
   );
 };
+

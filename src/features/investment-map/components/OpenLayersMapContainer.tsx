@@ -39,6 +39,7 @@ interface OpenLayersMapContainerProps {
   onSelectZone?: (zoneId: string) => void;
   onGisVerified?: (result: GisValidationResult) => void;
   onError?: () => void;
+  allowDemoData?: boolean;
   className?: string;
 }
 
@@ -76,7 +77,8 @@ function getZoneStyle(
   selectedZoneId: string | null | undefined,
   isDark: boolean,
   selectedCommodity?: CommodityKey | null,
-  selectedMetric: ThematicMetric = 'production'
+  selectedMetric: ThematicMetric = 'production',
+  allowDemoData: boolean = false
 ): Style[] {
   const zid = feature.get('zone_id');
   const isSelected = zid === selectedZoneId;
@@ -89,7 +91,7 @@ function getZoneStyle(
   let strokeColor = isDark ? '#34d399' : '#15803d';
   let strokeWidth = 1.5;
 
-  if (selectedCommodity && zid) {
+  if (allowDemoData && selectedCommodity && zid) {
     const metrics = getDemoZoneCommodityMetrics(zid, selectedCommodity);
     let rawVal: number | null | undefined = null;
     if (metrics) {
@@ -165,6 +167,7 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
   onSelectZone,
   onGisVerified,
   onError,
+  allowDemoData = false,
   className = '',
 }) => {
   const { resolvedTheme } = useTheme();
@@ -187,6 +190,9 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
 
   const selectedMetricRef = useRef(selectedMetric);
   selectedMetricRef.current = selectedMetric;
+
+  const allowDemoDataRef = useRef(allowDemoData);
+  allowDemoDataRef.current = allowDemoData;
 
   const [gisResult, setGisResult] = useState<GisValidationResult | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -256,7 +262,8 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
             selectedZoneId,
             isDark,
             selectedCommodityRef.current,
-            selectedMetricRef.current
+            selectedMetricRef.current,
+            allowDemoDataRef.current
           ),
       });
       vectorLayerRef.current = vectorLayer;
@@ -335,7 +342,7 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
               const activeComm = selectedCommodityRef.current;
               const activeMet = selectedMetricRef.current;
 
-              if (activeComm && zid) {
+              if (allowDemoDataRef.current && activeComm && zid) {
                 const metrics = getDemoZoneCommodityMetrics(zid, activeComm);
                 let val: number | null | undefined = null;
                 if (metrics) {
@@ -392,9 +399,16 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
     if (!vectorLayerRef.current) return;
     const isDark = resolvedTheme === 'dark';
     vectorLayerRef.current.setStyle((feature) =>
-      getZoneStyle(feature, selectedZoneId, isDark, selectedCommodity, (selectedMetric as ThematicMetric) || 'production')
+      getZoneStyle(
+        feature,
+        selectedZoneId,
+        isDark,
+        selectedCommodity,
+        (selectedMetric as ThematicMetric) || 'production',
+        allowDemoData
+      )
     );
-  }, [selectedZoneId, selectedCommodity, selectedMetric, resolvedTheme]);
+  }, [selectedZoneId, selectedCommodity, selectedMetric, resolvedTheme, allowDemoData]);
 
   // Map Navigation Handlers
   const handleZoomIn = () => {
