@@ -17,23 +17,23 @@ export const FooterBrand: React.FC = () => {
           className="h-14 w-14 sm:h-16 sm:w-16 object-contain shrink-0 transition-transform duration-200 group-hover:scale-105"
         />
         <div>
-          <h3 className="text-xl sm:text-2xl font-black text-[#063D29] dark:text-white leading-tight tracking-tight">
+          <h3 className="text-xl sm:text-2xl font-black text-[#063D29] dark:text-[#f5f6f3] leading-tight tracking-tight">
             {t('bureau_title')}
           </h3>
-          <p className="text-xs sm:text-sm font-bold text-[#557161] dark:text-[#A7F3D0]/80">
+          <p className="text-xs sm:text-sm font-bold text-[#557161] dark:text-[#a5aba6]">
             {t('bureau_sub_title')}
           </p>
         </div>
       </Link>
 
       {/* Mission Text */}
-      <p className="text-sm sm:text-base text-[#4C6054] dark:text-[#A7F3D0]/80 leading-relaxed font-normal max-w-xl">
+      <p className="text-sm sm:text-base text-[#4C6054] dark:text-[#a5aba6] leading-relaxed font-normal max-w-xl">
         {t('footer_about')}
       </p>
 
       {/* Sustainability Statement */}
-      <div className="flex items-start sm:items-center gap-2.5 pt-1 text-xs sm:text-sm font-semibold text-[#075B36] dark:text-[#A7F3D0]">
-        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#EAF5E7] dark:bg-[#1B3F2E] text-[#075B36] dark:text-[#A3E635] shrink-0 mt-0.5 sm:mt-0">
+      <div className="flex items-start sm:items-center gap-2.5 pt-1 text-xs sm:text-sm font-semibold text-[#075B36] dark:text-[#74d62c]">
+        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#EAF5E7] dark:bg-[#161d18] text-[#075B36] dark:text-[#74d62c] shrink-0 mt-0.5 sm:mt-0">
           <Sprout className="h-3.5 w-3.5" aria-hidden="true" />
         </div>
         <span className="leading-snug">{t('footer_sustainability')}</span>

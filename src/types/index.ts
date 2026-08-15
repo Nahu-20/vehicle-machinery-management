@@ -78,6 +78,15 @@ export interface Program {
   imageUrl: string;
   status: 'active' | 'upcoming' | 'ongoing';
   badgeKey?: string;
+  directorate?: string;
+  keyObjectives?: string[];
+  interventions?: string[];
+  milestones?: { year: string; target: string; progress: number }[];
+  partners?: string[];
+  commodities?: string[];
+  zones?: string[];
+  impactMetric?: { value: string; label: string };
+  enrollmentSteps?: string[];
 }
 
 export type NewsContentBlock =
@@ -196,11 +205,30 @@ export interface Publication {
   id: string;
   titleKey: string;
   descriptionKey: string;
-  type: 'calendar' | 'guidance' | 'manual' | 'policy' | 'video' | 'form';
+  type: 'calendar' | 'guidance' | 'manual' | 'policy' | 'video' | 'form' | 'research' | 'poster';
   fileSize?: string;
   language: string;
   downloadUrl: string;
-  format: 'PDF' | 'MP4' | 'DOCX';
+  format: 'PDF' | 'MP4' | 'DOCX' | 'XLSX' | 'ZIP';
+  // Enhanced metadata fields
+  category?: 'crop' | 'pest' | 'livestock' | 'irrigation' | 'policy' | 'form' | 'multimedia' | 'ftc';
+  defaultTitle?: string;
+  defaultDescription?: string;
+  publishedDate?: string;
+  updatedDate?: string;
+  version?: string;
+  pagesOrDuration?: string;
+  authorOrOffice?: string;
+  targetAudience?: string[];
+  tags?: string[];
+  featured?: boolean;
+  downloadsCount?: number;
+  tableOfContents?: string[];
+  previewSummary?: string;
+  coverImage?: string;
+  videoEmbedUrl?: string;
+  videoDuration?: string;
+  formInstructions?: string[];
 }
 
 export interface MarketPrice {

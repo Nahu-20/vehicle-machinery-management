@@ -38,24 +38,24 @@ export const FooterLegalModals: React.FC<FooterLegalModalsProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl border border-[#D5E5D2] dark:border-[#1E4331] bg-white dark:bg-[#0E241A] p-6 sm:p-8 shadow-2xl space-y-5 text-[#14251D] dark:text-emerald-100 transition-colors duration-200"
+        className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl border border-[#D5E5D2] dark:border-white/[0.12] bg-white dark:bg-[#181c19] p-6 sm:p-8 shadow-2xl space-y-5 text-[#14251D] dark:text-[#f5f6f3] transition-colors duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#E8EFE5] dark:border-[#1E3E2E] pb-4">
+        <div className="flex items-center justify-between border-b border-[#E8EFE5] dark:border-white/[0.08] pb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#EDF7EA] dark:bg-[#1A3F2E] text-[#075B36] dark:text-[#A3E635]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#EDF7EA] dark:bg-[#161d18] text-[#075B36] dark:text-[#74d62c]">
               {activeModal === 'privacy' && <ShieldCheck className="h-5 w-5" />}
               {activeModal === 'accessibility' && <Eye className="h-5 w-5" />}
               {activeModal === 'terms' && <FileText className="h-5 w-5" />}
             </div>
             <div>
-              <h2 id="legal-modal-title" className="text-lg sm:text-xl font-extrabold text-[#063D29] dark:text-white">
+              <h2 id="legal-modal-title" className="text-lg sm:text-xl font-extrabold text-[#063D29] dark:text-[#f5f6f3]">
                 {activeModal === 'privacy' && t('footer_privacy')}
                 {activeModal === 'accessibility' && t('footer_accessibility')}
                 {activeModal === 'terms' && t('footer_terms')}
               </h2>
-              <p className="text-xs text-[#637A6E] dark:text-[#A7F3D0]/80">
+              <p className="text-xs text-[#637A6E] dark:text-[#a5aba6]">
                 {t('bureau_title')} • {t('bureau_sub_title')}
               </p>
             </div>
@@ -63,14 +63,14 @@ export const FooterLegalModals: React.FC<FooterLegalModalsProps> = ({
           <button
             onClick={onClose}
             aria-label={t('close')}
-            className="rounded-full p-2 text-[#637A6E] dark:text-[#A7F3D0] hover:bg-[#F2F7EF] dark:hover:bg-[#183B2C] min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors cursor-pointer"
+            className="rounded-full p-2 text-[#637A6E] dark:text-[#a5aba6] hover:bg-[#F2F7EF] dark:hover:bg-[#161d18] dark:hover:text-[#f5f6f3] min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Modal Content */}
-        <div className="space-y-4 text-sm sm:text-base text-[#4C6054] dark:text-[#A7F3D0]/90 leading-relaxed">
+        <div className="space-y-4 text-sm sm:text-base text-[#4C6054] dark:text-[#a5aba6] leading-relaxed">
           {activeModal === 'privacy' && (
             <>
               <p>
@@ -80,8 +80,8 @@ export const FooterLegalModals: React.FC<FooterLegalModalsProps> = ({
                   ? "የኦሮሚያ ግብርና ቢሮ ለአርሶ አደሮች፣ ደንበኞች እና የድረ-ገጽ ጎብኚዎች የግል መረጃ ጥበቃ ከፍተኛ ትኩረት ይሰጣል። ማንኛውም መረጃ ለመንግስት አገልግሎቶች እና ለግብርና ምርምር ብቻ ይውላል።"
                   : "The Oromia Agricultural Bureau values the privacy of farmers, stakeholders, and citizens. Personal information submitted via our portal is strictly protected and utilized exclusively for official agricultural advisory services, pest alert notices, and extension program support."}
               </p>
-              <div className="rounded-2xl bg-[#F4F9F2] dark:bg-[#132E21] p-4 border border-[#E0ECE0] dark:border-[#224E38] space-y-2 text-xs sm:text-sm">
-                <h3 className="font-bold text-[#063D29] dark:text-white">
+              <div className="rounded-2xl bg-[#F4F9F2] dark:bg-[#111613] p-4 border border-[#E0ECE0] dark:border-white/[0.08] space-y-2 text-xs sm:text-sm">
+                <h3 className="font-bold text-[#063D29] dark:text-[#f5f6f3]">
                   {language === 'om' ? 'Qajeeltoowwan Eegumsa Ragaa:' : language === 'am' ? 'የመረጃ ጥበቃ መርሆዎች:' : 'Data Protection Principles:'}
                 </h3>
                 <ul className="list-disc pl-5 space-y-1">
@@ -101,8 +101,8 @@ export const FooterLegalModals: React.FC<FooterLegalModalsProps> = ({
                   ? "ይህ ድረ-ገጽ የአለም አቀፍ የተደራሽነት ደረጃዎችን (WCAG 2.1 AA) በመከተል ለሁሉም ተጠቃሚዎች ምቹ ሆኖ የተዘጋጀ ነው። የስክሪን አንባቢዎችን፣ የቋንቋ አማራጮችን እና የገጽታ ቅንብሮችን ይደግፋል።"
                   : "We are dedicated to ensuring digital accessibility for all farmers, extension agents, and citizens. This platform is built in accordance with WCAG 2.1 AA guidelines, supporting full keyboard navigation, screen readers, multilingual switching (Afaan Oromoo, Amharic, English), and high-contrast color modes."}
               </p>
-              <div className="rounded-2xl bg-[#F4F9F2] dark:bg-[#132E21] p-4 border border-[#E0ECE0] dark:border-[#224E38] space-y-2 text-xs sm:text-sm">
-                <h3 className="font-bold text-[#063D29] dark:text-white">
+              <div className="rounded-2xl bg-[#F4F9F2] dark:bg-[#111613] p-4 border border-[#E0ECE0] dark:border-white/[0.08] space-y-2 text-xs sm:text-sm">
+                <h3 className="font-bold text-[#063D29] dark:text-[#f5f6f3]">
                   {language === 'om' ? 'Deeggarsa Dhaqqabamummaa:' : language === 'am' ? 'የተደራሽነት ድጋፍ:' : 'Accessibility Features:'}
                 </h3>
                 <ul className="list-disc pl-5 space-y-1">
@@ -123,8 +123,8 @@ export const FooterLegalModals: React.FC<FooterLegalModalsProps> = ({
                   ? "ይህ ድረ-ገጽ በኦሮሚያ ክልላዊ መንግስት ለአርሶ አደሮች እና ለህዝቡ የግብርና መረጃዎችን፣ የቴክኖሎጂ ምክሮችን እና አስቸኳይ ማስጠንቀቂያዎችን ለመስጠት የተዘጋጀ ይፋዊ መድረክ ነው።"
                   : "Welcome to the official digital portal of the Oromia Agricultural Bureau. This platform provides agricultural advisories, pest warnings, input distribution schedules, and market data for farmers across the Oromia region."}
               </p>
-              <div className="rounded-2xl bg-[#F4F9F2] dark:bg-[#132E21] p-4 border border-[#E0ECE0] dark:border-[#224E38] space-y-2 text-xs sm:text-sm">
-                <h3 className="font-bold text-[#063D29] dark:text-white">
+              <div className="rounded-2xl bg-[#F4F9F2] dark:bg-[#111613] p-4 border border-[#E0ECE0] dark:border-white/[0.08] space-y-2 text-xs sm:text-sm">
+                <h3 className="font-bold text-[#063D29] dark:text-[#f5f6f3]">
                   {language === 'om' ? 'Qajeeltoowwan Itti Fayyadamaa:' : language === 'am' ? 'የአጠቃቀም መመሪያዎች:' : 'Guidelines & Conditions:'}
                 </h3>
                 <ul className="list-disc pl-5 space-y-1">
@@ -141,7 +141,7 @@ export const FooterLegalModals: React.FC<FooterLegalModalsProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-[#075B36] hover:bg-[#064A2C] dark:bg-[#087A4B] text-white px-6 py-2.5 text-xs sm:text-sm font-bold shadow-2xs transition-colors cursor-pointer"
+            className="rounded-full bg-[#075B36] hover:bg-[#064A2C] dark:bg-[#74d62c] dark:hover:bg-[#8be63a] text-white dark:text-[#070908] px-6 py-2.5 text-xs sm:text-sm font-bold shadow-2xs transition-colors cursor-pointer"
           >
             {t('close')}
           </button>

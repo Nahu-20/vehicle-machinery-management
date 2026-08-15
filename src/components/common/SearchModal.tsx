@@ -52,11 +52,11 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl overflow-hidden rounded-2xl border border-emerald-900/20 dark:border-emerald-900/60 bg-white dark:bg-[#0B1912] shadow-2xl transition-colors duration-200"
+        className="w-full max-w-2xl overflow-hidden rounded-2xl border border-emerald-900/20 dark:border-white/[0.12] bg-white dark:bg-[#181c19] shadow-2xl transition-colors duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-3 border-b border-gray-100 dark:border-emerald-900/60 px-4 py-3.5 bg-[#F8F7F2] dark:bg-[#12281D]">
-          <Search className="h-5 w-5 text-[#087A4B] dark:text-emerald-300 shrink-0" />
+        <div className="flex items-center gap-3 border-b border-gray-100 dark:border-white/[0.08] px-4 py-3.5 bg-[#F8F7F2] dark:bg-[#111613]">
+          <Search className="h-5 w-5 text-[#087A4B] dark:text-[#74d62c] shrink-0" />
           <input
             id="search-modal-title"
             type="text"
@@ -64,12 +64,12 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('search_placeholder')}
             autoFocus
-            className="w-full bg-transparent text-sm font-semibold text-[#14251D] dark:text-emerald-100 placeholder-[#637069] dark:placeholder-emerald-300/60 focus:outline-none"
+            className="w-full bg-transparent text-sm font-semibold text-[#14251D] dark:text-[#f5f6f3] placeholder-[#637069] dark:placeholder-[#737b75] focus:outline-none"
           />
           <button
             onClick={onClose}
             aria-label={t('close')}
-            className="rounded-xl p-2 text-[#637069] dark:text-emerald-400 hover:bg-gray-200 dark:hover:bg-[#183627] min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="rounded-xl p-2 text-[#637069] dark:text-[#a5aba6] hover:bg-gray-200 dark:hover:bg-[#161d18] dark:hover:text-[#f5f6f3] min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -78,8 +78,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
         <div className="max-h-[70vh] overflow-y-auto p-4 space-y-4">
           {/* Services */}
           <div>
-            <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#087A4B] dark:text-emerald-300">
-              <Sprout className="h-4 w-4 text-[#D7A928]" /> {t('nav_services')}
+            <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#087A4B] dark:text-[#74d62c]">
+              <Sprout className="h-4 w-4 text-[#D7A928] dark:text-[#e4ad37]" /> {t('nav_services')}
             </h3>
             <div className="mt-2 space-y-1">
               {filteredServices.map((srv) => (
@@ -87,10 +87,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                   key={srv.id}
                   to={srv.linkUrl}
                   onClick={onClose}
-                  className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#14251D] dark:text-emerald-100 hover:bg-[#EFF8F2] dark:hover:bg-[#12281D] min-h-[44px]"
+                  className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#14251D] dark:text-[#f5f6f3] hover:bg-[#EFF8F2] dark:hover:bg-[#161d18] dark:hover:text-[#74d62c] min-h-[44px] transition-colors"
                 >
                   <span>{t(srv.titleKey)}</span>
-                  <ArrowRight className="h-3.5 w-3.5 text-[#087A4B] dark:text-emerald-300" />
+                  <ArrowRight className="h-3.5 w-3.5 text-[#087A4B] dark:text-[#74d62c]" />
                 </Link>
               ))}
             </div>
@@ -98,8 +98,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
 
           {/* Publications */}
           <div>
-            <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#087A4B] dark:text-emerald-300">
-              <FileText className="h-4 w-4 text-[#D7A928]" /> {t('nav_resources')}
+            <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#087A4B] dark:text-[#74d62c]">
+              <FileText className="h-4 w-4 text-[#D7A928] dark:text-[#e4ad37]" /> {t('nav_resources')}
             </h3>
             <div className="mt-2 space-y-1">
               {filteredPubs.map((pub) => (
@@ -107,13 +107,13 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                   key={pub.id}
                   to="/resources"
                   onClick={onClose}
-                  className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#14251D] dark:text-emerald-100 hover:bg-[#EFF8F2] dark:hover:bg-[#12281D] min-h-[44px]"
+                  className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#14251D] dark:text-[#f5f6f3] hover:bg-[#EFF8F2] dark:hover:bg-[#161d18] dark:hover:text-[#74d62c] min-h-[44px] transition-colors"
                 >
-                  <div>
+                  <div className="flex items-center gap-2">
                     <span className="font-semibold">{t(pub.titleKey)}</span>
-                    <span className="ml-2 rounded-md bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.5 text-[10px] text-[#087A4B] dark:text-emerald-300 font-bold">{pub.format}</span>
+                    <span className="rounded-md bg-emerald-100 dark:bg-[#111613] border border-transparent dark:border-white/[0.08] px-1.5 py-0.5 text-[10px] text-[#087A4B] dark:text-[#74d62c] font-bold">{pub.format}</span>
                   </div>
-                  <ArrowRight className="h-3.5 w-3.5 text-[#087A4B] dark:text-emerald-300" />
+                  <ArrowRight className="h-3.5 w-3.5 text-[#087A4B] dark:text-[#74d62c]" />
                 </Link>
               ))}
             </div>
@@ -121,8 +121,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
 
           {/* News */}
           <div>
-            <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#087A4B] dark:text-emerald-300">
-              <Newspaper className="h-4 w-4 text-[#D7A928]" /> {t('nav_news')}
+            <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#087A4B] dark:text-[#74d62c]">
+              <Newspaper className="h-4 w-4 text-[#D7A928] dark:text-[#e4ad37]" /> {t('nav_news')}
             </h3>
             <div className="mt-2 space-y-1">
               {filteredNews.map((news) => {
@@ -139,10 +139,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                     key={news.id}
                     to={`/news/${news.slug}`}
                     onClick={onClose}
-                    className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#14251D] dark:text-emerald-100 hover:bg-[#EFF8F2] dark:hover:bg-[#12281D] min-h-[44px]"
+                    className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#14251D] dark:text-[#f5f6f3] hover:bg-[#EFF8F2] dark:hover:bg-[#161d18] dark:hover:text-[#74d62c] min-h-[44px] transition-colors"
                   >
                     <span className="truncate max-w-md">{titleText}</span>
-                    <span className="text-[10px] text-[#637069] dark:text-emerald-400/80">{news.publishedAt || news.date}</span>
+                    <span className="text-[10px] text-[#637069] dark:text-[#a5aba6]">{news.publishedAt || news.date}</span>
                   </Link>
                 );
               })}
@@ -152,8 +152,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
           {/* Offices */}
           {filteredOffices.length > 0 && (
             <div>
-              <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#087A4B] dark:text-emerald-300">
-                <Building2 className="h-4 w-4 text-[#D7A928]" /> Regional Offices
+              <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#087A4B] dark:text-[#74d62c]">
+                <Building2 className="h-4 w-4 text-[#D7A928] dark:text-[#e4ad37]" /> Regional Offices
               </h3>
               <div className="mt-2 space-y-1">
                 {filteredOffices.map((off) => (
@@ -161,10 +161,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                     key={off.id}
                     to="/contact"
                     onClick={onClose}
-                    className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#14251D] dark:text-emerald-100 hover:bg-[#EFF8F2] dark:hover:bg-[#12281D] min-h-[44px]"
+                    className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#14251D] dark:text-[#f5f6f3] hover:bg-[#EFF8F2] dark:hover:bg-[#161d18] dark:hover:text-[#74d62c] min-h-[44px] transition-colors"
                   >
                     <span>{off.nameKey}</span>
-                    <span className="text-[10px] text-[#637069] dark:text-emerald-400/80">{off.phone}</span>
+                    <span className="text-[10px] text-[#637069] dark:text-[#a5aba6]">{off.phone}</span>
                   </Link>
                 ))}
               </div>

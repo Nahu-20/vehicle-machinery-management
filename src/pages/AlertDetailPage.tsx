@@ -20,6 +20,8 @@ import {
   Check,
   Bell,
   Layers,
+  PhoneCall,
+  Download,
 } from 'lucide-react';
 
 export const AlertDetailPage: React.FC = () => {
@@ -36,21 +38,21 @@ export const AlertDetailPage: React.FC = () => {
 
   if (!alert) {
     return (
-      <div className="bg-[#FAF9F5] min-h-[70vh] flex items-center justify-center p-6">
-        <div className="max-w-md w-full rounded-3xl bg-white p-8 text-center shadow-lg border border-[#DDE8E1] space-y-4">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+      <div className="bg-[#F6F7F3] dark:bg-[#0A110D] min-h-[70vh] flex items-center justify-center p-6 text-[#111310] dark:text-white">
+        <div className="max-w-md w-full rounded-3xl bg-white dark:bg-[#111613] p-8 text-center shadow-lg border border-[#E2EFE0] dark:border-white/10 space-y-4">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-100 dark:bg-white/10 text-red-600">
             <AlertTriangle className="h-8 w-8" />
           </div>
-          <h2 className="text-xl font-bold text-[#14251D]">Alert Not Found</h2>
-          <p className="text-xs text-[#637069]">
-            The requested agricultural alert broadcast could not be located or has expired.
+          <h2 className="text-xl font-black text-[#0A1912] dark:text-white">Advisory Notice Not Found</h2>
+          <p className="text-xs text-[#56635B] dark:text-white/60">
+            The requested early warning advisory broadcast could not be located or has expired.
           </p>
           <button
             onClick={() => navigate('/alerts')}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#063D2A] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#087A4B]"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#075B36] hover:bg-[#054629] px-5 py-2.5 text-xs font-black text-white"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>{t('alert_back_btn')}</span>
+            <span>Return to Alerts Portal</span>
           </button>
         </div>
       </div>
@@ -64,7 +66,7 @@ export const AlertDetailPage: React.FC = () => {
 
   const handleShare = async () => {
     const shareData = {
-      title: t(alert.titleKey),
+      title: t(alert.titleKey) || alert.slug,
       text: t(alert.summaryKey),
       url: window.location.href,
     };
@@ -73,15 +75,14 @@ export const AlertDetailPage: React.FC = () => {
       try {
         await navigator.share(shareData);
       } catch (err) {
-        // Fallback to clipboard
         navigator.clipboard.writeText(window.location.href);
         setCopied(true);
-        setTimeout(() => setCopied(false), 3000);
+        setTimeout(() => setCopied(false), 2500);
       }
     } else {
       navigator.clipboard.writeText(window.location.href);
       setCopied(true);
-      setTimeout(() => setCopied(false), 3000);
+      setTimeout(() => setCopied(false), 2500);
     }
   };
 
@@ -93,28 +94,28 @@ export const AlertDetailPage: React.FC = () => {
     switch (severity) {
       case 'critical':
         return (
-          <span className="inline-flex items-center gap-2 rounded-full bg-red-100 px-4 py-1.5 text-xs font-black text-red-900 border border-red-300 shadow-xs">
+          <span className="inline-flex items-center gap-2 rounded-full bg-red-500/10 text-red-700 dark:text-red-400 px-4 py-1.5 text-xs font-black border border-red-500/30 shadow-xs">
             <ShieldAlert className="h-4 w-4 text-red-600 shrink-0" />
             <span>{t('alert_severity_critical')}</span>
           </span>
         );
       case 'warning':
         return (
-          <span className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-1.5 text-xs font-black text-amber-950 border border-amber-300 shadow-xs">
+          <span className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 text-amber-800 dark:text-amber-300 px-4 py-1.5 text-xs font-black border border-amber-500/30 shadow-xs">
             <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
             <span>{t('alert_severity_warning')}</span>
           </span>
         );
       case 'advisory':
         return (
-          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-1.5 text-xs font-black text-[#087A4B] border border-emerald-300 shadow-xs">
-            <Info className="h-4 w-4 text-[#087A4B] shrink-0" />
+          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 text-[#075B36] dark:text-[#A3E635] px-4 py-1.5 text-xs font-black border border-emerald-500/30 shadow-xs">
+            <Info className="h-4 w-4 text-[#075B36] dark:text-[#A3E635] shrink-0" />
             <span>{t('alert_severity_advisory')}</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-4 py-1.5 text-xs font-black text-blue-950 border border-blue-300 shadow-xs">
+          <span className="inline-flex items-center gap-2 rounded-full bg-blue-500/10 text-blue-800 dark:text-blue-300 px-4 py-1.5 text-xs font-black border border-blue-500/30 shadow-xs">
             <Info className="h-4 w-4 text-blue-600 shrink-0" />
             <span>{t('alert_severity_info')}</span>
           </span>
@@ -123,69 +124,69 @@ export const AlertDetailPage: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#FAF9F5] min-h-screen py-8 print:bg-white print:py-0">
+    <div className="bg-[#F6F7F3] dark:bg-[#0A110D] min-h-screen py-8 text-[#111310] dark:text-white transition-colors duration-200 print:bg-white print:py-0 overflow-x-hidden">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-        {/* Top Action Bar */}
+        {/* Top Action Bar & Breadcrumb */}
         <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
           <Link
             to="/alerts"
-            className="inline-flex items-center gap-2 rounded-xl bg-white border border-[#DDE8E1] px-4 py-2 text-xs font-bold text-[#063D2A] hover:bg-[#EFF8F2] hover:border-[#087A4B] transition-all shadow-xs"
+            className="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-[#111613] border border-[#E2EFE0] dark:border-white/10 px-4 py-2 text-xs font-bold text-[#075B36] dark:text-[#A3E635] hover:bg-[#F0F7EE] dark:hover:bg-white/15 transition-all shadow-2xs"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>{t('alert_back_btn')}</span>
+            <span>Back to All Alerts</span>
           </Link>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
               type="button"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#DDE8E1] bg-white px-3.5 py-2 text-xs font-bold text-[#14251D] hover:bg-gray-50 shadow-xs"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#E2EFE0] dark:border-white/10 bg-white dark:bg-[#111613] px-3.5 py-2 text-xs font-bold text-[#0A1912] dark:text-white hover:bg-gray-50 dark:hover:bg-white/10 shadow-2xs"
             >
-              <Printer className="h-4 w-4 text-[#087A4B]" />
-              <span>{t('alert_print_btn')}</span>
+              <Printer className="h-4 w-4 text-[#075B36] dark:text-[#A3E635]" />
+              <span>Print Bulletin</span>
             </button>
 
             <button
               onClick={handleShare}
               type="button"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#063D2A] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#087A4B] shadow-xs transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#075B36] hover:bg-[#054629] px-3.5 py-2 text-xs font-black text-white shadow-2xs transition-colors"
             >
-              {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Share2 className="h-4 w-4 text-[#D7A928]" />}
-              <span>{copied ? 'Copied!' : t('alert_share_btn')}</span>
+              {copied ? <Check className="h-4 w-4 text-[#A3E635]" /> : <Share2 className="h-4 w-4 text-[#A3E635]" />}
+              <span>{copied ? 'Link Copied!' : 'Share'}</span>
             </button>
+
+            <a
+              href="tel:8888"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 hover:bg-red-700 px-3.5 py-2 text-xs font-black text-white shadow-2xs transition-colors"
+            >
+              <PhoneCall className="h-4 w-4" />
+              <span>Dial 8888</span>
+            </a>
           </div>
         </div>
 
-        {/* Toast Alert Notification */}
-        {copied && (
-          <div className="rounded-xl bg-emerald-900 text-white px-4 py-2.5 text-xs font-bold flex items-center justify-between shadow-md animate-in fade-in">
-            <span>✓ {t('alert_copy_success')}</span>
-            <span className="text-emerald-300 text-[10px]">Copied to Clipboard</span>
-          </div>
-        )}
-
         {/* Main Alert Card */}
-        <div className="rounded-3xl bg-white p-6 sm:p-10 shadow-sm border border-[#DDE8E1] space-y-8 print:shadow-none print:border-none print:p-0">
+        <div className="rounded-3xl bg-white dark:bg-[#111613] p-6 sm:p-10 shadow-sm border border-[#E2EFE0] dark:border-white/10 space-y-8 print:shadow-none print:border-none print:p-0">
           
           {/* Header Row */}
-          <div className="space-y-4 border-b border-[#DDE8E1] pb-6">
+          <div className="space-y-4 border-b border-[#EDF4EC] dark:border-white/10 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 {getSeverityBadge(alert.severity)}
-                <span className="rounded-full bg-[#EFF8F2] px-3 py-1 text-xs font-extrabold text-[#087A4B] border border-[#DDE8E1] capitalize">
+                <span className="rounded-full bg-[#F0F7EE] dark:bg-white/10 px-3 py-1 text-xs font-extrabold text-[#075B36] dark:text-[#A3E635] border border-[#D5E8D0] dark:border-white/10 capitalize">
                   {alert.category}
                 </span>
               </div>
 
               <div className="flex items-center gap-2 text-xs font-bold">
                 {alert.status === 'active' ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 border border-emerald-200">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-white/10 px-3 py-1 text-[#075B36] dark:text-[#A3E635] border border-emerald-200 dark:border-white/10">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                     {t('alert_status_active')}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-gray-600 border border-gray-200">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-white/10 px-3 py-1 text-gray-600 dark:text-white/60 border border-gray-200">
                     {t('alert_status_expired')}
                   </span>
                 )}
@@ -193,19 +194,19 @@ export const AlertDetailPage: React.FC = () => {
             </div>
 
             {/* Title */}
-            <h1 className="text-2xl sm:text-3xl font-black text-[#14251D] leading-tight tracking-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0A1912] dark:text-white leading-tight tracking-tight">
               {t(alert.titleKey)}
             </h1>
 
             {/* Metadata bar */}
-            <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-[#637069] pt-2">
+            <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-[#56635B] dark:text-white/70 pt-2">
               <span className="flex items-center gap-1.5">
-                <Calendar className="h-4 w-4 text-[#087A4B]" />
+                <Calendar className="h-4 w-4 text-[#075B36] dark:text-[#A3E635]" />
                 <strong>{t('alert_issued_date')}</strong> {alert.date}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4 text-amber-600" />
+                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 <strong>{t('alert_expiration_date')}</strong> {alert.expirationDate}
               </span>
               {alert.updatedDate && (
@@ -218,20 +219,20 @@ export const AlertDetailPage: React.FC = () => {
           </div>
 
           {/* Affected Areas Section */}
-          <div className="rounded-2xl bg-[#EFF8F2] p-5 border border-[#DDE8E1] space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#063D2A] flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-[#087A4B]" />
+          <div className="rounded-2xl bg-[#F0F7EE] dark:bg-white/5 p-5 sm:p-6 border border-[#D5E8D0] dark:border-white/10 space-y-3">
+            <h3 className="text-xs font-black uppercase tracking-wider text-[#075B36] dark:text-[#A3E635] flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-[#075B36] dark:text-[#A3E635]" />
               <span>{t('alert_affected_area')} {alert.affectedArea}</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
-                <span className="font-bold text-[#14251D] block mb-1">Affected Zones:</span>
+                <span className="font-bold text-[#0A1912] dark:text-white block mb-1">Affected Zones:</span>
                 <div className="flex flex-wrap gap-1.5">
                   {alert.affectedZones.map((z) => (
                     <span
                       key={z}
-                      className="rounded-lg bg-white px-2.5 py-1 font-bold text-[#063D2A] border border-[#DDE8E1]"
+                      className="rounded-lg bg-white dark:bg-white/10 px-2.5 py-1 font-bold text-[#075B36] dark:text-[#A3E635] border border-[#D5E8D0] dark:border-white/10"
                     >
                       {z}
                     </span>
@@ -240,12 +241,12 @@ export const AlertDetailPage: React.FC = () => {
               </div>
 
               <div>
-                <span className="font-bold text-[#14251D] block mb-1">Affected Woredas:</span>
+                <span className="font-bold text-[#0A1912] dark:text-white block mb-1">Affected Woredas:</span>
                 <div className="flex flex-wrap gap-1.5">
                   {alert.affectedWoredas.map((w) => (
                     <span
                       key={w}
-                      className="rounded-lg bg-emerald-100/60 px-2.5 py-1 font-semibold text-emerald-900 border border-emerald-200"
+                      className="rounded-lg bg-emerald-100/60 dark:bg-white/10 px-2.5 py-1 font-semibold text-emerald-900 dark:text-white"
                     >
                       {w}
                     </span>
@@ -255,80 +256,82 @@ export const AlertDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Full Description */}
+          {/* Full Description / Technical Analysis */}
           <div className="space-y-4">
-            <h3 className="text-base font-bold text-[#14251D] border-b border-gray-100 pb-2">
-              Broadcast Summary & Analysis
+            <h3 className="text-sm font-black uppercase tracking-wider text-[#0A1912] dark:text-white border-b border-[#EDF4EC] dark:border-white/10 pb-2">
+              Official Early Warning Broadcast & Technical Analysis
             </h3>
-            <p className="text-sm sm:text-base text-[#14251D]/90 leading-relaxed font-normal whitespace-pre-line">
+            <p className="text-sm sm:text-base text-[#3E4D43] dark:text-white/90 leading-relaxed font-normal whitespace-pre-line">
               {t(alert.fullDescriptionKey || alert.summaryKey)}
             </p>
           </div>
 
           {/* Recommended Actions Checklist */}
           {alert.recommendedActions && alert.recommendedActions.length > 0 && (
-            <div className="rounded-2xl bg-amber-50/70 p-6 border border-amber-200/80 space-y-4">
-              <h3 className="text-sm font-black uppercase tracking-wider text-amber-950 flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-[#087A4B]" />
-                <span>{t('alert_recommended_actions')}</span>
+            <div className="rounded-2xl bg-amber-500/10 p-6 border border-amber-500/30 space-y-4">
+              <h3 className="text-sm font-black uppercase tracking-wider text-amber-900 dark:text-amber-300 flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-[#075B36] dark:text-[#A3E635]" />
+                <span>Mandated First 48-Hour Protocol for Farmers & DAs</span>
               </h3>
 
-              <ul className="space-y-3">
+              <div className="space-y-2.5">
                 {alert.recommendedActions.map((action, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-amber-950 font-medium">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#087A4B] text-white text-[11px] font-bold mt-0.5">
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 bg-white dark:bg-[#181F1B] p-3.5 rounded-xl border border-amber-200 dark:border-white/10 text-xs sm:text-sm text-[#0A1912] dark:text-white font-medium"
+                  >
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#075B36] text-[#A3E635] text-[11px] font-black mt-0.5">
                       {idx + 1}
                     </span>
-                    <span className="leading-snug">{action}</span>
-                  </li>
+                    <span className="leading-relaxed">{action}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
 
           {/* Responsible Office Card */}
-          <div className="rounded-2xl bg-[#FAFAF7] p-5 border border-[#DDE8E1] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="rounded-2xl bg-[#F9FCF8] dark:bg-white/5 p-5 border border-[#EDF4EC] dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#063D2A] text-[#D7A928]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#075B36] text-[#A3E635]">
                 <Building2 className="h-5 w-5" />
               </div>
               <div>
-                <span className="text-xs font-bold text-[#637069] block">
+                <span className="text-xs font-bold text-[#56635B] dark:text-white/60 block">
                   {t('alert_responsible_office')}
                 </span>
-                <strong className="text-sm font-bold text-[#14251D] block">
+                <strong className="text-sm font-bold text-[#0A1912] dark:text-white block">
                   {alert.responsibleOffice}
                 </strong>
               </div>
             </div>
 
-            <Link
-              to="/contact"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#DDE8E1] bg-white px-3.5 py-2 text-xs font-bold text-[#063D2A] hover:bg-[#EFF8F2] hover:border-[#087A4B] transition-all shrink-0"
-            >
-              <span>Contact Office</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <a
+                href="tel:8888"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-xs font-black transition-all shadow-2xs"
+              >
+                <PhoneCall className="h-3.5 w-3.5" />
+                <span>Call Hotline 8888</span>
+              </a>
 
-          {/* Prototype Demonstration Disclaimer Banner */}
-          <div className="rounded-2xl bg-gray-50 p-4 text-xs text-[#637069] border border-gray-200 flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-[#D7A928] shrink-0" />
-            <div>
-              <strong className="text-gray-800 block">Demonstration Content Disclaimer</strong>
-              <span>
-                {t('alert_demo_notice')}. For real-time emergencies, contact official district extension lines or call <strong>8844</strong>.
-              </span>
+              <Link
+                to="/about#offices"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[#D5E8D0] dark:border-white/10 bg-white dark:bg-white/10 px-3.5 py-2 text-xs font-bold text-[#075B36] dark:text-[#A3E635] hover:bg-[#F0F7EE] transition-all"
+              >
+                <span>Woreda Desks</span>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           </div>
         </div>
 
-        {/* Related Alerts Section */}
+        {/* Related Active Bulletins */}
         {relatedAlerts.length > 0 && (
           <div className="space-y-4 pt-4 print:hidden">
-            <h3 className="text-base font-extrabold text-[#063D2A] flex items-center gap-2">
-              <Bell className="h-4 w-4 text-[#087A4B]" />
-              <span>{t('alert_related_title')}</span>
+            <h3 className="text-base font-extrabold text-[#0A1912] dark:text-white flex items-center gap-2">
+              <Bell className="h-4 w-4 text-[#075B36] dark:text-[#A3E635]" />
+              <span>Related Active Early Warning Broadcasts</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -336,17 +339,19 @@ export const AlertDetailPage: React.FC = () => {
                 <Link
                   key={rel.id}
                   to={`/alerts/${rel.slug}`}
-                  className="group rounded-2xl bg-white p-4 shadow-xs border border-[#DDE8E1] hover:border-[#087A4B] transition-all space-y-2"
+                  className="group rounded-2xl bg-white dark:bg-[#111613] p-5 shadow-2xs border border-[#E2EFE0] dark:border-white/10 hover:border-[#075B36] dark:hover:border-[#A3E635] transition-all space-y-2 flex flex-col justify-between"
                 >
-                  <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 capitalize">
-                    {rel.severity}
-                  </span>
-                  <h4 className="text-xs font-bold text-[#14251D] group-hover:text-[#087A4B] line-clamp-2">
-                    {t(rel.titleKey)}
-                  </h4>
-                  <div className="flex items-center justify-between text-[11px] text-[#637069] pt-2 border-t border-gray-100">
+                  <div className="space-y-1.5">
+                    <span className="inline-block rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-black text-amber-700 dark:text-amber-400 capitalize">
+                      {rel.severity}
+                    </span>
+                    <h4 className="text-xs font-bold text-[#0A1912] dark:text-white group-hover:text-[#075B36] dark:group-hover:text-[#A3E635] line-clamp-2">
+                      {t(rel.titleKey)}
+                    </h4>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-[#56635B] dark:text-white/60 pt-2 border-t border-[#EDF4EC] dark:border-white/10">
                     <span className="truncate max-w-[120px]">{rel.affectedArea}</span>
-                    <ChevronRight className="h-3.5 w-3.5 text-[#087A4B]" />
+                    <ChevronRight className="h-3.5 w-3.5 text-[#075B36] dark:text-[#A3E635]" />
                   </div>
                 </Link>
               ))}
