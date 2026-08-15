@@ -52,6 +52,20 @@ export type NewsContentBlock =
       id: string;
       type: 'highlight';
       content: LocalizedText;
+      title?: LocalizedText;
+    }
+  | {
+      id: string;
+      type: 'image';
+      src: string;
+      alt: LocalizedText;
+      caption?: LocalizedText;
+    }
+  | {
+      id: string;
+      type: 'relatedLink';
+      title: LocalizedText;
+      url: string;
     };
 
 export interface NewsManagedFeaturedImage {
@@ -98,6 +112,10 @@ export interface NewsArticle {
 
   responsibleOffice: LocalizedText;
   authorName?: LocalizedText;
+
+  date?: string;
+  readTime?: string;
+  readingTime?: string;
 
   status: NewsStatus;
   featured: boolean;
@@ -146,6 +164,7 @@ export interface NewsArticle {
   trashedAt?: any;
   trashReason?: string;
   statusBeforeTrash?: NewsStatus;
+  previousStatusBeforeTrash?: NewsStatus;
 
   version: number;
 }

@@ -59,6 +59,7 @@ export type DatasetCategory =
   | 'production'
   | 'suitability'
   | 'investment-potential'
+  | 'investment_potential'
   | 'infrastructure'
   | 'climate'
   | 'irrigation'
@@ -68,7 +69,7 @@ export type DatasetCategory =
 
 export type CommodityKey = 'coffee' | 'wheat' | 'maize' | (string & {});
 
-export type DatasetUnit = 'tonne' | 'kg' | 'quintal' | 'hectare' | 'percent' | 'score' | 'count';
+export type DatasetUnit = 'tonne' | 'kg' | 'quintal' | 'hectare' | 'percent' | 'score' | 'count' | (string & {});
 
 export type ReferencePeriodType = 'year' | 'season' | 'fiscal_year' | 'multi_year';
 

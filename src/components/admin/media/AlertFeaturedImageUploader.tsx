@@ -243,7 +243,7 @@ export const AlertFeaturedImageUploader: React.FC<AlertFeaturedImageUploaderProp
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      if (controllerRef.current && controllerRef.current.state === 'uploading') {
+      if (controllerRef.current && controllerRef.current.getCurrentState().state === 'uploading') {
         controllerRef.current.cancel();
       }
     };

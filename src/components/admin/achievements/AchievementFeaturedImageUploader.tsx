@@ -136,7 +136,7 @@ export const AchievementFeaturedImageUploader: React.FC<AchievementFeaturedImage
               label="Image Alternative Text (Alt)"
               value={imageAlt}
               onChange={onAltChange}
-              requiredOm={source !== 'none'}
+              requiredOm={true}
               placeholderOm="Gulaala faayidaa fi ibsa fakkii..."
               placeholderAm="የምስል ገለፃ..."
               placeholderEn="Describe the image for accessibility..."

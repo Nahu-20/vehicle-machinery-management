@@ -249,7 +249,7 @@ export const NewsFeaturedImageUploader: React.FC<NewsFeaturedImageUploaderProps>
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      if (controllerRef.current && controllerRef.current.state === 'uploading') {
+      if (controllerRef.current && controllerRef.current.getCurrentState().state === 'uploading') {
         controllerRef.current.cancel();
       }
     };
