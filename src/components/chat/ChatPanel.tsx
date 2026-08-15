@@ -20,7 +20,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   messages,
   setMessages,
 }) => {
-  const { currentLang } = useLanguage();
+  const { currentLang, t } = useLanguage();
   const [isTyping, setIsTyping] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -73,6 +73,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         content: res.message,
         createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         sources: res.sources,
+        wasTranslated: res.wasTranslated,
         status: 'sent',
       };
 
@@ -81,7 +82,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       const errorMsg: ChatMessage = {
         id: 'err-' + Date.now(),
         role: 'assistant',
-        content: 'An error occurred while connecting to the assistant. Please try again.',
+        content: t('chat_connection_error'),
         createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         status: 'failed',
       };

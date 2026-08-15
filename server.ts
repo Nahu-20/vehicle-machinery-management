@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import path from 'path';
 import multer from 'multer';
@@ -29,7 +30,7 @@ if (!getApps().length) {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
 
@@ -47,6 +48,13 @@ async function startServer() {
   app.post('/api/investment/mutate', async (req: Request, res: Response) => {
     const { handleInvestmentMutation } = await import('./src/server/investmentApi.js');
     return handleInvestmentMutation(req, res);
+  });
+
+  // Public Chatbot Endpoint: grounded retrieval over Bureau content.
+  // Runs server-side so GEMINI_API_KEY is never exposed to the browser.
+  app.post('/api/chat', async (req: Request, res: Response) => {
+    const { handleChat } = await import('./src/server/chat/chatApi.js');
+    return handleChat(req, res);
   });
 
   // Health check

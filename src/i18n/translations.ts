@@ -1,4 +1,4 @@
-import { LanguageCode } from '../types';
+import type { LanguageCode } from '../types/index.js';
 
 export type { LanguageCode };
 
@@ -411,8 +411,11 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     // Chatbot Frontend
     chat_title: "Gargaaraa Qonna Oromiyaa",
     chat_launcher: "Gargaaraa Qonnaa Banadhu",
-    chat_status_demo: "Haala Agarsiisaa (Demo)",
-    chat_disclaimer: "Gargaaraan kun yeroo ampaa agarsiisaaf qofa kan qophaa'e malee tajaajila gorsa qonnaa deeggarsa rasmiitti hin qabatamne.",
+    chat_status_demo: "Odeeffannoo Biiroo irraa",
+    chat_disclaimer: "Gargaaraan kun deebii kan kennu odeeffannoo Biiroon Qonnaa Oromiyaa maxxanse irraa qofa. Dhimma ariifachiisaaf waajjira qonnaa naannoo keessanii qunnamaa.",
+    chat_machine_translated: "Qabiyyeen kun afaan biraatiin barreeffame; hiikkaan kompiitaraan godhame.",
+    chat_related_info: "Odeeffannoo Walqabatu:",
+    chat_connection_error: "Gargaaraa wajjin walqunnamuun hin danda'amne. Maaloo irra deebi'aa yaalaa.",
     chat_placeholder: "Gaaffii qonnaa keessan asitti barreessaa...",
     chat_send: "Ergi",
     chat_retry: "Irra deebi'ii yaali",
@@ -858,8 +861,11 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     // Chatbot Frontend
     chat_title: "የኦሮሚያ ግብርና ረዳት",
     chat_launcher: "የግብርና ረዳት ይክፈቱ",
-    chat_status_demo: "የማሳያ ሁኔታ (Demo)",
-    chat_disclaimer: "ይህ ረዳት በአሁኑ ጊዜ ለማሳያ ብቻ የቀረበ ነው፣ ከኦፊሴላዊ የግብርና ማማከር አገልግሎት ጋር አልተገናኘም።",
+    chat_status_demo: "ከቢሮው መረጃ",
+    chat_disclaimer: "ይህ ረዳት መልስ የሚሰጠው ከኦሮሚያ ግብርና ቢሮ ከታተመ መረጃ ብቻ ነው። ለአስቸኳይ ጉዳዮች የአካባቢዎን ግብርና ጽሕፈት ቤት ያነጋግሩ።",
+    chat_machine_translated: "ይህ ይዘት በሌላ ቋንቋ የተጻፈ ሲሆን በማሽን የተተረጎመ ነው።",
+    chat_related_info: "ተዛማጅ መረጃ፡",
+    chat_connection_error: "ከረዳቱ ጋር መገናኘት አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
     chat_placeholder: "የግብርና ጥያቄዎን እዚህ ይጻፉ...",
     chat_send: "ላክ",
     chat_retry: "ድጋሚ ሞክር",
@@ -1305,8 +1311,11 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     // Chatbot Frontend
     chat_title: "Oromia Agricultural Assistant",
     chat_launcher: "Open Agricultural Assistant",
-    chat_status_demo: "Demonstration Mode",
-    chat_disclaimer: "This assistant is currently a demonstration and is not connected to an official agricultural advisory service.",
+    chat_status_demo: "From Bureau records",
+    chat_disclaimer: "This assistant answers only from information published by the Oromia Agriculture Bureau. For urgent matters, contact your local agricultural office.",
+    chat_machine_translated: "This content was written in another language and has been machine-translated.",
+    chat_related_info: "Related Information:",
+    chat_connection_error: "Could not reach the assistant. Please try again.",
     chat_placeholder: "Type your agricultural question here...",
     chat_send: "Send",
     chat_retry: "Retry",
