@@ -63,14 +63,14 @@ export const HeroSection: React.FC = () => {
             {/* Reference-style Button Duo: [ Main CTA ] + [ Circular Arrow ] */}
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-2">
               <a
-                href="#services"
+                href="/services"
                 className="inline-flex items-center justify-center gap-2.5 rounded-full bg-[#A3E635] hover:bg-[#92D022] text-[#0A1912] font-extrabold text-base h-13 px-8 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0"
               >
                 <span>{t('hero_btn_services')}</span>
               </a>
 
               <a
-                href="#services"
+                href="/services"
                 className="inline-flex items-center justify-center rounded-full bg-[#0A1912] dark:bg-emerald-800 hover:bg-[#063D2A] text-[#A3E635] h-13 w-13 transition-all duration-200 transform hover:scale-105 shadow-sm"
                 aria-label="Explore Services"
               >

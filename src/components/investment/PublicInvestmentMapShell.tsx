@@ -8,14 +8,39 @@ import { GisValidationResult } from '../../features/investment-map/types/gis';
 import { loadAndValidateOromiaGeoJSON, getZoneFeatureById } from '../../features/investment-map/services/gisLoader';
 import { Compass, ShieldCheck } from 'lucide-react';
 
+const SUPPORTED_MAP_COMMODITIES: CommodityKey[] = ['coffee', 'wheat', 'maize'];
+const SUPPORTED_METRICS: ThematicMetric[] = ['production', 'suitability', 'investment_potential'];
+
+function parseCommodity(value: string | null): CommodityKey | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  return SUPPORTED_MAP_COMMODITIES.includes(normalized as CommodityKey)
+    ? (normalized as CommodityKey)
+    : null;
+}
+
+function parseMetric(value: string | null): ThematicMetric {
+  if (!value) return 'production';
+  const normalized = value.trim().toLowerCase();
+  return SUPPORTED_METRICS.includes(normalized as ThematicMetric)
+    ? (normalized as ThematicMetric)
+    : 'production';
+}
+
 export const PublicInvestmentMapShell: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const zoneParam = searchParams.get('zone');
+  const commodityParam = searchParams.get('commodity');
+  const metricParam = searchParams.get('metric');
 
   const [gisResult, setGisResult] = useState<GisValidationResult | null>(null);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(zoneParam);
-  const [selectedCommodity, setSelectedCommodity] = useState<CommodityKey | null>('coffee');
-  const [selectedMetric, setSelectedMetric] = useState<ThematicMetric>('production');
+  const [selectedCommodity, setSelectedCommodity] = useState<CommodityKey | null>(
+    () => parseCommodity(commodityParam) ?? 'coffee'
+  );
+  const [selectedMetric, setSelectedMetric] = useState<ThematicMetric>(() =>
+    parseMetric(metricParam)
+  );
 
   // Sync selectedZoneId when URL search parameter changes
   useEffect(() => {
@@ -24,18 +49,70 @@ export const PublicInvestmentMapShell: React.FC = () => {
     }
   }, [zoneParam]);
 
+  // Sync commodity / metric from URL (product deep-links)
+  useEffect(() => {
+    const nextCommodity = parseCommodity(commodityParam);
+    if (nextCommodity && nextCommodity !== selectedCommodity) {
+      setSelectedCommodity(nextCommodity);
+    }
+  }, [commodityParam]);
+
+  useEffect(() => {
+    const nextMetric = parseMetric(metricParam);
+    if (nextMetric !== selectedMetric) {
+      setSelectedMetric(nextMetric);
+    }
+  }, [metricParam]);
+
+  const syncSearchParams = useCallback(
+    (next: { zone?: string | null; commodity?: CommodityKey | null; metric?: ThematicMetric }) => {
+      const params = new URLSearchParams(searchParams);
+      const zone = next.zone !== undefined ? next.zone : selectedZoneId;
+      const commodity =
+        next.commodity !== undefined ? next.commodity : selectedCommodity;
+      const metric = next.metric !== undefined ? next.metric : selectedMetric;
+
+      if (zone) params.set('zone', zone);
+      else params.delete('zone');
+
+      if (commodity) params.set('commodity', commodity);
+      else params.delete('commodity');
+
+      if (metric) params.set('metric', metric);
+      else params.delete('metric');
+
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, selectedZoneId, selectedCommodity, selectedMetric, setSearchParams]
+  );
+
   const handleGisVerified = useCallback((res: GisValidationResult) => {
     setGisResult(res);
   }, []);
 
-  const handleSelectZone = useCallback((zoneId: string | null) => {
-    setSelectedZoneId(zoneId);
-    if (zoneId) {
-      setSearchParams({ zone: zoneId }, { replace: true });
-    } else {
-      setSearchParams({}, { replace: true });
-    }
-  }, [setSearchParams]);
+  const handleSelectZone = useCallback(
+    (zoneId: string | null) => {
+      setSelectedZoneId(zoneId);
+      syncSearchParams({ zone: zoneId });
+    },
+    [syncSearchParams]
+  );
+
+  const handleSelectCommodity = useCallback(
+    (commodity: CommodityKey | null) => {
+      setSelectedCommodity(commodity);
+      syncSearchParams({ commodity });
+    },
+    [syncSearchParams]
+  );
+
+  const handleSelectMetric = useCallback(
+    (metric: ThematicMetric) => {
+      setSelectedMetric(metric);
+      syncSearchParams({ metric });
+    },
+    [syncSearchParams]
+  );
 
   const handleClearSelection = useCallback(() => {
     handleSelectZone(null);
@@ -70,8 +147,8 @@ export const PublicInvestmentMapShell: React.FC = () => {
       <ThematicSelectorBar
         selectedCommodity={selectedCommodity}
         selectedMetric={selectedMetric}
-        onSelectCommodity={setSelectedCommodity}
-        onSelectMetric={setSelectedMetric}
+        onSelectCommodity={handleSelectCommodity}
+        onSelectMetric={handleSelectMetric}
         titleEyebrow="AGRICULTURAL POTENTIAL MAP"
       />
 

@@ -18,6 +18,8 @@ import { Footer } from './components/layout/Footer';
 import { HomePage } from './pages/HomePage';
 import { AboutPage } from './pages/AboutPage';
 import { ServicesPage } from './pages/ServicesPage';
+import { ProductsPage } from './pages/ProductsPage';
+import { ProductDetailPage } from './pages/ProductDetailPage';
 import { ProgramsPage } from './pages/ProgramsPage';
 import { ResourcesPage } from './pages/ResourcesPage';
 import { NewsPage } from './pages/NewsPage';
@@ -427,6 +429,8 @@ export default function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="/services" element={<ServicesPage />} />
+                    <Route path="/products" element={<ProductsPage />} />
+                    <Route path="/products/:productSlug" element={<ProductDetailPage />} />
                     <Route path="/programs" element={<ProgramsPage />} />
                     <Route path="/achievements" element={<AchievementsPage />} />
                     <Route

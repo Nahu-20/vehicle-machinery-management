@@ -1,6 +1,6 @@
 import React from 'react';
 import { HeroSection } from '../components/home/HeroSection';
-import { QuickServicesSection } from '../components/home/QuickServicesSection';
+import { AgriculturalProductsSection } from '../components/home/AgriculturalProductsSection';
 import { FeaturedProgramsSection } from '../components/home/FeaturedProgramsSection';
 import { MarketSnapshotSection } from '../components/home/MarketSnapshotSection';
 import { AgriculturalInvestmentSection } from '../components/home/AgriculturalInvestmentSection';
@@ -13,31 +13,14 @@ import { ContactFeedbackCTA } from '../components/home/ContactFeedbackCTA';
 export const HomePage: React.FC = () => {
   return (
     <div className="space-y-0">
-      {/* 1. Hero section */}
       <HeroSection />
-
-      {/* 2. Quick services */}
-      <QuickServicesSection />
-
-      {/* 3. Featured programs */}
+      <AgriculturalProductsSection />
       <FeaturedProgramsSection />
-
-      {/* 4. Agricultural market snapshot */}
       <MarketSnapshotSection />
-
-      {/* 5. Agricultural Investment Opportunities */}
       <AgriculturalInvestmentSection />
-
-      {/* 6. Achievements and Impact section */}
       <AchievementsSection />
-
-      {/* 6. Latest news and announcements */}
       <NewsAnnouncementsSection />
-
-      {/* 7. Investors and Partners marquee */}
       <InvestorsPartnersSection />
-
-      {/* 8. Farmer resources */}
       <FarmerResourcesSection />
 
       {/* 9. Contact and feedback call-to-action */}
