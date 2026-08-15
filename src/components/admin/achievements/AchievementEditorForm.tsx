@@ -1095,7 +1095,7 @@ export const AchievementEditorForm: React.FC<AchievementEditorFormProps> = ({
       {/* Unsaved Changes Confirmation Dialog */}
       <UnsavedChangesDialog
         isOpen={showUnsavedDialog}
-        onConfirm={() => {
+        onConfirmLeave={() => {
           setShowUnsavedDialog(false);
           if (pendingNavigationPath) {
             navigate(pendingNavigationPath);

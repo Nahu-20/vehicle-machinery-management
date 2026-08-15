@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { getPublishedNewsArticleBySlug, getPublishedNewsArticles } from '../services/newsService';
-import { NewsArticle, NewsContentBlock, LocalizedText } from '../types';
+import { NewsArticle, NewsContentBlock, LocalizedText } from '../types/news';
 import { NewsImage } from '../components/news/NewsImage';
 
 export const NewsDetailPage: React.FC = () => {
@@ -421,7 +421,7 @@ export const NewsDetailPage: React.FC = () => {
 
         {/* Featured Banner Image */}
         <NewsImage
-          src={article.featuredImage || article.imageUrl}
+          src={article.featuredImage || (article as any).imageUrl}
           alt={typeof article.imageAlt === 'string' ? article.imageAlt : getLocalizedText(article.imageAlt) || titleText}
           aspect="hero"
           objectPosition={article.imagePosition || 'center'}
@@ -434,9 +434,9 @@ export const NewsDetailPage: React.FC = () => {
           {/* Main Article Body Column */}
           <main className="lg:col-span-8 bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-10 shadow-sm border border-gray-200/80 dark:border-gray-700">
             {article.content && article.content.length > 0 ? (
-              article.content.map((block, idx) => renderContentBlock(block, idx))
-            ) : article.fullContent && article.fullContent.length > 0 ? (
-              article.fullContent.map((block, idx) => renderContentBlock(block, idx))
+              article.content.map((block, idx) => renderContentBlock(block as any, idx))
+            ) : (article as any).fullContent && (article as any).fullContent.length > 0 ? (
+              (article as any).fullContent.map((block: any, idx: number) => renderContentBlock(block, idx))
             ) : (
               <p className="text-gray-800 dark:text-gray-200 text-lg leading-relaxed">
                 {excerptText}

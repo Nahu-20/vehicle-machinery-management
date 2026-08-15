@@ -53,14 +53,14 @@ export const NewsAnnouncementsSection: React.FC = () => {
   const dominantFeatured = featuredArticle || (latestArticles.length > 0 ? latestArticles[0] : null);
 
   const sideNewsArticles = latestArticles
-    .filter((art) => !dominantFeatured || (art.id !== dominantFeatured.id && art.slug !== dominantFeatured.slug))
+    .filter((art) => !dominantFeatured || art.slug !== dominantFeatured.slug)
     .slice(0, 3);
 
-  const getCategoryBadgeVariant = (category: string): 'lime' | 'emerald' | 'amber' => {
+  const getCategoryBadgeVariant = (category: string): 'lime' | 'dark' | 'outline' | 'forest' => {
     switch (category) {
       case 'training':
       case 'tender':
-        return 'amber';
+        return 'outline';
       case 'event':
       case 'news':
       default:
@@ -76,7 +76,7 @@ export const NewsAnnouncementsSection: React.FC = () => {
           initial={isReducedMotion ? undefined : { opacity: 0, y: 20 }}
           whileInView={isReducedMotion ? undefined : { opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.15 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
+          transition={{ duration: 0.5, ease: [0, 0, 0.58, 1] as const }}
           className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12"
         >
           <div className="space-y-3 max-w-2xl">
