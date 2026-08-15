@@ -36,7 +36,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
     >
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-center p-6 space-y-3">
-          <div className="h-14 w-14 rounded-2xl bg-[#EFF8F2] dark:bg-[#12281D] border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-[#087A4B] dark:text-emerald-400 shadow-xs">
+          <div className="h-14 w-14 rounded-2xl bg-[#EFF8F2] dark:bg-[#12281D] border border-[#DDE8E1] dark:border-emerald-800 flex items-center justify-center text-[#087A4B] dark:text-[#A3E635] shadow-xs">
             <Sprout className="h-7 w-7 text-[#D7A928]" />
           </div>
           <div className="space-y-1 max-w-xs">

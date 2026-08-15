@@ -41,7 +41,7 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({ onSendMessage, isSen
   const charsRemaining = MAX_CHARS - text.length;
 
   return (
-    <div className="p-3 bg-white dark:bg-[#12281D] border-t border-gray-200 dark:border-emerald-900/60 shrink-0">
+    <div className="p-3 bg-white dark:bg-[#12281D] border-t border-[#DDE8E1] dark:border-emerald-900/60 shrink-0">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -62,7 +62,7 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({ onSendMessage, isSen
             onKeyDown={handleKeyDown}
             disabled={isSending}
             placeholder={t('chat_placeholder')}
-            className="w-full resize-none rounded-xl border border-gray-300 dark:border-emerald-800 bg-[#FAFAF7] dark:bg-[#0B1912] px-3.5 py-2.5 text-xs text-[#14251D] dark:text-emerald-100 placeholder-[#637069] dark:placeholder-emerald-400/60 focus:border-[#087A4B] focus:bg-white dark:focus:bg-[#142C21] focus:outline-none transition-colors max-h-24 min-h-[44px]"
+            className="w-full resize-none rounded-xl border border-[#DDE8E1] dark:border-emerald-800 bg-[#FAFAF7] dark:bg-[#0B1912] px-3.5 py-2.5 text-xs text-[#14251D] dark:text-emerald-100 placeholder-[#637069] dark:placeholder-emerald-400/60 focus:border-[#087A4B] focus:bg-white dark:focus:bg-[#142C21] focus:outline-none transition-colors max-h-24 min-h-[44px]"
           />
           <button
             type="submit"
@@ -78,9 +78,9 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({ onSendMessage, isSen
           </button>
         </div>
 
-        <div className="flex items-center justify-between text-[10px] text-gray-400 dark:text-emerald-400/60 px-1">
+        <div className="flex items-center justify-between text-[10px] text-[#637069] dark:text-emerald-400/60 px-1">
           <span>Enter to send, Shift+Enter for new line</span>
-          <span className={charsRemaining < 50 ? 'text-amber-500 font-bold' : ''}>
+          <span className={charsRemaining < 50 ? 'text-[#D7A928] font-bold' : ''}>
             {charsRemaining} chars
           </span>
         </div>
