@@ -110,9 +110,9 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     alert_date: "Guyyaa:",
 
     // Hero section
-    hero_badge: "Mootummaa Naannoo Oromiyaa • Biiroo Qonnaa",
+    hero_badge: "Biiroo Qonnaa Oromiyaa",
     hero_headline: "Qonna Oromiyaa Guddisuu, Wabii Nyaataa Mirkaneessuu",
-    hero_supporting: "Oromiyaan onnee qonnaa Itoophiyaati. Qonnaan bultoota, waldaalee, fi invesutaroota teeknooloojii qonnaa, gorsa ogeessotaa fi tajaajila ammayyaatiin deeggaraa jirra.",
+    hero_supporting: "Oromiyaan onnee qonnaa Itoophiyaati.",
     hero_btn_services: "Tajaajila Sakatta'i",
     hero_btn_programs: "Sagantaalee Daawwadhu",
     hero_trust_text: "Oromiyaa guutuu keessatti qonnaan bultoota miliyoona 12 ol tajaajilaa jira.",
@@ -336,16 +336,8 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     hours_text: "Wiixata – Jimaata | 2:30 WB – 11:30 WD",
     hours_subtext: "Guyyoota ayyaana uummataa cufaadha",
 
-    // Footer
-    footer_about: "Biiroon Qonnaa Oromiyaa mootummaa naannoo Oromiyaa keessatti misooma qonnaa ammayyeessuu, wabii nyaataa mirkaneessuu fi jireenya qonnaan bultootaa fooyyessuuf kutannoon hojjeta.",
+    // Farmer Support & Enhanced Footer Keys
     footer_sustainability: "Qonna ammayyaa, itti fufiinsa qabu fi wabii nyaataa mirkaneessu Oromiyaa keessatti tarkaanfachiisuu.",
-    footer_quick_links: "Liinkiilee Ariifachiisaa",
-    footer_services: "Tajaajilawwan",
-    footer_resources: "Wabiilee",
-    footer_contact_info: "ODEGGEFFANNOO QUNNAMTII",
-    footer_address: "Finfinnee, Oromiyaa, Itoophiyaa",
-    footer_phone: "+251 11 551 7000",
-    footer_email: "info@oab.gov.et",
     footer_toll_free_card: "SARARA DEEGGARSAA BILISAA",
     footer_follow_us: "NU HORDOFAA",
     footer_stay_updated: "ODEEFFANNOO HAARAA",
@@ -354,8 +346,19 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     footer_subscribe_btn: "Galmaa'i",
     footer_subscribed_msg: "Galatoomaa! Beeksisa keenyaaf galmooftaniittu.",
     footer_terms: "Waliigaltee Tajaajilaa (Terms of Use)",
-    footer_privacy: "Imaammata Maqfiya (Privacy Policy)",
     footer_accessibility: "Ibsa Dhaqqabamummaa (Accessibility)",
+    // Farmer Support & Enhanced Footer Keys
+    // Farmer Support & Enhanced Footer Keys
+    // Footer
+    footer_about: "Biiroon Qonnaa Oromiyaa mootummaa naannoo Oromiyaa keessatti misooma qonnaa ammayyeessuu, wabii nyaataa mirkaneessuu fi jireenya qonnaan bultootaa fooyyessuuf kutannoon hojjeta.",
+    footer_quick_links: "Liinkiilee Ariifachiisaa",
+    footer_services: "Tajaajilawwan",
+    footer_resources: "Wabiilee",
+    footer_contact_info: "ODEGGEFFANNOO QUNNAMTII",
+    footer_address: "Finfinnee, Oromiyaa, Itoophiyaa",
+    footer_phone: "+251 11 551 7000",
+    footer_email: "info@oab.gov.et",
+    footer_privacy: "Imaammata Maqfiya (Privacy Policy)",
     footer_copyright: "© {year} Biiroo Qonnaa Oromiyaa. Mirgi Hundaa Seeraan Eegamaa Dha.",
     footer_demo_notice: "Afaan Oromoo • Moodeela Demo Mootummaa",
 
@@ -460,7 +463,6 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     auth_verifying_staff: "Hayyama Hojjetaa Mirkaneessaa Jira...",
     auth_back_to_dashboard: "Gara Fula Duraatti Deebi'i",
   },
-
   am: {
     // Government header & branding
     gov_name: "የኦሮሚያ ብሔራዊ ክልላዊ መንግሥት",
@@ -558,9 +560,9 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     alert_date: "ቀን:",
 
     // Hero section
-    hero_badge: "የኦሮሚያ ብሔራዊ ክልላዊ መንግሥት • የግብርና ቢሮ",
+    hero_badge: "የግብርና ቢሮ",
     hero_headline: "የኦሮሚያን ግብርና ማዘመን፣ የምግብ ዋስትናን ማረጋገጥ",
-    hero_supporting: "ኦሮሚያ የኢትዮጵያ ግብርና እምብርት ናት። አርሶ አደሮችን፣ ህብረት ስራ ማህበራትን እና ባለሀብቶችን በዘመናዊ ቴክኖሎጂ እና ባለሙያ ምክር እንደግፋለን።",
+    hero_supporting: "ኦሮሚያ የኢትዮጵያ ግብርና እምብርት ናት።",
     hero_btn_services: "አገልግሎቶችን ይመልከቱ",
     hero_btn_programs: "ፕሮግራሞችን ይቃኙ",
     hero_trust_text: "በመላው ኦሮሚያ ከ12 ሚሊዮን በላይ አርሶ አደሮችን በማገልገል ላይ።",
@@ -908,10 +910,9 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     auth_verifying_staff: "የሰራተኛ ፈቃድን በማረጋገጥ ላይ...",
     auth_back_to_dashboard: "ወደ ዋናው ገጽ ተመለስ",
   },
-
   en: {
     // Government header & branding
-    gov_name: "Oromia National Regional State",
+    gov_name: "Regional Government of Oromia",
     bureau_title: "Oromia Agricultural Bureau",
     bureau_sub_title: "Regional Government of Oromia",
     bureau_full_name: "Oromia Agricultural Bureau (Biiroo Qonnaa Oromiyaa)",
@@ -1006,9 +1007,9 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     alert_date: "Date:",
 
     // Hero section
-    hero_badge: "Oromia Regional Government • Agricultural Bureau",
+    hero_badge: "Oromia Agricultural Bureau",
     hero_headline: "Empowering Oromia Farmers, Securing Regional Food Future",
-    hero_supporting: "Oromia is Ethiopia's agricultural heartland. We support millions of smallholders, cooperatives, and commercial investors with modern extension, tech, and policy.",
+    hero_supporting: "Oromia is Ethiopia's agricultural heartland.",
     hero_btn_services: "Explore Services",
     hero_btn_programs: "View Programs",
     hero_trust_text: "Serving over 12 million farming households across 21 zones in Oromia.",
