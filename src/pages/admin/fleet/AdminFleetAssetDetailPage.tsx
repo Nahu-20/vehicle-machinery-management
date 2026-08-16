@@ -11,12 +11,15 @@ import {
   History,
   Gauge,
   CheckCircle2,
+  Droplets,
 } from 'lucide-react';
 import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
 import { hasPermission } from '../../../lib/permissions';
 import {
   getAssetById,
   listStatusEvents,
+  listServiceRecords,
+  recordService,
 } from '../../../features/fleet/services/fleetService';
 import {
   issueAsset,
@@ -29,6 +32,7 @@ import type {
   FleetAssignment,
   FleetFaultSeverity,
   FleetWorkOrder,
+  FleetServiceRecord,
   FleetStatusEvent,
   FleetAssetStatus,
 } from '../../../features/fleet/types/fleet';
@@ -103,6 +107,7 @@ export function AdminFleetAssetDetailPage() {
 
   const canManage = hasPermission(staffUser, 'fleet.asset.manage');
   const canAssign = hasPermission(staffUser, 'fleet.assign');
+  const canMaintain = hasPermission(staffUser, 'fleet.maintenance.manage');
 
   const [asset, setAsset] = useState<FleetAsset | null>(null);
   const [assignments, setAssignments] = useState<FleetAssignment[]>([]);
@@ -133,16 +138,24 @@ export function AdminFleetAssetDetailPage() {
   const [statusReason, setStatusReason] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
 
+  const [serviceRecords, setServiceRecords] = useState<FleetServiceRecord[]>([]);
+  const [showService, setShowService] = useState(false);
+  const [serviceMeter, setServiceMeter] = useState('');
+  const [serviceDate, setServiceDate] = useState('');
+  const [serviceNote, setServiceNote] = useState('');
+  const [serviceCost, setServiceCost] = useState('');
+
   const load = useCallback(async () => {
     if (!assetId) return;
     setLoading(true);
     setError(null);
     try {
-      const [a, history, faults, events] = await Promise.all([
+      const [a, history, faults, events, services] = await Promise.all([
         getAssetById(assetId),
         listAssignmentsForAsset(assetId).catch(() => [] as FleetAssignment[]),
         listWorkOrdersForAsset(assetId).catch(() => [] as FleetWorkOrder[]),
         listStatusEvents(assetId).catch(() => [] as FleetStatusEvent[]),
+        listServiceRecords(assetId).catch(() => [] as FleetServiceRecord[]),
       ]);
       if (!a) {
         setError(`Asset ${assetId} was not found.`);
@@ -150,10 +163,15 @@ export function AdminFleetAssetDetailPage() {
         setAsset(a);
         setMeterOut(String(a.currentMeter));
         setMeterIn(String(a.currentMeter));
+        // The reading it was serviced at is almost always the reading it is on
+        // now, so that is offered rather than an empty box to retype.
+        setServiceMeter(String(a.currentMeter));
+        setServiceDate(new Date().toISOString().slice(0, 10));
       }
       setAssignments(history);
       setWorkOrders(faults);
       setStatusEvents(events);
+      setServiceRecords(services);
       // Not a.status: the current status is often one the dropdown does not
       // offer, and defaulting to a value that is not in the list leaves the
       // select showing the first option while the state says another.
@@ -233,6 +251,44 @@ export function AdminFleetAssetDetailPage() {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not receive the asset.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRecordService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!asset || !staffUser || busy) return;
+
+    const reading = Number(serviceMeter);
+    if (!Number.isFinite(reading)) {
+      return setError('Enter the reading the service was done at.');
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      await recordService(
+        {
+          assetId: asset.assetId,
+          meterAtService: reading,
+          // Local midnight rather than UTC: a service done on the 16th should
+          // not appear on the 15th for anyone reading it in Addis.
+          servicedAt: serviceDate ? new Date(`${serviceDate}T00:00:00`) : new Date(),
+          note: serviceNote.trim() || undefined,
+          cost: serviceCost.trim() ? Number(serviceCost) : undefined,
+        },
+        staffUser
+      );
+      setShowService(false);
+      setServiceNote('');
+      setServiceCost('');
+      setNotice(
+        `Service recorded at ${formatMeter(reading, asset.meterType)}. This machine is no longer due.`
+      );
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not record the service.');
     } finally {
       setBusy(false);
     }
@@ -345,6 +401,15 @@ export function AdminFleetAssetDetailPage() {
           {asset.status !== 'disposed' && (
             <FleetButton variant="secondary" icon={Wrench} onClick={() => setShowFault((v) => !v)}>
               Report fault
+            </FleetButton>
+          )}
+          {canMaintain && asset.status !== 'disposed' && asset.meterType !== 'none' && (
+            <FleetButton
+              variant="secondary"
+              icon={Droplets}
+              onClick={() => setShowService((v) => !v)}
+            >
+              Record service
             </FleetButton>
           )}
           {canManage && asset.status !== 'disposed' && (
@@ -572,6 +637,72 @@ export function AdminFleetAssetDetailPage() {
         </FleetPanel>
       )}
 
+      {showService && (
+        <FleetPanel
+          title="Record service"
+          description="Logs the work and moves the last-service reading, which is what clears this machine from the service-due list."
+        >
+          <form onSubmit={handleRecordService} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className={LABEL}>Reading it was serviced at</label>
+              <input
+                type="number"
+                value={serviceMeter}
+                onChange={(e) => setServiceMeter(e.target.value)}
+                className={INPUT}
+              />
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                {METER_UNIT_LABEL[asset.meterType]} · currently{' '}
+                {formatMeter(asset.currentMeter, asset.meterType)}
+                {asset.lastServiceMeter
+                  ? `, last serviced at ${formatMeter(asset.lastServiceMeter, asset.meterType)}`
+                  : ''}
+              </p>
+            </div>
+            <div>
+              <label className={LABEL}>Done on</label>
+              <input
+                type="date"
+                value={serviceDate}
+                onChange={(e) => setServiceDate(e.target.value)}
+                className={INPUT}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className={LABEL}>What was done</label>
+              <input
+                value={serviceNote}
+                onChange={(e) => setServiceNote(e.target.value)}
+                placeholder="250-hour service — oil, filters, greased"
+                className={INPUT}
+              />
+            </div>
+            <div>
+              <label className={LABEL}>Cost (optional)</label>
+              <input
+                type="number"
+                value={serviceCost}
+                onChange={(e) => setServiceCost(e.target.value)}
+                placeholder="ETB"
+                className={INPUT}
+              />
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                Kept apart from repair spend, so routine upkeep does not read as a
+                machine that keeps breaking.
+              </p>
+            </div>
+            <div className="md:col-span-2 flex justify-end gap-3">
+              <FleetButton type="button" variant="secondary" onClick={() => setShowService(false)}>
+                Cancel
+              </FleetButton>
+              <FleetButton type="submit" icon={Droplets} disabled={busy}>
+                {busy ? 'Saving…' : 'Record service'}
+              </FleetButton>
+            </div>
+          </form>
+        </FleetPanel>
+      )}
+
       {showStatus && (
         <FleetPanel
           title="Change status"
@@ -630,6 +761,7 @@ export function AdminFleetAssetDetailPage() {
           statusEvents={statusEvents}
           assignments={assignments}
           workOrders={workOrders}
+          serviceRecords={serviceRecords}
         />
       </FleetPanel>
 

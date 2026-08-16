@@ -526,6 +526,28 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // The per-machine timeline. Written by every status change, so without this
+    // clause Firestore's default deny silently drops the history the moment a
+    // real project is configured — invisible in demo mode, where nothing writes
+    // to Firestore at all.
+    match /fleetStatusEvents/{eventId} {
+      allow get, list: if isCurrentActiveStaff();
+      allow create: if hasFleetPermission('fleet.asset.manage')
+                    || hasFleetPermission('fleet.assign')
+                    || hasFleetPermission('fleet.maintenance.manage');
+      // A timeline is a record of what happened. Correcting it means adding to
+      // it, never editing what it already says.
+      allow update, delete: if false;
+    }
+
+    match /fleetServiceRecords/{recordId} {
+      allow get, list: if isCurrentActiveStaff();
+      allow create: if hasFleetPermission('fleet.maintenance.manage');
+      // Append-only for the same reason as the readings below: a mistyped
+      // service reading stays visible in context rather than becoming the truth.
+      allow update, delete: if false;
+    }
+
     match /fleetMeterReadings/{readingId} {
       allow get, list: if isCurrentActiveStaff();
       allow create: if hasFleetPermission('fleet.assign')

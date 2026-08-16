@@ -3,6 +3,7 @@ import type {
   FleetAsset,
   FleetAssetStatus,
   FleetAssignment,
+  FleetServiceRecord,
   FleetStatusEvent,
   FleetWorkOrder,
 } from '../types/fleet';
@@ -26,6 +27,7 @@ let assets: FleetAsset[] = DEMO_ASSETS.map((a) => ({ ...a }));
 let assignments: FleetAssignment[] = DEMO_ASSIGNMENTS.map((a) => ({ ...a }));
 let workOrders: FleetWorkOrder[] = DEMO_WORK_ORDERS.map((w) => ({ ...w }));
 let statusEvents: FleetStatusEvent[] = [];
+let serviceRecords: FleetServiceRecord[] = [];
 
 /**
  * Subscribers are notified after every mutation.
@@ -59,6 +61,8 @@ export const demoGetAsset = (assetId: string): FleetAsset | null => {
 export const demoListAssignments = (): FleetAssignment[] => assignments.map((a) => ({ ...a }));
 export const demoListWorkOrders = (): FleetWorkOrder[] => workOrders.map((w) => ({ ...w }));
 export const demoListStatusEvents = (): FleetStatusEvent[] => statusEvents.map((e) => ({ ...e }));
+export const demoListServiceRecords = (): FleetServiceRecord[] =>
+  serviceRecords.map((r) => ({ ...r }));
 
 /* -------------------------------------------------------------- writes */
 
@@ -243,12 +247,24 @@ export function demoAdvanceWorkOrder(
   notify();
 }
 
+/** Record a service and move the asset's last-service reading in one step. */
+export function demoRecordService(record: Omit<FleetServiceRecord, 'serviceRecordId'>): string {
+  const id = nextId('svc');
+  serviceRecords = [...serviceRecords, { ...record, serviceRecordId: id }];
+  // The two have to move together: a service record that did not clear the due
+  // flag would leave the reports page still asking for work already done.
+  mutateAsset(record.assetId, { lastServiceMeter: record.meterAtService });
+  notify();
+  return id;
+}
+
 /** Restore the register to its opening state. */
 export function demoReset(): void {
   assets = DEMO_ASSETS.map((a) => ({ ...a }));
   assignments = DEMO_ASSIGNMENTS.map((a) => ({ ...a }));
   workOrders = DEMO_WORK_ORDERS.map((w) => ({ ...w }));
   statusEvents = [];
+  serviceRecords = [];
   notify();
 }
 
@@ -294,4 +310,23 @@ export function demoCancelOpenWorkOrders(assetId: string, openStatuses: readonly
   });
   if (closed) notify();
   return closed;
+}
+
+/** Sign off every finished job on an asset without moving the asset. */
+export function demoVerifyWorkOrders(assetId: string, actorUid: string, actorName: string): number {
+  let signed = 0;
+  workOrders = workOrders.map((w) => {
+    if (w.assetId !== assetId || w.status !== 'completed') return w;
+    signed += 1;
+    return {
+      ...w,
+      status: 'verified' as FleetWorkOrder['status'],
+      verifiedAt: Timestamp.now(),
+      verifiedByUid: actorUid,
+      verifiedByName: actorName,
+      version: w.version + 1,
+    };
+  });
+  if (signed) notify();
+  return signed;
 }

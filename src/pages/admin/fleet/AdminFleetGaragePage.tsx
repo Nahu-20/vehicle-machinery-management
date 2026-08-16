@@ -15,7 +15,7 @@ import type {
 } from '../../../features/fleet/types/fleet';
 import {
   WORK_ORDER_TRANSITIONS,
-  OPEN_WORK_ORDER_STATUSES,
+  IN_GARAGE_WORK_ORDER_STATUSES,
   humanise,
   isGarageStatus,
 } from '../../../features/fleet/constants/fleetVocabulary';
@@ -66,6 +66,13 @@ export function AdminFleetGaragePage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [showClosed, setShowClosed] = useState(false);
 
+  // Which job has its completion panel open, and what it holds. Scoped to one
+  // job at a time: two half-filled forms on one queue is how the wrong cost ends
+  // up against the wrong machine.
+  const [completing, setCompleting] = useState<string | null>(null);
+  const [labourCost, setLabourCost] = useState('');
+  const [releaseOnComplete, setReleaseOnComplete] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -88,12 +95,13 @@ export function AdminFleetGaragePage() {
     void load();
   }, [load]);
 
+  // Everything the garage still owes, a repair awaiting sign-off included.
   const open = useMemo(
-    () => orders.filter((o) => OPEN_WORK_ORDER_STATUSES.includes(o.status)),
+    () => orders.filter((o) => IN_GARAGE_WORK_ORDER_STATUSES.includes(o.status)),
     [orders]
   );
   const closed = useMemo(
-    () => orders.filter((o) => !OPEN_WORK_ORDER_STATUSES.includes(o.status)),
+    () => orders.filter((o) => !IN_GARAGE_WORK_ORDER_STATUSES.includes(o.status)),
     [orders]
   );
   const grounded = useMemo(() => open.filter((o) => o.severity === 'grounded'), [open]);
@@ -130,18 +138,81 @@ export function AdminFleetGaragePage() {
     });
   }, [assets, open, grounded]);
 
-  const advance = async (wo: FleetWorkOrder, next: FleetWorkOrderStatus) => {
+  const advance = async (
+    wo: FleetWorkOrder,
+    next: FleetWorkOrderStatus,
+    extra: { labourCost?: number } = {}
+  ) => {
     if (!staffUser || busyId) return;
     setBusyId(wo.workOrderId);
     setError(null);
     try {
       await advanceWorkOrder(
-        { workOrderId: wo.workOrderId, next, expectedVersion: wo.version },
+        { workOrderId: wo.workOrderId, next, expectedVersion: wo.version, ...extra },
         staffUser
       );
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not update the work order.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const openCompletion = (wo: FleetWorkOrder) => {
+    setCompleting(wo.workOrderId);
+    setLabourCost(wo.labourCost ? String(wo.labourCost) : '');
+    setReleaseOnComplete(false);
+    setError(null);
+  };
+
+  /**
+   * Finish a repair, and optionally put the machine back to work.
+   *
+   * Two writes rather than one, because completion and verification are separate
+   * states and collapsing them in the data would lose the distinction for every
+   * job, not just this one. Releasing here is a choice made per repair: leave the
+   * box unticked and the job waits in the queue for someone else to sign off.
+   */
+  const completeJob = async (wo: FleetWorkOrder) => {
+    if (!staffUser || busyId) return;
+    const cost = labourCost.trim() ? Number(labourCost) : undefined;
+    if (cost !== undefined && !Number.isFinite(cost)) {
+      return setError('Labour cost must be a number, or left blank.');
+    }
+
+    setBusyId(wo.workOrderId);
+    setError(null);
+    try {
+      await advanceWorkOrder(
+        {
+          workOrderId: wo.workOrderId,
+          next: 'completed',
+          expectedVersion: wo.version,
+          labourCost: cost,
+        },
+        staffUser
+      );
+
+      if (releaseOnComplete) {
+        // The version moved with the write above, so this one has to expect the
+        // next number rather than the one loaded with the page.
+        await advanceWorkOrder(
+          {
+            workOrderId: wo.workOrderId,
+            next: 'verified',
+            expectedVersion: wo.version + 1,
+          },
+          staffUser
+        );
+      }
+
+      setCompleting(null);
+      setLabourCost('');
+      setReleaseOnComplete(false);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not complete the job.');
     } finally {
       setBusyId(null);
     }
@@ -157,7 +228,7 @@ export function AdminFleetGaragePage() {
           value={open.length}
           icon={Wrench}
           tone={open.length > 0 ? 'warn' : 'good'}
-          hint="Reported, triaged or in progress"
+          hint="Reported, in progress, or awaiting sign-off"
         />
         <StatCard
           label="Machines grounded"
@@ -290,7 +361,11 @@ export function AdminFleetGaragePage() {
                                 key={n}
                                 variant={n === 'verified' ? 'primary' : 'secondary'}
                                 disabled={busyId === wo.workOrderId}
-                                onClick={() => void advance(wo, n)}
+                                onClick={() =>
+                                  n === 'completed'
+                                    ? openCompletion(wo)
+                                    : void advance(wo, n)
+                                }
                               >
                                 {NEXT_LABELS[n]}
                               </FleetButton>
@@ -298,6 +373,64 @@ export function AdminFleetGaragePage() {
                         </div>
                       )}
                     </div>
+
+                    {completing === wo.workOrderId && (
+                      <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+                        <div className="text-xs font-bold text-slate-900 dark:text-white">
+                          Repair complete — {wo.assetId}
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap items-end gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              Labour cost
+                            </label>
+                            <input
+                              type="number"
+                              value={labourCost}
+                              onChange={(e) => setLabourCost(e.target.value)}
+                              placeholder="ETB — optional"
+                              className="mt-1 w-40 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white"
+                            />
+                          </div>
+
+                          <label className="flex items-center gap-2 pb-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={releaseOnComplete}
+                              onChange={(e) => setReleaseOnComplete(e.target.checked)}
+                              className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 accent-emerald-600"
+                            />
+                            <span className="text-xs text-slate-700 dark:text-slate-200">
+                              Return this machine to service now
+                            </span>
+                          </label>
+                        </div>
+
+                        <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                          {releaseOnComplete
+                            ? 'You are finishing the repair and signing it back onto the road in one step. The history will record both as yours.'
+                            : 'Left unticked, the job stays in this queue until somebody signs it off with Verify & release.'}
+                        </p>
+
+                        <div className="mt-3 flex justify-end gap-2">
+                          <FleetButton
+                            variant="secondary"
+                            onClick={() => setCompleting(null)}
+                            disabled={busyId === wo.workOrderId}
+                          >
+                            Cancel
+                          </FleetButton>
+                          <FleetButton
+                            icon={CheckCircle2}
+                            onClick={() => void completeJob(wo)}
+                            disabled={busyId === wo.workOrderId}
+                          >
+                            {busyId === wo.workOrderId ? 'Saving…' : 'Confirm'}
+                          </FleetButton>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

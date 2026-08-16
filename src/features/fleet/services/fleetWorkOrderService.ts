@@ -23,6 +23,7 @@ import type {
 import {
   canTransitionWorkOrder,
   humanise,
+  IN_GARAGE_WORK_ORDER_STATUSES,
   OPEN_WORK_ORDER_STATUSES,
 } from '../constants/fleetVocabulary';
 import { FLEET_ASSETS_COLLECTION, FleetNotFoundError, isDemoFleet } from './fleetService';
@@ -216,6 +217,7 @@ export async function advanceWorkOrder(
         completedAt: input.next === 'completed' ? Timestamp.now() : wo.completedAt,
         verifiedAt: input.next === 'verified' ? Timestamp.now() : wo.verifiedAt,
         verifiedByUid: input.next === 'verified' ? actor.uid : wo.verifiedByUid,
+        verifiedByName: input.next === 'verified' ? actor.displayName : wo.verifiedByName,
       },
       assetStatus,
       actor.uid,
@@ -262,6 +264,7 @@ export async function advanceWorkOrder(
         completedAt: input.next === 'completed' ? serverTimestamp() : wo.completedAt,
         verifiedAt: input.next === 'verified' ? serverTimestamp() : wo.verifiedAt,
         verifiedByUid: input.next === 'verified' ? actor.uid : wo.verifiedByUid,
+        verifiedByName: input.next === 'verified' ? actor.displayName : wo.verifiedByName,
         version: wo.version + 1,
         updatedAt: serverTimestamp(),
       })
@@ -358,7 +361,7 @@ export async function listWorkOrdersForAsset(assetId: string): Promise<FleetWork
 export function countGrounded(workOrders: FleetWorkOrder[]): number {
   const grounded = new Set(
     workOrders
-      .filter((w) => w.severity === 'grounded' && OPEN_WORK_ORDER_STATUSES.includes(w.status))
+      .filter((w) => w.severity === 'grounded' && IN_GARAGE_WORK_ORDER_STATUSES.includes(w.status))
       .map((w) => w.assetId)
   );
   return grounded.size;

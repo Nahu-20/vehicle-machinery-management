@@ -1,8 +1,17 @@
 import React, { useMemo } from 'react';
-import { ArrowRightLeft, LogOut, LogIn, Wrench, CheckCircle2, History } from 'lucide-react';
+import {
+  ArrowRightLeft,
+  LogOut,
+  LogIn,
+  Wrench,
+  CheckCircle2,
+  History,
+  Droplets,
+} from 'lucide-react';
 import type {
   FleetAsset,
   FleetAssignment,
+  FleetServiceRecord,
   FleetStatusEvent,
   FleetTimelineEntry,
   FleetWorkOrder,
@@ -33,9 +42,24 @@ export function buildTimeline(
   asset: FleetAsset,
   statusEvents: FleetStatusEvent[],
   assignments: FleetAssignment[],
-  workOrders: FleetWorkOrder[]
+  workOrders: FleetWorkOrder[],
+  serviceRecords: FleetServiceRecord[] = []
 ): FleetTimelineEntry[] {
   const entries: FleetTimelineEntry[] = [];
+
+  for (const r of serviceRecords) {
+    entries.push({
+      id: `sv-${r.serviceRecordId}`,
+      kind: 'service',
+      at: r.servicedAt,
+      title: 'Serviced',
+      detail: [r.note, r.cost ? `${r.cost.toLocaleString()} ETB` : null]
+        .filter(Boolean)
+        .join(' · '),
+      actorName: r.recordedByName,
+      meter: r.meterAtService,
+    });
+  }
 
   for (const e of statusEvents) {
     entries.push({
@@ -109,6 +133,7 @@ export function buildTimeline(
         at: w.verifiedAt,
         title: 'Repair verified, returned to service',
         detail: w.assignedGarage,
+        actorName: w.verifiedByName,
       });
     }
   }
@@ -123,12 +148,16 @@ const KIND_ICON = {
 };
 
 function iconFor(entry: FleetTimelineEntry) {
+  if (entry.kind === 'service') return Droplets;
   if (entry.kind === 'assignment') return entry.id.startsWith('rt-') ? LogIn : LogOut;
   if (entry.kind === 'work_order') return entry.id.startsWith('wv-') ? CheckCircle2 : Wrench;
   return KIND_ICON.status;
 }
 
 function toneFor(entry: FleetTimelineEntry): string {
+  // Servicing gets its own hue: it is the one entry that is good news, and it
+  // should not read as another thing that went wrong.
+  if (entry.kind === 'service') return 'bg-sky-500/15 text-sky-600 dark:text-sky-400';
   if (entry.severity === 'grounded') return 'bg-red-500/15 text-red-600 dark:text-red-400';
   if (entry.kind === 'work_order') {
     return entry.id.startsWith('wv-')
@@ -155,10 +184,11 @@ export const AssetTimeline: React.FC<{
   statusEvents: FleetStatusEvent[];
   assignments: FleetAssignment[];
   workOrders: FleetWorkOrder[];
-}> = ({ asset, statusEvents, assignments, workOrders }) => {
+  serviceRecords?: FleetServiceRecord[];
+}> = ({ asset, statusEvents, assignments, workOrders, serviceRecords = [] }) => {
   const entries = useMemo(
-    () => buildTimeline(asset, statusEvents, assignments, workOrders),
-    [asset, statusEvents, assignments, workOrders]
+    () => buildTimeline(asset, statusEvents, assignments, workOrders, serviceRecords),
+    [asset, statusEvents, assignments, workOrders, serviceRecords]
   );
 
   if (entries.length === 0) {
@@ -166,7 +196,7 @@ export const AssetTimeline: React.FC<{
       <FleetEmptyState
         icon={History}
         title="Nothing recorded yet"
-        message="Issues, returns, faults and status changes will appear here as they happen."
+        message="Issues, returns, faults, services and status changes will appear here as they happen."
       />
     );
   }

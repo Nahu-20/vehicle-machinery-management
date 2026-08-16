@@ -1,7 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart3, Wrench, Clock, Coins, AlertTriangle, ShieldAlert } from 'lucide-react';
-import { listAssets } from '../../../features/fleet/services/fleetService';
+import {
+  BarChart3,
+  Wrench,
+  Clock,
+  Coins,
+  AlertTriangle,
+  ShieldAlert,
+  Droplets,
+} from 'lucide-react';
+import { listAssets, listServiceRecords } from '../../../features/fleet/services/fleetService';
 import { listWorkOrders } from '../../../features/fleet/services/fleetWorkOrderService';
 import {
   listActiveAssignments,
@@ -10,6 +18,7 @@ import {
 import type {
   FleetAsset,
   FleetAssignment,
+  FleetServiceRecord,
   FleetWorkOrder,
 } from '../../../features/fleet/types/fleet';
 import {
@@ -18,7 +27,7 @@ import {
   isExpired,
   isExpiringSoon,
   meterUntilService,
-  OPEN_WORK_ORDER_STATUSES,
+  IN_GARAGE_WORK_ORDER_STATUSES,
 } from '../../../features/fleet/constants/fleetVocabulary';
 import {
   StatCard,
@@ -27,6 +36,16 @@ import {
   StatusPill,
 } from '../../../features/fleet/components/FleetUI';
 import { CANONICAL_ZONE_METADATA } from '../../../features/investment-map/constants/canonicalZones';
+
+/** Short date for expiry and service rows. */
+function fmtDay(ts?: { toDate?: () => Date } | null): string {
+  if (!ts?.toDate) return '—';
+  return ts.toDate().toLocaleDateString(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 /**
  * Operational reports.
@@ -43,6 +62,7 @@ export function AdminFleetReportsPage() {
   const [assets, setAssets] = useState<FleetAsset[]>([]);
   const [workOrders, setWorkOrders] = useState<FleetWorkOrder[]>([]);
   const [active, setActive] = useState<FleetAssignment[]>([]);
+  const [services, setServices] = useState<FleetServiceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,14 +70,16 @@ export function AdminFleetReportsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [a, w, act] = await Promise.all([
+      const [a, w, act, svc] = await Promise.all([
         listAssets(),
         listWorkOrders().catch(() => [] as FleetWorkOrder[]),
         listActiveAssignments().catch(() => [] as FleetAssignment[]),
+        listServiceRecords().catch(() => [] as FleetServiceRecord[]),
       ]);
       setAssets(a);
       setWorkOrders(w);
       setActive(act);
+      setServices(svc);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not build the reports.');
     } finally {
@@ -97,8 +119,22 @@ export function AdminFleetReportsPage() {
     return [...map.values()].filter((r) => r.total > 0).sort((a, b) => b.total - a.total);
   }, [workOrders]);
 
+  /**
+   * Jobs that carry a cost, which is what the spend total is summed from.
+   *
+   * Not every work order: an open fault with nothing spent yet contributes
+   * nothing, and counting it made the card read "37,050 ETB across 8 jobs" when
+   * the money came from five.
+   */
+  const chargedJobs = useMemo(() => workOrders.filter((w) => (w.totalCost ?? 0) > 0), [workOrders]);
+
+  const totalSpend = useMemo(
+    () => chargedJobs.reduce((sum, w) => sum + (w.totalCost ?? 0), 0),
+    [chargedJobs]
+  );
+
   const openJobs = useMemo(
-    () => workOrders.filter((w) => OPEN_WORK_ORDER_STATUSES.includes(w.status)),
+    () => workOrders.filter((w) => IN_GARAGE_WORK_ORDER_STATUSES.includes(w.status)),
     [workOrders]
   );
 
@@ -148,13 +184,13 @@ export function AdminFleetReportsPage() {
           value={documentRisk.length}
           icon={ShieldAlert}
           tone={documentRisk.length > 0 ? 'bad' : 'neutral'}
-          hint="Insurance or inspection lapsed"
+          hint="Lapsed, or within 30 days"
         />
         <StatCard
           label="Repair spend"
-          value={`${costByAsset.reduce((s, r) => s + r.total, 0).toLocaleString()} ETB`}
+          value={`${totalSpend.toLocaleString()} ETB`}
           icon={Coins}
-          hint={`Across ${workOrders.length} job${workOrders.length === 1 ? '' : 's'}`}
+          hint={`Across ${chargedJobs.length} job${chargedJobs.length === 1 ? '' : 's'} with costs recorded`}
         />
       </div>
 
@@ -287,6 +323,109 @@ export function AdminFleetReportsPage() {
         </FleetPanel>
       </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* The Document risk card had no panel under it, so it named a number
+            nobody could act on. */}
+        <FleetPanel
+          title={`Document risk — ${documentRisk.length}`}
+          description="Insurance and roadworthiness, expired or falling due within 30 days. Farm machinery carries neither, so only road vehicles appear."
+        >
+          {documentRisk.length === 0 ? (
+            <FleetEmptyState
+              icon={ShieldAlert}
+              title="Nothing lapsing"
+              message="Every road vehicle is covered for the next 30 days."
+            />
+          ) : (
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {documentRisk.map((a) => {
+                const rows = [
+                  { label: 'Insurance', at: a.insuranceExpiry },
+                  { label: 'Inspection', at: a.inspectionExpiry },
+                ].filter((r) => isExpired(r.at) || isExpiringSoon(r.at));
+                return (
+                  <div key={a.assetId} className="p-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        to={`/admin/fleet/register/${encodeURIComponent(a.assetId)}`}
+                        className="font-mono font-bold text-xs text-emerald-700 dark:text-emerald-400 hover:underline"
+                      >
+                        {a.assetId}
+                      </Link>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                        {a.make} {a.model}
+                        {a.plateNumber ? ` · ${a.plateNumber}` : ''} ·{' '}
+                        {CANONICAL_ZONE_METADATA[a.zoneId]?.displayName ?? a.zoneId}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {rows.map((r) => (
+                        <div
+                          key={r.label}
+                          className={`text-[11px] font-bold ${
+                            isExpired(r.at)
+                              ? 'text-red-600 dark:text-red-400'
+                              : 'text-amber-700 dark:text-amber-400'
+                          }`}
+                        >
+                          {r.label} {isExpired(r.at) ? 'expired' : 'due'} {fmtDay(r.at)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </FleetPanel>
+
+        {/* The counterpart to 'Due for service': what proves the register is
+            being kept up rather than only being asked things. */}
+        <FleetPanel
+          title={`Serviced recently — ${services.length}`}
+          description="Completed services, newest first. Recorded from a vehicle's page, and kept apart from repair spend."
+        >
+          {services.length === 0 ? (
+            <FleetEmptyState
+              icon={Droplets}
+              title="No services recorded"
+              message="Use Record service on a vehicle to log one. It clears the machine from the due list above."
+            />
+          ) : (
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {services.slice(0, 12).map((r) => {
+                const asset = assets.find((a) => a.assetId === r.assetId);
+                return (
+                  <div key={r.serviceRecordId} className="p-4 flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        to={`/admin/fleet/register/${encodeURIComponent(r.assetId)}`}
+                        className="font-mono font-bold text-xs text-emerald-700 dark:text-emerald-400 hover:underline"
+                      >
+                        {r.assetId}
+                      </Link>
+                      {r.note && (
+                        <div className="text-[11px] text-slate-600 dark:text-slate-300">{r.note}</div>
+                      )}
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {fmtDay(r.servicedAt)} · {r.recordedByName}
+                      </div>
+                    </div>
+                    <div className="text-right text-[11px] font-mono text-slate-600 dark:text-slate-300">
+                      {asset ? formatMeter(r.meterAtService, asset.meterType) : r.meterAtService}
+                      {r.cost ? (
+                        <div className="text-slate-500 dark:text-slate-400">
+                          {r.cost.toLocaleString()} ETB
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </FleetPanel>
+      </div>
       <FleetPanel
         title={`Sitting idle — ${idle.length}`}
         description="Available and not currently issued. A starting point for the utilisation question, not a verdict — a pump kept back for the rainy season is idle by design."

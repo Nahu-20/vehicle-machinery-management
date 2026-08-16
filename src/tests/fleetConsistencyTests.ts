@@ -3,9 +3,13 @@ import type { Permission } from '../types/auth';
 import { ALL_PERMISSIONS as LIB_PERMISSIONS, ROLE_PERMISSIONS_MAP } from '../lib/permissions';
 import { ALL_PERMISSIONS as AUTH_PERMISSIONS } from '../auth/permissions';
 import {
+  isServiceDue,
+  meterUntilService,
   planStatusChange,
   MANUAL_ASSET_STATUSES,
   GARAGE_STATUSES,
+  IN_GARAGE_WORK_ORDER_STATUSES,
+  OPEN_WORK_ORDER_STATUSES,
   isGarageStatus,
 } from '../features/fleet/constants/fleetVocabulary';
 
@@ -29,7 +33,7 @@ import {
 export interface TestResult {
   id: number;
   name: string;
-  category: 'Status' | 'Assignment' | 'Garage' | 'Vocabulary' | 'Permissions';
+  category: 'Status' | 'Assignment' | 'Garage' | 'Vocabulary' | 'Permissions' | 'Service';
   passed: boolean;
   message: string;
   details?: any;
@@ -58,9 +62,10 @@ export function runFleetConsistencyTests(): TestResult[] {
     }
   };
 
-  const ctx = (hasActiveAssignment = false, openWorkOrderCount = 0) => ({
+  const ctx = (hasActiveAssignment = false, openWorkOrderCount = 0, completedWorkOrderCount = 0) => ({
     hasActiveAssignment,
     openWorkOrderCount,
+    completedWorkOrderCount,
   });
 
   /* ------------------------------------------------- the reported defect */
@@ -218,6 +223,125 @@ export function runFleetConsistencyTests(): TestResult[] {
     return {
       passed: stray.length === 0,
       message: stray.length ? `Unknown statuses: ${stray.join(', ')}` : 'All accounted for.',
+    };
+  });
+
+  /* ------------------------------------------- finished but not signed off */
+
+  /*
+   * A completed repair is not a closed one. The machine sits in the yard until
+   * somebody signs it back onto the road, so the garage still holds it — which
+   * is why 'completed' belongs in the in-garage list and not the open one.
+   * Conflating them filed the job under "Show closed" while the asset stayed in
+   * maintenance, and the reconcile panel then flagged the pair as contradictory.
+   */
+
+  check('A finished repair still counts as in the garage', 'Garage', () => {
+    const inGarage = IN_GARAGE_WORK_ORDER_STATUSES.includes('completed');
+    const open = OPEN_WORK_ORDER_STATUSES.includes('completed');
+    return {
+      passed: inGarage && !open,
+      message:
+        inGarage && !open
+          ? 'Held by the garage, but with no work left to do — which is exactly what it is.'
+          : 'A completed job is misfiled; the queue and the register will disagree.',
+      details: { inGarage, open },
+    };
+  });
+
+  check('A machine awaiting sign-off gets no second job raised', 'Garage', () => {
+    const plan = planStatusChange('available', 'in_maintenance', ctx(false, 0, 1));
+    return {
+      passed: plan.raiseWorkOrder === false,
+      message: plan.raiseWorkOrder
+        ? 'A fresh job would be opened against a machine the garage already holds.'
+        : 'The finished job stands; nothing new is raised.',
+      details: plan,
+    };
+  });
+
+  check('Releasing a machine signs off its finished repair', 'Garage', () => {
+    const plan = planStatusChange('in_maintenance', 'available', ctx(false, 0, 1));
+    return {
+      passed: plan.verifyWorkOrders === true && plan.cancelWorkOrders === false,
+      message: plan.cancelWorkOrders
+        ? 'The repair would be cancelled, erasing work that was done and paid for.'
+        : 'Signed off, so the repair and its cost stay in the machine history.',
+      details: plan,
+    };
+  });
+
+  check('Unfinished and finished jobs are handled differently at release', 'Garage', () => {
+    const plan = planStatusChange('in_maintenance', 'available', ctx(false, 2, 1));
+    return {
+      passed: plan.cancelWorkOrders === true && plan.verifyWorkOrders === true,
+      message: 'The two unfinished jobs are abandoned; the finished one is signed off.',
+      details: plan,
+    };
+  });
+
+  /* ---------------------------------------------------------------- service */
+
+  /*
+   * Service-due is derived from the meter, never stored, so recording a service
+   * clears it by moving lastServiceMeter and nothing else. These pin the derivation
+   * rather than the write, which is the half that can silently go wrong.
+   */
+
+  const machine = (over: Partial<any> = {}) =>
+    ({
+      assetId: 'TR-999',
+      meterType: 'hours',
+      currentMeter: 4102,
+      serviceIntervalMeter: 250,
+      lastServiceMeter: 3780,
+      status: 'available',
+      ...over,
+    }) as any;
+
+  check('A machine past its interval is due', 'Service', () => {
+    const a = machine();
+    return {
+      passed: isServiceDue(a),
+      message: '4,102 − 3,780 = 322 hrs against a 250-hr interval.',
+      details: { since: a.currentMeter - a.lastServiceMeter },
+    };
+  });
+
+  check('Recording the service at the current reading clears it', 'Service', () => {
+    const a = machine({ lastServiceMeter: 4102 });
+    return {
+      passed: !isServiceDue(a),
+      message: isServiceDue(a)
+        ? 'Still due after being serviced — the reports page would keep asking.'
+        : 'No longer due, and the next one falls at 4,352 hrs.',
+      details: { until: meterUntilService(a) },
+    };
+  });
+
+  check('A machine with no meter is never due', 'Service', () => {
+    const a = machine({ meterType: 'none', serviceIntervalMeter: undefined });
+    return {
+      passed: !isServiceDue(a),
+      message: 'An implement accumulates no hours; flagging it would train people to ignore the list.',
+    };
+  });
+
+  check('A machine with no interval set is never due', 'Service', () => {
+    const a = machine({ serviceIntervalMeter: undefined });
+    return {
+      passed: !isServiceDue(a),
+      message: 'A missing interval is unknown, not zero — treating it as zero flags the whole register on day one.',
+    };
+  });
+
+  check('A retired machine is never due for service', 'Service', () => {
+    const a = machine({ status: 'disposed' });
+    return {
+      passed: !isServiceDue(a),
+      message: isServiceDue(a)
+        ? 'The reports page would schedule work on a vehicle the Bureau no longer owns.'
+        : 'Out of the register, so out of the maintenance schedule.',
     };
   });
 

@@ -27,6 +27,7 @@ import {
   demoAppendWorkOrder,
   demoCancelOpenWorkOrders,
   demoCloseAssignment,
+  demoVerifyWorkOrders,
 } from '../data/demoStore';
 
 /**
@@ -62,6 +63,7 @@ export interface ChangeAssetStatusResult {
   closedAssignmentId: string | null;
   raisedWorkOrderId: string | null;
   cancelledWorkOrders: number;
+  verifiedWorkOrders: number;
 }
 
 export async function changeAssetStatus(
@@ -83,12 +85,14 @@ export async function changeAssetStatus(
 
   const activeAssignment = assignments.find((a) => a.status !== 'returned') ?? null;
   const openWorkOrders = workOrders.filter((w) => OPEN_WORK_ORDER_STATUSES.includes(w.status));
+  const completedWorkOrders = workOrders.filter((w) => w.status === 'completed');
 
   // Throws on a change that must not happen at all — reviving a retired asset,
   // a no-op, or a status that only another workflow may set.
   const plan = planStatusChange(asset.status, input.next, {
     hasActiveAssignment: Boolean(activeAssignment),
     openWorkOrderCount: openWorkOrders.length,
+    completedWorkOrderCount: completedWorkOrders.length,
   });
 
   const reason = input.reason?.trim() || undefined;
@@ -96,6 +100,7 @@ export async function changeAssetStatus(
     closedAssignmentId: null,
     raisedWorkOrderId: null,
     cancelledWorkOrders: 0,
+    verifiedWorkOrders: 0,
   };
 
   const database = db;
@@ -187,6 +192,32 @@ export async function changeAssetStatus(
     }
   }
 
+  /* ---- the repairs that were finished but never signed off */
+
+  if (plan.verifyWorkOrders) {
+    // Verified, not cancelled. The work was done; releasing the machine is the
+    // sign-off. Cancelling would erase a real repair and the money it cost from
+    // the machine's history, which is the one thing the register exists to keep.
+    if (isDemoFleet()) {
+      result.verifiedWorkOrders = demoVerifyWorkOrders(asset.assetId, actor.uid, actor.displayName);
+    } else if (database) {
+      await Promise.all(
+        completedWorkOrders.map((w) =>
+          updateDoc(doc(database, FLEET_WORK_ORDERS_COLLECTION, w.workOrderId), {
+            status: 'verified',
+            verifiedAt: serverTimestamp(),
+            verifiedByUid: actor.uid,
+            verifiedByName: actor.displayName,
+            version: w.version + 1,
+            updatedAt: serverTimestamp(),
+            updatedByUid: actor.uid,
+          })
+        )
+      );
+      result.verifiedWorkOrders = completedWorkOrders.length;
+    }
+  }
+
   /* ---- and the status itself, last, as the only writer of that field */
 
   await setAssetStatus(asset.assetId, input.next, input.expectedVersion, actor, {
@@ -209,6 +240,13 @@ function describe(
   if (result.cancelledWorkOrders > 0) {
     parts.push(
       `${result.cancelledWorkOrders} open job${result.cancelledWorkOrders === 1 ? '' : 's'} cancelled`
+    );
+  }
+  if (result.verifiedWorkOrders > 0) {
+    parts.push(
+      `${result.verifiedWorkOrders} finished repair${
+        result.verifiedWorkOrders === 1 ? '' : 's'
+      } signed off`
     );
   }
   if (parts.length === 0) return isGarageStatus(next) ? 'Moved to the garage' : undefined;

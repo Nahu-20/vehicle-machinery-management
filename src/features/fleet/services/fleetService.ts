@@ -21,6 +21,7 @@ import type {
   FleetAssetFilters,
   FleetAssetStatus,
   FleetDashboardSummary,
+  FleetServiceRecord,
   FleetStatusEvent,
   FleetZoneAvailability,
 } from '../types/fleet';
@@ -33,6 +34,8 @@ import {
   demoSetStatus,
   demoRecordStatusEvent,
   demoListStatusEvents,
+  demoRecordService,
+  demoListServiceRecords,
 } from '../data/demoStore';
 import {
   CANONICAL_ZONE_IDS,
@@ -412,6 +415,137 @@ export async function retireAsset(
   await setAssetStatus(assetId, 'disposed', expectedVersion, actor, {
     reason: 'Retired from the register',
   });
+}
+
+export const FLEET_SERVICE_RECORDS_COLLECTION = 'fleetServiceRecords';
+
+export interface RecordServiceInput {
+  assetId: string;
+  /** Defaults to the asset's current reading in the UI, but typed in, so it can be corrected. */
+  meterAtService: number;
+  servicedAt: Date;
+  note?: string;
+  cost?: number;
+}
+
+/**
+ * Record a completed service.
+ *
+ * Writes the record and moves `lastServiceMeter` in one transaction, because the
+ * two disagreeing is the whole failure mode: a service logged that does not
+ * clear the due flag trains staff to ignore the flag, and a flag cleared with no
+ * record behind it cannot be defended to an auditor.
+ *
+ * The due state itself is never stored — `isServiceDue` derives it from the
+ * meter — so there is nothing here that can go stale against the reading.
+ */
+export async function recordService(
+  input: RecordServiceInput,
+  actor: StaffUser
+): Promise<string> {
+  const check = (asset: FleetAsset) => {
+    if (asset.meterType === 'none') {
+      throw new Error(
+        `${asset.assetId} has no meter, so there is no reading to service it against.`
+      );
+    }
+    if (asset.status === 'disposed') {
+      throw new Error('A retired asset cannot be serviced.');
+    }
+    if (input.meterAtService < (asset.lastServiceMeter ?? 0)) {
+      throw new Error(
+        `Reading ${input.meterAtService} is below the last service at ${asset.lastServiceMeter}. Check the meter.`
+      );
+    }
+    if (input.meterAtService > asset.currentMeter) {
+      throw new Error(
+        `Reading ${input.meterAtService} is above the current ${asset.currentMeter}. Record the running hours first.`
+      );
+    }
+  };
+
+  let recordId: string;
+
+  if (isDemoFleet()) {
+    const asset = demoGetAsset(input.assetId);
+    if (!asset) throw new FleetNotFoundError(input.assetId);
+    check(asset);
+    recordId = demoRecordService({
+      assetId: input.assetId,
+      zoneId: asset.zoneId,
+      meterAtService: input.meterAtService,
+      servicedAt: Timestamp.fromDate(input.servicedAt),
+      note: input.note,
+      cost: input.cost,
+      recordedByUid: actor.uid,
+      recordedByName: actor.displayName,
+    });
+  } else {
+    const database = requireDb();
+    const assetRef = doc(database, FLEET_ASSETS_COLLECTION, input.assetId);
+    const recordRef = doc(collection(database, FLEET_SERVICE_RECORDS_COLLECTION));
+
+    await runTransaction(database, async (tx) => {
+      const snap = await tx.get(assetRef);
+      if (!snap.exists()) throw new FleetNotFoundError(input.assetId);
+      const asset = snap.data() as FleetAsset;
+      check(asset);
+
+      tx.set(
+        recordRef,
+        stripUndefined({
+          serviceRecordId: recordRef.id,
+          assetId: input.assetId,
+          zoneId: asset.zoneId,
+          meterAtService: input.meterAtService,
+          servicedAt: Timestamp.fromDate(input.servicedAt),
+          note: input.note,
+          cost: input.cost,
+          recordedByUid: actor.uid,
+          recordedByName: actor.displayName,
+          createdAt: serverTimestamp(),
+        })
+      );
+
+      tx.update(assetRef, {
+        lastServiceMeter: input.meterAtService,
+        version: asset.version + 1,
+        updatedAt: serverTimestamp(),
+        updatedByUid: actor.uid,
+      });
+    });
+
+    recordId = recordRef.id;
+  }
+
+  await logAuditEvent({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    actorDisplayName: actor.displayName,
+    actorRole: actor.role,
+    module: 'fleet',
+    action: 'asset_serviced',
+    targetType: 'fleetAsset',
+    targetId: input.assetId,
+    targetLabel: `${input.assetId} at ${input.meterAtService}`,
+  } as any);
+
+  return recordId;
+}
+
+/** Services for one vehicle, newest first. */
+export async function listServiceRecords(assetId?: string): Promise<FleetServiceRecord[]> {
+  if (isDemoFleet()) {
+    return demoListServiceRecords()
+      .filter((r) => !assetId || r.assetId === assetId)
+      .sort((a, b) => b.servicedAt.toMillis() - a.servicedAt.toMillis());
+  }
+  const database = requireDb();
+  const constraints: QueryConstraint[] = [];
+  if (assetId) constraints.push(where('assetId', '==', assetId));
+  constraints.push(orderBy('servicedAt', 'desc'), fsLimit(200));
+  const snap = await getDocs(query(collection(database, FLEET_SERVICE_RECORDS_COLLECTION), ...constraints));
+  return snap.docs.map((d) => d.data() as FleetServiceRecord);
 }
 
 export const FLEET_STATUS_EVENTS_COLLECTION = 'fleetStatusEvents';

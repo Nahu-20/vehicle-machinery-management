@@ -117,12 +117,35 @@ export function canTransitionWorkOrder(
   return WORK_ORDER_TRANSITIONS[from]?.includes(to) ?? false;
 }
 
-/** Work-order statuses that mean the asset is still in the garage's hands. */
+/**
+ * Work-order statuses where the work itself is unfinished.
+ *
+ * Narrower than 'the garage still has it' — see IN_GARAGE_WORK_ORDER_STATUSES
+ * below. This is the list that answers 'is there still something to do', and
+ * it is the one used when a job has to be abandoned, because a finished repair
+ * must never be cancelled out from under its own cost record.
+ */
 export const OPEN_WORK_ORDER_STATUSES: readonly FleetWorkOrderStatus[] = [
   'reported',
   'triaged',
   'in_progress',
   'awaiting_parts',
+];
+
+/**
+ * Work-order statuses where the garage still holds the machine.
+ *
+ * Includes 'completed', which the open list above deliberately does not: the
+ * repair is done but nobody has signed it back onto the road, so the machine is
+ * still in the yard and the job is still the garage's to answer for.
+ *
+ * Conflating the two put a completed job under 'Show closed' while the asset
+ * stayed in_maintenance — the queue showed nothing, the register showed a
+ * machine in the garage, and the two had to be reconciled by hand.
+ */
+export const IN_GARAGE_WORK_ORDER_STATUSES: readonly FleetWorkOrderStatus[] = [
+  ...OPEN_WORK_ORDER_STATUSES,
+  'completed',
 ];
 
 /**
@@ -144,6 +167,9 @@ export function isIssuable(asset: Pick<FleetAsset, 'status'>): boolean {
  * flag the entire register on day one and train staff to ignore the warning.
  */
 export function isServiceDue(asset: FleetAsset): boolean {
+  // A retired machine is out of the register. Listing one as due for service
+  // put work on a maintenance schedule for a vehicle the Bureau no longer has.
+  if (asset.status === 'disposed') return false;
   if (asset.meterType === 'none') return false;
   if (!asset.serviceIntervalMeter || asset.serviceIntervalMeter <= 0) return false;
 
@@ -240,13 +266,18 @@ export interface StatusChangePlan {
   closeAssignment: boolean;
   /** Raise a job, so the garage can see what it has been given. */
   raiseWorkOrder: boolean;
-  /** Close the open jobs: the machine has left the garage. */
+  /** Abandon unfinished jobs: the machine has left the garage without them. */
   cancelWorkOrders: boolean;
+  /** Sign off finished jobs: the repair was done, the release confirms it. */
+  verifyWorkOrders: boolean;
 }
 
 export interface StatusChangeContext {
   hasActiveAssignment: boolean;
+  /** Jobs with work still to do. */
   openWorkOrderCount: number;
+  /** Jobs repaired but not yet signed back into service. */
+  completedWorkOrderCount: number;
 }
 
 /**
@@ -277,12 +308,17 @@ export function planStatusChange(
 
   const leavingGarage = isGarageStatus(from) && !isGarageStatus(to);
   const inGarage = isGarageStatus(to);
+  const held = ctx.openWorkOrderCount + ctx.completedWorkOrderCount;
 
   return {
     closeAssignment: from === 'assigned' && ctx.hasActiveAssignment,
-    // Only when nothing is open: a machine moved from repair to awaiting parts
-    // is the same job continuing, not a second fault.
-    raiseWorkOrder: inGarage && ctx.openWorkOrderCount === 0,
+    // Only when the garage holds nothing already: a machine moved from repair to
+    // awaiting parts is the same job continuing, not a second fault, and one
+    // waiting on sign-off does not need a fresh job raised against it either.
+    raiseWorkOrder: inGarage && held === 0,
     cancelWorkOrders: leavingGarage && ctx.openWorkOrderCount > 0,
+    // Finished work is signed off, never cancelled. Cancelling would throw away
+    // the record of a repair that happened and the money it cost.
+    verifyWorkOrders: leavingGarage && ctx.completedWorkOrderCount > 0,
   };
 }

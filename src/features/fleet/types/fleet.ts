@@ -226,6 +226,8 @@ export interface FleetWorkOrder {
    */
   verifiedAt?: Timestamp | null;
   verifiedByUid?: string;
+  /** Named, not just referenced: the timeline has to show who released the machine. */
+  verifiedByName?: string;
 
   version: number;
 
@@ -272,8 +274,34 @@ export interface FleetStatusEvent {
   reason?: string;
 }
 
+/**
+ * A completed service.
+ *
+ * Kept apart from fleetWorkOrders on purpose. A work order is something that
+ * broke; a service is something planned that stops things breaking. Folding
+ * routine servicing into the repair collection would make "repair spend by
+ * machine" read as though the well-maintained machines were the expensive ones,
+ * which is the opposite of what the figure is for.
+ *
+ * Recording one moves the asset's lastServiceMeter, which is what clears it from
+ * the service-due list. That list is derived, never stored, so it cannot drift.
+ */
+export interface FleetServiceRecord {
+  serviceRecordId: string;
+  assetId: string;
+  zoneId: CanonicalZoneId;
+  /** The reading the work was done at, which becomes the asset's lastServiceMeter. */
+  meterAtService: number;
+  servicedAt: Timestamp;
+  /** What was done. Free text: a 250-hour service is not the same job everywhere. */
+  note?: string;
+  cost?: number;
+  recordedByUid: string;
+  recordedByName: string;
+}
+
 /** One entry on a vehicle's combined history. */
-export type FleetTimelineKind = 'status' | 'assignment' | 'work_order';
+export type FleetTimelineKind = 'status' | 'assignment' | 'work_order' | 'service';
 
 export interface FleetTimelineEntry {
   id: string;
