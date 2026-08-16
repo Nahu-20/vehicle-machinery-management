@@ -1,0 +1,489 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function currentStaffExists() {
+      return isSignedIn()
+        && request.auth.uid != null
+        && exists(/databases/$(database)/documents/staffUsers/$(request.auth.uid));
+    }
+
+    function isStaffUser(uid) {
+      return isSignedIn()
+        && uid != null
+        && exists(/databases/$(database)/documents/staffUsers/$(uid))
+        && get(/databases/$(database)/documents/staffUsers/$(uid)).data != null
+        && ('active' in get(/databases/$(database)/documents/staffUsers/$(uid)).data)
+        && get(/databases/$(database)/documents/staffUsers/$(uid)).data.active == true;
+    }
+
+    function isCurrentActiveStaff() {
+      return isStaffUser(request.auth.uid);
+    }
+
+    function getStaffRole() {
+      return currentStaffExists()
+        && get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data != null
+        && ('role' in get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data)
+        ? get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.role
+        : '';
+    }
+
+    function isSuperAdmin() {
+      return isCurrentActiveStaff() && getStaffRole() == 'superAdmin';
+    }
+
+    function isContentAdmin() {
+      return isCurrentActiveStaff() && (getStaffRole() == 'superAdmin' || getStaffRole() == 'contentAdmin');
+    }
+
+    function isEditor() {
+      return isCurrentActiveStaff() && (
+        getStaffRole() == 'superAdmin' ||
+        getStaffRole() == 'contentAdmin' ||
+        getStaffRole() == 'editor'
+      );
+    }
+
+    function isMarketOfficer() {
+      return isCurrentActiveStaff() && (getStaffRole() == 'superAdmin' || getStaffRole() == 'marketOfficer');
+    }
+
+    function isAdvisoryOfficer() {
+      return isCurrentActiveStaff() && (getStaffRole() == 'superAdmin' || getStaffRole() == 'advisoryOfficer');
+    }
+
+    function hasAuditViewPermission() {
+      return isCurrentActiveStaff() && (getStaffRole() == 'superAdmin' || getStaffRole() == 'contentAdmin');
+    }
+
+    function isValidFeaturedImageStaging(docData) {
+      return !('featuredImageStaging' in docData) || docData.featuredImageStaging == null || (
+        docData.featuredImageStaging is map
+        && docData.featuredImageStaging.mediaId is string
+        && docData.featuredImageStaging.mediaId.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$')
+        && docData.featuredImageStaging.ownerUid is string
+        && docData.featuredImageStaging.ownerUid == request.auth.uid
+        && docData.featuredImageStaging.storagePath is string
+        && docData.featuredImageStaging.storagePath.matches('^media/staging/' + request.auth.uid + '/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$')
+        && docData.featuredImageStaging.status == 'staged'
+        && !('downloadUrl' in docData.featuredImageStaging)
+        && !('publicUrl' in docData.featuredImageStaging)
+      );
+    }
+
+    // Collection: staffUsers
+    match /staffUsers/{uid} {
+      allow get: if isSignedIn() && (request.auth.uid == uid || isSuperAdmin());
+      allow list: if isSuperAdmin();
+      allow create: if isSuperAdmin() || (isSignedIn() && request.auth.uid == uid);
+      allow update: if isSuperAdmin() || (
+        isCurrentActiveStaff()
+        && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.active == resource.data.active
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Collection: newsArticles (CMS News Articles)
+    match /newsArticles/{newsSlug} {
+      // Public can read only published articles where publishedAt <= request.time; active staff can read any status
+      allow get: if isCurrentActiveStaff() || resource == null || (
+        resource.data != null
+        && 'status' in resource.data
+        && resource.data.status == 'published'
+        && 'publishedAt' in resource.data
+        && resource.data.publishedAt != null
+        && resource.data.publishedAt is timestamp
+        && resource.data.publishedAt <= request.time
+      );
+      allow list: if isCurrentActiveStaff() || (
+        resource != null
+        && resource.data != null
+        && 'status' in resource.data
+        && resource.data.status == 'published'
+        && 'publishedAt' in resource.data
+        && resource.data.publishedAt != null
+        && resource.data.publishedAt is timestamp
+        && resource.data.publishedAt <= request.time
+      );
+
+      // Editors can create new draft articles
+      allow create: if isEditor()
+        && newsSlug == request.resource.data.slug
+        && request.resource.data.status == 'draft'
+        && request.resource.data.createdBy == request.auth.uid
+        && isValidFeaturedImageStaging(request.resource.data);
+
+      // Update rules with status-transition and role constraints
+      allow update: if isCurrentActiveStaff()
+        && request.resource.data.slug == resource.data.slug
+        && (!('createdAt' in resource.data) || resource.data.createdAt == null || request.resource.data.createdAt == resource.data.createdAt)
+        && (!('createdBy' in resource.data) || resource.data.createdBy == null || request.resource.data.createdBy == resource.data.createdBy)
+        && request.resource.data.updatedBy == request.auth.uid
+        && isValidFeaturedImageStaging(request.resource.data)
+        && (
+          // Published articles can ONLY be edited, unpublished, archived, or trashed by Content Admins
+          (resource.data.status == 'published' && isContentAdmin())
+          ||
+          // Draft articles: Editors can update draft, submit for review, archive, or trash
+          (resource.data.status == 'draft' && (
+            (request.resource.data.status in ['draft', 'review', 'archived', 'trashed'] && isEditor())
+            || (request.resource.data.status == 'published' && isContentAdmin())
+          ))
+          ||
+          // Review articles: Editors can return to draft, keep in review, archive, or trash
+          (resource.data.status == 'review' && (
+            (request.resource.data.status in ['draft', 'review', 'archived', 'trashed'] && isEditor())
+            || (request.resource.data.status == 'published' && isContentAdmin())
+          ))
+          ||
+          // Unpublished articles: Content Admins can return to draft, republish, archive, or trash
+          (resource.data.status == 'unpublished' && isContentAdmin() && (
+            request.resource.data.status in ['draft', 'published', 'archived', 'unpublished', 'trashed']
+          ))
+          ||
+          // Archived articles: Content Admins can return to draft or trash
+          (resource.data.status == 'archived' && isContentAdmin() && (
+            request.resource.data.status in ['draft', 'archived', 'trashed']
+          ))
+          ||
+          // Trashed articles: Restore to draft allowed for Editors; restore to published requires Content Admin
+          (resource.data.status == 'trashed' && (
+            (request.resource.data.status in ['draft', 'trashed'] && isEditor())
+            || (request.resource.data.status in ['draft', 'review', 'published', 'unpublished', 'archived'] && isContentAdmin())
+          ))
+        );
+
+      // Permanent deletion strictly reserved for Super Admin on trashed items
+      allow delete: if isSuperAdmin() && resource.data.status == 'trashed';
+    }
+
+    // Public read collections, restricted staff write
+    match /news/{articleId} {
+      allow read: if true;
+      allow create, update: if isEditor();
+      allow delete: if isContentAdmin();
+    }
+
+    // Collection: achievements (CMS Achievements)
+    match /achievements/{achievementSlug} {
+      // Public can read only published achievements where publishedAt <= request.time; active staff can read any status
+      allow get: if isCurrentActiveStaff() || (
+        resource.data.status == 'published'
+        && resource.data.publishedAt != null
+        && resource.data.publishedAt is timestamp
+        && resource.data.publishedAt <= request.time
+      );
+      allow list: if isCurrentActiveStaff() || (
+        resource.data.status == 'published'
+        && resource.data.publishedAt != null
+        && resource.data.publishedAt is timestamp
+        && resource.data.publishedAt <= request.time
+      );
+
+      // Editors and Content Admins can create new draft achievements
+      allow create: if isEditor()
+        && achievementSlug == request.resource.data.slug
+        && request.resource.data.status == 'draft'
+        && request.resource.data.createdByUid == request.auth.uid
+        && request.resource.data.version == 1
+        && isValidFeaturedImageStaging(request.resource.data);
+
+      // Update rules with status-transition and role constraints
+      allow update: if isCurrentActiveStaff()
+        && request.resource.data.slug == resource.data.slug
+        && (!('createdAt' in resource.data) || resource.data.createdAt == null || request.resource.data.createdAt == resource.data.createdAt)
+        && (!('createdByUid' in resource.data) || resource.data.createdByUid == null || request.resource.data.createdByUid == resource.data.createdByUid)
+        && request.resource.data.updatedByUid == request.auth.uid
+        && request.resource.data.version == resource.data.version + 1
+        && isValidFeaturedImageStaging(request.resource.data)
+        && (
+          // Published achievements can ONLY be edited, unpublished, archived, or trashed by Content Admins
+          (resource.data.status == 'published' && isContentAdmin())
+          ||
+          // Draft achievements: Editors can update draft, submit for review, archive, or trash
+          (resource.data.status == 'draft' && (
+            (request.resource.data.status in ['draft', 'review', 'archived', 'trashed'] && isEditor())
+            || (request.resource.data.status == 'published' && isContentAdmin())
+          ))
+          ||
+          // Review achievements: Editors can return to draft, keep in review, archive, or trash
+          (resource.data.status == 'review' && (
+            (request.resource.data.status in ['draft', 'review', 'archived', 'trashed'] && isEditor())
+            || (request.resource.data.status == 'published' && isContentAdmin())
+          ))
+          ||
+          // Unpublished achievements: Content Admins can return to draft, republish, archive, or trash
+          (resource.data.status == 'unpublished' && isContentAdmin() && (
+            request.resource.data.status in ['draft', 'published', 'archived', 'unpublished', 'trashed']
+          ))
+          ||
+          // Archived achievements: Content Admins can return to draft or trash
+          (resource.data.status == 'archived' && isContentAdmin() && (
+            request.resource.data.status in ['draft', 'archived', 'trashed']
+          ))
+          ||
+          // Trashed achievements: Restore to draft allowed for Editors; restore to published requires Content Admin
+          (resource.data.status == 'trashed' && (
+            (request.resource.data.status in ['draft', 'trashed'] && isEditor())
+            || (request.resource.data.status in ['draft', 'review', 'published', 'unpublished', 'archived'] && isContentAdmin())
+          ))
+        );
+
+      // Permanent deletion is prohibited for browser clients. Must occur via trusted backend function.
+      allow delete: if false;
+    }
+
+    // Collection: agriculturalAlerts (CMS Agricultural Alerts & Advisories)
+    match /agriculturalAlerts/{alertSlug} {
+      // Public can read only published alerts where effectiveFrom <= request.time AND (expiresAt is null or > request.time)
+      // Active staff can read any alert document regardless of status
+      allow get: if isCurrentActiveStaff() || resource == null || (
+        resource != null
+        && resource.data != null
+        && 'status' in resource.data
+        && resource.data.status == 'published'
+        && 'effectiveFrom' in resource.data
+        && resource.data.effectiveFrom != null
+        && resource.data.effectiveFrom is timestamp
+        && resource.data.effectiveFrom <= request.time
+        && (!('expiresAt' in resource.data) || resource.data.expiresAt == null || (resource.data.expiresAt is timestamp && resource.data.expiresAt > request.time))
+      );
+      allow list: if isCurrentActiveStaff() || (
+        resource != null
+        && resource.data != null
+        && 'status' in resource.data
+        && resource.data.status == 'published'
+        && 'effectiveFrom' in resource.data
+        && resource.data.effectiveFrom != null
+        && resource.data.effectiveFrom is timestamp
+        && resource.data.effectiveFrom <= request.time
+        && (!('expiresAt' in resource.data) || resource.data.expiresAt == null || (resource.data.expiresAt is timestamp && resource.data.expiresAt > request.time))
+      );
+
+      // Editors and Advisory Officers can create new draft alerts
+      allow create: if (isEditor() || isAdvisoryOfficer())
+        && alertSlug == request.resource.data.slug
+        && request.resource.data.status == 'draft'
+        && request.resource.data.createdByUid == request.auth.uid
+        && request.resource.data.version == 1
+        && isValidFeaturedImageStaging(request.resource.data);
+
+      // Update rules with status-transition and role constraints
+      allow update: if isCurrentActiveStaff()
+        && request.resource.data.slug == resource.data.slug
+        && (!('createdAt' in resource.data) || resource.data.createdAt == null || request.resource.data.createdAt == resource.data.createdAt)
+        && (!('createdByUid' in resource.data) || resource.data.createdByUid == null || request.resource.data.createdByUid == resource.data.createdByUid)
+        && request.resource.data.updatedByUid == request.auth.uid
+        && request.resource.data.version == resource.data.version + 1
+        && isValidFeaturedImageStaging(request.resource.data)
+        && (
+          // Published alerts can ONLY be edited, unpublished, expired, archived, or trashed by Content Admins
+          (resource.data.status == 'published' && isContentAdmin() && (
+            request.resource.data.status in ['published', 'unpublished', 'expired', 'archived', 'trashed']
+          ))
+          ||
+          // Draft alerts: Editors/Advisory Officers can update draft, submit for review, archive, or trash; Content Admin can publish
+          (resource.data.status == 'draft' && (
+            (request.resource.data.status in ['draft', 'review', 'archived', 'trashed'] && (isEditor() || isAdvisoryOfficer()))
+            || (request.resource.data.status == 'published' && isContentAdmin())
+          ))
+          ||
+          // Review alerts: Editors/Advisory Officers can return to draft, keep in review, archive, or trash; Content Admin can publish
+          (resource.data.status == 'review' && (
+            (request.resource.data.status in ['draft', 'review', 'archived', 'trashed'] && (isEditor() || isAdvisoryOfficer()))
+            || (request.resource.data.status == 'published' && isContentAdmin())
+          ))
+          ||
+          // Unpublished alerts: Content Admins can return to draft, republish, archive, or trash
+          (resource.data.status == 'unpublished' && isContentAdmin() && (
+            request.resource.data.status in ['draft', 'published', 'archived', 'unpublished', 'trashed']
+          ))
+          ||
+          // Expired alerts: Content Admins can return to draft, archive, or trash
+          (resource.data.status == 'expired' && isContentAdmin() && (
+            request.resource.data.status in ['draft', 'archived', 'trashed', 'expired']
+          ))
+          ||
+          // Archived alerts: Content Admins can return to draft or trash
+          (resource.data.status == 'archived' && isContentAdmin() && (
+            request.resource.data.status in ['draft', 'archived', 'trashed']
+          ))
+          ||
+          // Trashed alerts: Restore to draft allowed for Editors/Advisory Officers; restore to published requires Content Admin
+          (resource.data.status == 'trashed' && (
+            (request.resource.data.status in ['draft', 'trashed'] && (isEditor() || isAdvisoryOfficer()))
+            || (request.resource.data.status in ['draft', 'review', 'published', 'unpublished', 'expired', 'archived'] && isContentAdmin())
+          ))
+        );
+
+      // Permanent deletion is prohibited for browser clients. Must occur via trusted backend endpoint.
+      allow delete: if false;
+    }
+
+    match /alerts/{alertId} {
+      allow read: if true;
+      allow create, update, delete: if isAdvisoryOfficer();
+    }
+
+    match /marketPrices/{priceId} {
+      allow read: if true;
+      allow create, update, delete: if isMarketOfficer();
+    }
+
+    match /resources/{resourceId} {
+      allow read: if true;
+      allow create, update, delete: if isContentAdmin();
+    }
+
+    // Collection: mediaAssets (Authoritative Media Asset Metadata)
+    // Only trusted backend code may create, update, or delete mediaAssets.
+    // Active owners with media.upload role can read metadata of their own mediaAssets.
+    // Active staff with media.manage role can read managed media records.
+    match /mediaAssets/{mediaId} {
+      allow get: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid ||
+        isContentAdmin() ||
+        (isCurrentActiveStaff() &&
+         exists(/databases/$(database)/documents/staffUsers/$(request.auth.uid)) &&
+         'permissions' in get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data &&
+         get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.permissions.hasAny(['media.manage', 'media.upload']))
+      );
+      allow list: if isSignedIn() && (
+        isContentAdmin() ||
+        (isCurrentActiveStaff() &&
+         exists(/databases/$(database)/documents/staffUsers/$(request.auth.uid)) &&
+         'permissions' in get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data &&
+         get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.permissions.hasAny(['media.manage']))
+      );
+      allow create, update, delete: if false;
+    }
+
+    // Audit logs: Read restricted to active staff with audit.view permission (superAdmin, contentAdmin).
+    match /auditLogs/{logId} {
+      allow read: if hasAuditViewPermission();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    match /newsAuditLogs/{logId} {
+      allow read: if hasAuditViewPermission();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    match /adminAuditLogs/{logId} {
+      allow read: if hasAuditViewPermission();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // Helper function for canonical zone validation in security rules
+    function isCanonicalZone(zoneId) {
+      return zoneId in [
+        'west_wellega', 'east_wellega', 'ilu_aba_bora', 'jimma',
+        'west_shewa', 'north_shewa', 'east_shewa', 'arsi',
+        'west_hararghe', 'east_hararghe', 'bale', 'borena',
+        'south_west_shewa', 'guji', 'west_guji', 'buno_bedele',
+        'west_arsi', 'kelem_wellega', 'horo_gudru_wellega',
+        'shager_city', 'east_bale', 'east_borena'
+      ];
+    }
+
+    // Collection: investmentZoneProfiles
+    match /investmentZoneProfiles/{zoneId} {
+      allow get, list: if isCurrentActiveStaff() || (
+        resource != null && resource.data != null
+        && resource.data.status == 'published'
+        && resource.data.verificationStatus == 'verified'
+      );
+      // All writes must originate from trusted backend server endpoint
+      allow create, update, delete: if false;
+    }
+
+    // Collection: investmentDatasets
+    match /investmentDatasets/{datasetId} {
+      allow get, list: if isCurrentActiveStaff() || (
+        resource != null && resource.data != null
+        && resource.data.lifecycleStatus == 'published'
+        && resource.data.verificationStatus == 'verified'
+      );
+      allow create, update, delete: if false;
+
+      // Subcollection: values/{zoneId}
+      match /values/{zoneId} {
+        allow get, list: if isCurrentActiveStaff() || (
+          get(/databases/$(database)/documents/investmentDatasets/$(datasetId)).data != null
+          && get(/databases/$(database)/documents/investmentDatasets/$(datasetId)).data.lifecycleStatus == 'published'
+          && get(/databases/$(database)/documents/investmentDatasets/$(datasetId)).data.verificationStatus == 'verified'
+        );
+        allow create, update, delete: if false;
+      }
+    }
+
+    // Collection: investmentSources
+    match /investmentSources/{sourceId} {
+      allow get, list: if isCurrentActiveStaff() || (
+        resource != null && resource.data != null
+        && resource.data.status == 'published'
+        && resource.data.verificationStatus == 'verified'
+      );
+      allow create, update, delete: if false;
+    }
+
+    // Collection: investmentMethodologies
+    match /investmentMethodologies/{methodologyId} {
+      allow get, list: if isCurrentActiveStaff() || (
+        resource != null && resource.data != null
+        && resource.data.status == 'published'
+        && resource.data.verificationStatus == 'verified'
+      );
+      allow create, update, delete: if false;
+    }
+
+    // Collection: investmentOpportunities
+    match /investmentOpportunities/{opportunityId} {
+      allow get, list: if isCurrentActiveStaff() || (
+        resource != null && resource.data != null
+        && resource.data.lifecycleStatus == 'published'
+        && resource.data.verificationStatus == 'verified'
+      );
+      allow create, update, delete: if false;
+    }
+
+    // Collection: investmentInfrastructure
+    match /investmentInfrastructure/{recordId} {
+      allow get, list: if isCurrentActiveStaff() || (
+        resource != null && resource.data != null && resource.data.verificationStatus == 'verified'
+      );
+      allow create, update, delete: if false;
+    }
+
+    // Collection: investmentMapConfig
+    match /investmentMapConfig/{configId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    // Collection: investmentAuditLogs
+    match /investmentAuditLogs/{logId} {
+      allow read: if hasAuditViewPermission();
+      // HARD REQUIREMENT: Browser/client code must NOT directly create, update, or delete audit records.
+      allow create, update, delete: if false;
+    }
+  }
+}

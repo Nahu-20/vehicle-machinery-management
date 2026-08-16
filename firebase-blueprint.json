@@ -1,0 +1,128 @@
+{
+  "entities": {
+    "StaffUser": {
+      "title": "StaffUser",
+      "description": "Authenticated staff member profile and access authorization record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Authentication UID" },
+        "email": { "type": "string", "format": "email", "description": "Government staff email" },
+        "displayName": { "type": "string", "description": "Full name of staff member" },
+        "role": {
+          "type": "string",
+          "enum": ["superAdmin", "contentAdmin", "editor", "marketOfficer", "advisoryOfficer"],
+          "description": "Centralized authorization role"
+        },
+        "active": { "type": "boolean", "description": "Account activation status" },
+        "preferredLanguage": { "type": "string", "enum": ["om", "am", "en"], "description": "UI language preference" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role", "active", "preferredLanguage"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Administrative action log for security compliance",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "actorUid": { "type": "string" },
+        "actorEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "entityType": { "type": "string" },
+        "entityId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "metadata": { "type": "object" }
+      },
+      "required": ["id", "actorUid", "actorEmail", "action", "entityType", "timestamp"]
+    },
+    "InvestmentZoneProfile": {
+      "title": "InvestmentZoneProfile",
+      "description": "Zone editorial and descriptive profile keyed by canonical zoneId",
+      "type": "object",
+      "properties": {
+        "zoneId": { "type": "string" },
+        "overview": { "type": "object" },
+        "featuredCommodities": { "type": "array", "items": { "type": "string" } },
+        "responsibleOffice": { "type": "string" },
+        "verificationStatus": { "type": "string", "enum": ["unverified", "pending", "verified", "rejected"] },
+        "status": { "type": "string", "enum": ["draft", "review", "published", "unpublished", "archived"] },
+        "version": { "type": "number", "minimum": 1 }
+      },
+      "required": ["zoneId", "overview", "featuredCommodities", "verificationStatus", "status", "version"]
+    },
+    "InvestmentDataset": {
+      "title": "InvestmentDataset",
+      "description": "Dataset metadata specification and provenance link",
+      "type": "object",
+      "properties": {
+        "datasetId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "commodity": { "type": "string" },
+        "metric": { "type": "string" },
+        "unit": { "type": "string" },
+        "sourceIds": { "type": "array", "items": { "type": "string" } },
+        "verificationStatus": { "type": "string", "enum": ["unverified", "pending", "verified", "rejected"] },
+        "lifecycleStatus": { "type": "string", "enum": ["draft", "review", "published", "unpublished", "archived"] },
+        "version": { "type": "number", "minimum": 1 }
+      },
+      "required": ["datasetId", "title", "category", "commodity", "metric", "unit", "sourceIds", "verificationStatus", "lifecycleStatus", "version"]
+    },
+    "InvestmentSource": {
+      "title": "InvestmentSource",
+      "description": "Data source provenance record",
+      "type": "object",
+      "properties": {
+        "sourceId": { "type": "string" },
+        "title": { "type": "string" },
+        "organization": { "type": "string" },
+        "verificationStatus": { "type": "string", "enum": ["unverified", "pending", "verified", "rejected"] },
+        "status": { "type": "string", "enum": ["draft", "review", "published", "unpublished", "archived"] },
+        "version": { "type": "number", "minimum": 1 }
+      },
+      "required": ["sourceId", "title", "organization", "verificationStatus", "status", "version"]
+    }
+  },
+  "firestore": {
+    "/staffUsers/{uid}": {
+      "schema": { "$ref": "#/entities/StaffUser" },
+      "description": "Stores staff profiles and authorization roles keyed by auth UID"
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Logs administrative mutations performed by authorized staff"
+    },
+    "/investmentZoneProfiles/{zoneId}": {
+      "schema": { "$ref": "#/entities/InvestmentZoneProfile" },
+      "description": "Slow-changing descriptive profiles for each ADM2 zone keyed by canonical zoneId"
+    },
+    "/investmentDatasets/{datasetId}": {
+      "schema": { "$ref": "#/entities/InvestmentDataset" },
+      "description": "Metadata for statistical and analytical datasets"
+    },
+    "/investmentDatasets/{datasetId}/values/{zoneId}": {
+      "description": "Values for a given dataset indexed by canonical zoneId"
+    },
+    "/investmentSources/{sourceId}": {
+      "schema": { "$ref": "#/entities/InvestmentSource" },
+      "description": "Data sources and citation metadata for verification provenance"
+    },
+    "/investmentMethodologies/{methodologyId}": {
+      "description": "Methodology definitions for suitability and investment potential calculations"
+    },
+    "/investmentOpportunities/{opportunityId}": {
+      "description": "Verified or pipeline agricultural investment opportunities"
+    },
+    "/investmentInfrastructure/{recordId}": {
+      "description": "Infrastructure assets and availability status records"
+    },
+    "/investmentMapConfig/default": {
+      "description": "Default public map configuration and current active dataset pointers"
+    },
+    "/investmentAuditLogs/{logId}": {
+      "description": "Centralized investment CMS mutation audit trail"
+    }
+  }
+}

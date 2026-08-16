@@ -1,0 +1,2165 @@
+import {
+  NavigationItem,
+  AgriculturalAlert,
+  Service,
+  Program,
+  MarketPrice,
+  WeatherInfo,
+  NewsArticle,
+  Announcement,
+  Publication,
+  Office,
+  Achievement,
+  AchievementMilestone,
+  ProgramImpact,
+  ImpactReport,
+  BeforeAfterItem,
+} from '../types';
+
+export const navigationItems: NavigationItem[] = [
+  { id: 'nav-home', labelKey: 'nav_home', href: '/' },
+  { id: 'nav-services', labelKey: 'nav_services', href: '/services' },
+  { id: 'nav-programs', labelKey: 'nav_programs', href: '/programs' },
+  { id: 'nav-achievements', labelKey: 'nav_achievements', href: '/achievements' },
+  { id: 'nav-alerts', labelKey: 'nav_alerts', href: '/alerts', badge: 'Active' },
+  { id: 'nav-resources', labelKey: 'nav_resources', href: '/resources' },
+  { id: 'nav-news', labelKey: 'nav_news', href: '/news' },
+  { id: 'nav-about', labelKey: 'nav_about', href: '/about' },
+  { id: 'nav-contact', labelKey: 'nav_contact', href: '/contact' },
+];
+
+export const mockAlerts: AgriculturalAlert[] = [
+  {
+    id: 'alert-1',
+    slug: 'rooba-cimaa-harargee-2026',
+    titleKey: 'alert_rainfall_title',
+    summaryKey: 'alert_rainfall_desc',
+    fullDescriptionKey: 'alert_rainfall_full',
+    severity: 'critical',
+    category: 'weather',
+    date: 'August 02, 2026',
+    expirationDate: 'August 14, 2026',
+    updatedDate: 'August 02, 2026 - 14:30 EAT',
+    affectedArea: 'Harargee Bahaa, Baalee, Gujii',
+    affectedZones: ['Harargee Bahaa', 'Baalee', 'Gujii'],
+    affectedWoredas: ['Babile', 'Fedis', 'Gursum', 'Mena', 'Wadera'],
+    actionRequiredKey: 'alert_rainfall_action',
+    recommendedActions: [
+      "Qulaallee yaa'a bishaanii fi booyii dhangala'aa dirree qonnaa keessa qulqulleessaa.",
+      "Iddoo lolaan mudachuu danda'u irraa maatii fi beeylada gara bakka oofkaatti furaa.",
+      "Gabaasa midhaanii waajjira qonnaa woredaatiif hatattamaan gabaasaa."
+    ],
+    responsibleOffice: 'Waajjira Qonnaa Godina Harargee Bahaa & Eksteenshinii Biiroo',
+    status: 'active',
+    isDismissible: false,
+  },
+  {
+    id: 'alert-2',
+    slug: 'hoosisa-hawwaanii-jimmaa-2026',
+    titleKey: 'alert_pest_title',
+    summaryKey: 'alert_pest_title_sub',
+    fullDescriptionKey: 'alert_pest_full',
+    severity: 'warning',
+    category: 'pest',
+    date: 'August 01, 2026',
+    expirationDate: 'August 22, 2026',
+    updatedDate: 'August 01, 2026 - 09:15 EAT',
+    affectedArea: 'Jimmaa & Illuu Abbaa Booraa',
+    affectedZones: ['Jimmaa', 'Illuu Abbaa Booraa'],
+    affectedWoredas: ['Dedo', 'Manna', 'Goma', 'Bure', 'Yayu'],
+    actionRequiredKey: 'alert_pest_action',
+    recommendedActions: [
+      "Sakatta'iinsa guyyaa guyyaan oomisha boqqoolloo fi misingaa irratti taasiisaa.",
+      "Hawaasa awaannisaa arganuun hatattamaan garsa hojjettoota eksteenshinii qonnaatiif darbiisaa.",
+      "Tooftaawwan biiffaa qoricha uumamaa fi biiffaa approved ta'e fayyadamaa."
+    ],
+    responsibleOffice: 'Garta Ittisa Arsiisaa fi Dhukkuboota Midhaanii Oromiyaa',
+    status: 'active',
+    isDismissible: true,
+  },
+  {
+    id: 'alert-3',
+    slug: 'dhukkuba-qamadii-arsii-2026',
+    titleKey: 'alert_disease_title',
+    summaryKey: 'alert_disease_sub',
+    fullDescriptionKey: 'alert_disease_full',
+    severity: 'advisory',
+    category: 'crop',
+    date: 'July 29, 2026',
+    expirationDate: 'August 25, 2026',
+    updatedDate: 'July 30, 2026 - 11:00 EAT',
+    affectedArea: 'Arsii & Arsii Dhihaa',
+    affectedZones: ['Arsii', 'Arsii Dhihaa'],
+    affectedWoredas: ['Hetosa', 'Tiyo', 'Lode Hetosa', 'Shashamane', 'Kofele'],
+    actionRequiredKey: 'alert_disease_action',
+    recommendedActions: [
+      "Dirree qamadii keessatti mallaattoo maxa'a daakuu fi waaggaa sakatta'aa.",
+      "Sanyii dandamatoo fi biiffaa qoricha waaggaa yeroon fayyadamaa.",
+      "Bariin gorsa ogeessa qonnaa keellaa irraa argadhaa."
+    ],
+    responsibleOffice: 'Institiyuutii Qorannoo Qonnaa Oromiyaa & Waajjira Qonnaa Arsii',
+    status: 'active',
+    isDismissible: true,
+  },
+  {
+    id: 'alert-4',
+    slug: 'talaallii-beeylada-shawaa-bahaa-2026',
+    titleKey: 'alert_livestock_title',
+    summaryKey: 'alert_livestock_desc',
+    fullDescriptionKey: 'alert_livestock_full',
+    severity: 'info',
+    category: 'livestock',
+    date: 'July 28, 2026',
+    expirationDate: 'August 30, 2026',
+    updatedDate: 'July 28, 2026 - 16:00 EAT',
+    affectedArea: 'Shawaa Bahaa & Gujii',
+    affectedZones: ['Shawaa Bahaa', 'Gujii'],
+    affectedWoredas: ['Boset', 'Lume', 'Adama', 'Bule Hora', 'Negele'],
+    actionRequiredKey: 'alert_livestock_action',
+    recommendedActions: [
+      "Beeylada keessan gara kellaa talaallii ganda keessanii dhiheessaa.",
+      "Beeylada dhukkubsatan horii fayyaa irraa adda baasaa.",
+      "Waraqaa ragaa talaallii ogeessa keellaa irraa fudhadhaa."
+    ],
+    responsibleOffice: 'Biiroo Fayyaa Beeyladaa fi Misooma Aannanii Oromiyaa',
+    status: 'active',
+    isDismissible: true,
+  },
+  {
+    id: 'alert-5',
+    slug: 'hirina-bishaan-jallisii-awash-2026',
+    titleKey: 'alert_irrigation_title',
+    summaryKey: 'alert_irrigation_desc',
+    fullDescriptionKey: 'alert_irrigation_full',
+    severity: 'warning',
+    category: 'irrigation',
+    date: 'July 25, 2026',
+    expirationDate: 'August 18, 2026',
+    updatedDate: 'July 26, 2026 - 10:30 EAT',
+    affectedArea: 'Rift Valley & Shawaa Bahaa',
+    affectedZones: ['Shawaa Bahaa', 'Arsii Dhihaa'],
+    affectedWoredas: ['Maki', 'Ziway', 'Fentale'],
+    actionRequiredKey: 'alert_irrigation_action',
+    recommendedActions: [
+      "Dabareen bishaan jallisii fayyadamuu irratti waliigaltee daangessaa.",
+      "Paampii jallisii sa'aatii qilleensa qabana'aa irratti qofa fayyadamaa.",
+      "Tooftaa jallisii dhangala'aa qusatu (drip irrigation) fayyadamaa."
+    ],
+    responsibleOffice: 'Biiroo Misooma Jallisii fi Qabeenya Bishaan Oromiyaa',
+    status: 'active',
+    isDismissible: true,
+  },
+  {
+    id: 'alert-6',
+    slug: 'raabsa-xaafoo-fi-sanyii-2026',
+    titleKey: 'alert_general_title',
+    summaryKey: 'alert_general_desc',
+    fullDescriptionKey: 'alert_general_full',
+    severity: 'info',
+    category: 'general',
+    date: 'July 20, 2026',
+    expirationDate: 'September 05, 2026',
+    updatedDate: 'July 21, 2026 - 08:00 EAT',
+    affectedArea: 'All 21 Oromia Zones',
+    affectedZones: ['Shawaa Dhihaa', 'Shawaa Kaabaa', 'Arsii', 'Jimmaa', 'Harargee Dhihaa', 'Harargee Bahaa'],
+    affectedWoredas: ['All Woredas'],
+    actionRequiredKey: 'alert_general_action',
+    recommendedActions: [
+      "Nagahee bitta xaa'oo fi sanyii waldaalee bu'uuraa keessaniitti dhiheessaa.",
+      "Galmee galtee qonnaa keellaa eksteenshinii irratti mirkaneessaa."
+    ],
+    responsibleOffice: 'Biiroo Raabsaa Galteewwan Qonnaa fi Waldaalee Oromiyaa',
+    status: 'active',
+    isDismissible: true,
+  },
+  {
+    id: 'alert-7',
+    slug: 'qorra-cimaa-baalee-2025',
+    titleKey: 'alert_expired1_title',
+    summaryKey: 'alert_expired1_desc',
+    fullDescriptionKey: 'alert_expired1_full',
+    severity: 'critical',
+    category: 'weather',
+    date: 'December 15, 2025',
+    expirationDate: 'January 10, 2026',
+    updatedDate: 'December 16, 2025 - 12:00 EAT',
+    affectedArea: 'Baalee Highlands',
+    affectedZones: ['Baalee'],
+    affectedWoredas: ['Dinsho', 'Goba'],
+    actionRequiredKey: 'alert_expired1_action',
+    recommendedActions: [
+      "Midhaan sassaabamuuf ga'e hatattamaan sassaabaa."
+    ],
+    responsibleOffice: 'Waajjira Qonnaa Godina Baalee',
+    status: 'expired',
+    isDismissible: true,
+  },
+  {
+    id: 'alert-8',
+    slug: 'hawwaa-gammoojjii-harargee-2025',
+    titleKey: 'alert_expired2_title',
+    summaryKey: 'alert_expired2_desc',
+    fullDescriptionKey: 'alert_expired2_full',
+    severity: 'warning',
+    category: 'pest',
+    date: 'November 05, 2025',
+    expirationDate: 'December 01, 2025',
+    updatedDate: 'November 06, 2025 - 15:30 EAT',
+    affectedArea: 'Harargee Dhihaa',
+    affectedZones: ['Harargee Dhihaa'],
+    affectedWoredas: ['Chiro', 'Mieso'],
+    actionRequiredKey: 'alert_expired2_action',
+    recommendedActions: [
+      "Duula to'annoo awaannisaa irratti hirmaadhaa."
+    ],
+    responsibleOffice: 'Waajjira Qonnaa Harargee Dhihaa',
+    status: 'expired',
+    isDismissible: true,
+  },
+];
+
+export const mockServices: Service[] = [
+  {
+    id: 'srv-ext',
+    iconName: 'Sprout',
+    titleKey: 'service_extension_title',
+    descriptionKey: 'service_extension_desc',
+    category: 'extension',
+    linkUrl: '/services#extension',
+    isPopular: true,
+  },
+  {
+    id: 'srv-market',
+    iconName: 'TrendingUp',
+    titleKey: 'service_market_title',
+    descriptionKey: 'service_market_desc',
+    category: 'market',
+    linkUrl: '/services#market',
+    isPopular: true,
+  },
+  {
+    id: 'srv-crop',
+    iconName: 'Wheat',
+    titleKey: 'service_crop_title',
+    descriptionKey: 'service_crop_desc',
+    category: 'crop',
+    linkUrl: '/services#crop',
+  },
+  {
+    id: 'srv-livestock',
+    iconName: 'Beef',
+    titleKey: 'service_livestock_title',
+    descriptionKey: 'service_livestock_desc',
+    category: 'livestock',
+    linkUrl: '/services#livestock',
+  },
+  {
+    id: 'srv-irrigation',
+    iconName: 'Droplets',
+    titleKey: 'service_irrigation_title',
+    descriptionKey: 'service_irrigation_desc',
+    category: 'irrigation',
+    linkUrl: '/services#irrigation',
+  },
+  {
+    id: 'srv-inputs',
+    iconName: 'PackageCheck',
+    titleKey: 'service_inputs_title',
+    descriptionKey: 'service_inputs_desc',
+    category: 'inputs',
+    linkUrl: '/services#inputs',
+  },
+];
+
+export const mockPrograms: Program[] = [
+  {
+    id: 'prog-cluster',
+    titleKey: 'prog_crop_title',
+    descriptionKey: 'prog_crop_desc',
+    categoryKey: 'Crop Production',
+    targetArea: 'Arsii, Baalee, Shawaa, Wallagga',
+    beneficiaries: '1.4M+ Farmers',
+    imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1000&q=80',
+    status: 'active',
+    badgeKey: 'Cluster Farming',
+    directorate: 'Crop Development & Agronomy Directorate',
+    keyObjectives: [
+      'Consolidate adjacent smallholder plots into commercial farming clusters (100–500 hectares per cluster).',
+      'Provide mechanized combine harvesting and precision tractor tillage services.',
+      'Deploy certified high-yielding rust-resistant wheat, hybrid maize, and malt barley seed varieties.',
+      'Double average grain yields from 28 quintals/ha to over 54 quintals/ha.'
+    ],
+    interventions: [
+      'Synchronized planting and crop care calendar',
+      'Direct distribution of blended NPSB & Urea fertilizer',
+      'Drone-guided aerial pest monitoring & selective spraying',
+      'Guaranteed purchase agreements through Primary Cooperative Unions'
+    ],
+    milestones: [
+      { year: '2024', target: '1.2M Hectares under Cluster', progress: 100 },
+      { year: '2025', target: '2.5M Hectares under Cluster', progress: 100 },
+      { year: '2026/27', target: '3.8M Hectares Target', progress: 78 }
+    ],
+    partners: ['IQQO Research', 'MoA Ethiopia', 'ATI', 'Cooperative Bank of Oromia'],
+    commodities: ['Wheat', 'Maize', 'Malt Barley', 'Teff', 'Soybean'],
+    zones: ['Arsi', 'West Arsi', 'Bale', 'East Bale', 'East Shewa', 'West Shewa', 'South West Shewa'],
+    impactMetric: { value: '+92%', label: 'Average Yield Increase in Clusters' },
+    enrollmentSteps: [
+      'Form or join a local cluster group with adjacent farmland neighbors (min 30 hectares total).',
+      'Register cluster boundaries with the local Kebele Agricultural Development Agent (DA).',
+      'Receive approved seed, fertilizer allocation, and scheduled tractor tillage vouchers.'
+    ]
+  },
+  {
+    id: 'prog-yelemat',
+    titleKey: 'prog_livestock_title',
+    descriptionKey: 'prog_livestock_desc',
+    categoryKey: 'Livestock Development',
+    targetArea: 'All 22 Oromia Administrative Zones',
+    beneficiaries: '850K+ Households',
+    imageUrl: 'https://images.unsplash.com/photo-1546445317-29f4545f9d52?auto=format&fit=crop&w=1000&q=80',
+    status: 'active',
+    badgeKey: 'Yelemat Tirufat',
+    directorate: 'Livestock & Veterinary Health Directorate',
+    keyObjectives: [
+      'Accelerate artificial insemination (AI) and cross-breeding with high-yielding dairy heifers (Boran x Holstein).',
+      'Expand decentralized milk collection hubs and cold storage in dairy shed corridors.',
+      'Promote urban & peri-urban poultry, honey bee apiculture, and small ruminant fattening packages.',
+      'Eradicate priority livestock diseases through free mass vaccination campaigns.'
+    ],
+    interventions: [
+      'Mobile artificial insemination technician kits across 330 woredas',
+      'Distribution of modern transitional beehives and extractor equipment',
+      'Hydroponic fodder & silage preparation training for dry seasons',
+      'Veterinary clinic modernization and cold-chain vaccine deployment'
+    ],
+    milestones: [
+      { year: '2024', target: '1.2M Dairy Inseminations', progress: 100 },
+      { year: '2025', target: '3.5B Liters Regional Milk Output', progress: 100 },
+      { year: '2026/27', target: '5.2B Liters Milk & 400K Apiculture Kits', progress: 72 }
+    ],
+    partners: ['ILRI', 'MoA Ethiopia', 'FAO Ethiopia', 'Oromia Pastoralist Commission'],
+    commodities: ['Dairy Cattle', 'Poultry (Layers & Broilers)', 'Pure Honey & Wax', 'Fattened Sheep & Goats'],
+    zones: ['East Shewa', 'Special Zone Surrounding Finfinne', 'Borena', 'Guji', 'Jimma', 'West Guji'],
+    impactMetric: { value: '4.8M', label: 'Livestock Vaccinated in 2026' },
+    enrollmentSteps: [
+      'Apply at Woreda Livestock Desk or local FTC for dairy, poultry, or bee starter packages.',
+      'Participate in a 3-day practical husbandry & feed management FTC workshop.',
+      'Receive certified livestock starter animals and linkage to milk/honey collection unions.'
+    ]
+  },
+  {
+    id: 'prog-irrigation',
+    titleKey: 'prog_irrigation_title',
+    descriptionKey: 'prog_irrigation_desc',
+    categoryKey: 'Irrigation Development',
+    targetArea: 'Lowlands, Rift Valley & River Basins',
+    beneficiaries: '600K+ Hectares Irrigated',
+    imageUrl: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&w=1000&q=80',
+    status: 'ongoing',
+    badgeKey: 'Bona Irrigation',
+    directorate: 'Irrigation Schemes & Drainage Engineering Directorate',
+    keyObjectives: [
+      'Transition Oromia agriculture from rain-dependent to resilient triple-harvest year-round production.',
+      'Harness Awash, Gibe-Omo, Genale-Dawa, and Rift Valley water resources with solar pumping & river diversions.',
+      'Scale lowland summer/winter (Bona) irrigated wheat to supply domestic and regional bakeries.',
+      'Construct small-scale community check dams, night storage reservoirs, and drip irrigation kits.'
+    ],
+    interventions: [
+      'Subsidized distribution of solar water pumping units (zero fuel cost)',
+      'Rehabilitation of primary and secondary canals across micro-irrigation schemes',
+      'Water User Associations (WUAs) legal registration and dispute management',
+      'Soil moisture sensor pilots and precision water scheduling'
+    ],
+    milestones: [
+      { year: '2024', target: '450K Hectares Lowland Wheat', progress: 100 },
+      { year: '2025', target: '780K Hectares Irrigated Land', progress: 100 },
+      { year: '2026/27', target: '1.2M Hectares Basin Coverage', progress: 65 }
+    ],
+    partners: ['World Bank AGP', 'Ministry of Water & Energy', 'Oromia Irrigation Dev. Authority', 'FAO'],
+    commodities: ['Lowland Irrigated Wheat', 'Tomatoes & Onions', 'Horticulture & Fruits', 'Sugar Cane'],
+    zones: ['East Shewa', 'Arsi', 'Bale', 'Hararghe', 'Borena', 'West Arsi'],
+    impactMetric: { value: '3x', label: 'Annual Harvest Cycles Achieved' },
+    enrollmentSteps: [
+      'Register as a member of a local Kebele Water Users Association (WUA).',
+      'Request irrigation pump credit subsidy or gravity canal tie-in at the Woreda Water & Agri office.',
+      'Adopt scheduled rotational water rationing and cluster planting.'
+    ]
+  },
+  {
+    id: 'prog-nrm',
+    titleKey: 'prog_nrm_title',
+    descriptionKey: 'prog_nrm_desc',
+    categoryKey: 'Natural Resource Mgt',
+    targetArea: 'Highlands, Slopes & Critical Watersheds',
+    beneficiaries: 'Community Wide (All Zones)',
+    imageUrl: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=1000&q=80',
+    status: 'active',
+    badgeKey: 'Green Legacy',
+    directorate: 'Natural Resources & Watershed Conservation Directorate',
+    keyObjectives: [
+      'Rehabilitate degraded hillsides, steep slopes, and riverbanks through mass community watershed campaigns.',
+      'Plant multi-purpose agroforestry seedlings (avocado, moringa, bamboo, indigenous acacia).',
+      'Construct deep stone-faced soil bunds, terracing, and percolation micro-trenches.',
+      'Sequester regional carbon and secure freshwater aquifers for downstream farming communities.'
+    ],
+    interventions: [
+      'Community mobilized 40-day annual soil and water conservation campaigns (January–March)',
+      'Over 2,500 government and private seedling nurseries producing native & fruit trees',
+      'Biological stabilization using vetiver grass and desho fodder along terrace contours',
+      'Free distribution of grafted Hass avocado and fruit tree seedlings to farmers'
+    ],
+    milestones: [
+      { year: '2024', target: '2.5B Seedlings Planted in Oromia', progress: 100 },
+      { year: '2025', target: '3.8B Seedlings & 85% Survival Rate', progress: 100 },
+      { year: '2026/27', target: '5.0B Cumulative Target', progress: 84 }
+    ],
+    partners: ['Green Legacy Initiative', 'MoA Ethiopia', 'CIFOR-ICRAF', 'UNDP Climate Resilience'],
+    commodities: ['Grafted Avocado', 'Bamboo', 'Vetiver & Desho Grass', 'Indigenous Timber & Coffee Shade'],
+    zones: ['All 22 Oromia Zones (Highland & Mid-altitude Focus)'],
+    impactMetric: { value: '88.4%', label: 'Seedling Survival Rate in Protected Watersheds' },
+    enrollmentSteps: [
+      'Participate in annual community watershed conservation days organized by Kebele leaders.',
+      'Obtain free certified avocado or multi-purpose tree seedlings from local Woreda nurseries.',
+      'Enclose steep slope areas to restore natural vegetation and topsoil.'
+    ]
+  },
+  {
+    id: 'prog-coffee',
+    titleKey: 'prog_coffee_title',
+    descriptionKey: 'prog_coffee_desc',
+    categoryKey: 'High-Value Commercial Crops',
+    targetArea: 'Jimma, Illu Abbaa Boor, Guji, Hararghe, Bunno Bedele',
+    beneficiaries: '2.1M+ Coffee Farming Families',
+    imageUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1000&q=80',
+    status: 'active',
+    badgeKey: 'Specialty Coffee Export',
+    directorate: 'Commercial Crops & Agro-Processing Directorate',
+    keyObjectives: [
+      'Preserve and map heirloom Arabica coffee genetic diversity across Oromia origins (Jimma, Limmu, Guji, Harar).',
+      'Distribute disease-resistant (CBD/CLR-free) aged coffee rejuvenation seedlings to replace old trees.',
+      'Modernize wet-washing stations and eco-pulpers to conserve water and eliminate fermentation defects.',
+      'Direct linkage of certified cooperative unions with global specialty coffee roasters and buyers.'
+    ],
+    interventions: [
+      'Coffee stump rejuvenation campaign (pruning old trees to triple cherry yield)',
+      'Solar drying raised bed modernization and moisture meters for farmers',
+      'Traceability and digital geo-tagging for single-origin export lots',
+      'Direct farmer payment accounts via Cooperative Bank of Oromia'
+    ],
+    milestones: [
+      { year: '2024', target: '320K Metric Tons Coffee Output', progress: 100 },
+      { year: '2025', target: '450K Metric Tons with $1.4B Export Value', progress: 100 },
+      { year: '2026/27', target: '600K Metric Tons Export Target', progress: 70 }
+    ],
+    partners: ['Ethiopian Coffee & Tea Authority', 'IQQO Jimma Center', 'Oromia Coffee Farmers Coop Union'],
+    commodities: ['Specialty Arabica Coffee', 'Spices (Ginger, Turmeric, Cardamom)', 'Tea'],
+    zones: ['Jimma', 'Illubabor', 'Bunno Bedele', 'Guji', 'West Guji', 'East Hararghe', 'West Hararghe'],
+    impactMetric: { value: '$1.6B+', label: 'Annual Regional Coffee Export Value' },
+    enrollmentSteps: [
+      'Register your coffee garden with the local primary coffee cooperative union.',
+      'Participate in the seasonal stumping and organic agronomy training at the FTC.',
+      'Deliver ripe red cherries to certified eco-washing stations for premium payment.'
+    ]
+  },
+  {
+    id: 'prog-mechanization',
+    titleKey: 'prog_mechanization_title',
+    descriptionKey: 'prog_mechanization_desc',
+    categoryKey: 'Agricultural Technology & Inputs',
+    targetArea: 'Regional Mechanization Centers & All 330 Woredas',
+    beneficiaries: '3.5M+ Farm Enterprises',
+    imageUrl: 'https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&w=1000&q=80',
+    status: 'ongoing',
+    badgeKey: 'Smart Mechanization',
+    directorate: 'Agricultural Mechanization & Extension Directorate',
+    keyObjectives: [
+      'Expand custom hiring mechanization service centers with subsidized lease-to-own tractors and combine harvesters.',
+      'Provide duty-free agricultural machinery financing and spare-parts hubs in major agricultural corridors.',
+      'Introduce two-wheel walking tractors and multi-crop threshers designed for smallholder topography.',
+      'Digitize fertilizer and seed voucher redemption via National ID and mobile wallets.'
+    ],
+    interventions: [
+      'Zero-tariff import policy enforcement on all farm equipment & spare parts',
+      'Training youth mechanization service enterprise operators in machinery maintenance',
+      'Digital soil health mapping with targeted micro-nutrient fertilizer formulas',
+      'Post-harvest hermetic storage bags and grain silo distribution to eliminate storage loss'
+    ],
+    milestones: [
+      { year: '2024', target: '3,200 New Tractors & Combines Deployed', progress: 100 },
+      { year: '2025', target: '5,500 Machinery Units in Operation', progress: 100 },
+      { year: '2026/27', target: '8,000 Machinery Target & 500 Youth Centers', progress: 68 }
+    ],
+    partners: ['Commercial Bank of Ethiopia', 'Cooperative Bank of Oromia', 'MoA Ethiopia', 'ATI'],
+    commodities: ['Farm Tractors', 'Combine Harvesters', 'Threshers', 'Hermetic Storage Bags', 'Smart Drones'],
+    zones: ['Arsi', 'Bale', 'East Shewa', 'West Shewa', 'Jimma', 'Horo Guduru Wallagga'],
+    impactMetric: { value: '-65%', label: 'Reduction in Smallholder Post-Harvest Loss' },
+    enrollmentSteps: [
+      'Organize a registered youth or farmer mechanization cooperative (minimum 5 members).',
+      'Apply for lease-to-own tractor/combine financing through CoopBank with Bureau endorsement.',
+      'Offer scheduled tilling, planting, and harvesting services to local cluster farmers.'
+    ]
+  }
+];
+
+export const mockMarketPrices: MarketPrice[] = [
+  {
+    id: 'mkt-1',
+    commodityKey: 'comm_teff',
+    commodity: {
+      om: 'Tafi Agamsa (Teff Red/White)',
+      am: 'ጤፍ (ቀይ/ነጭ)',
+      en: 'Teff (Red/White Grade A)',
+    },
+    market: {
+      om: 'Gabaa Adaamaa',
+      am: 'አዳማ ገበያ',
+      en: 'Adama Market',
+    },
+    zone: {
+      om: 'Shawaa Bahaa',
+      am: 'ምስራቅ ሸዋ',
+      en: 'East Shewa',
+    },
+    unit: {
+      om: 'Kuntala 1 (Kg 100)',
+      am: '1 ኲንታል (100 ኪ.ግ)',
+      en: '1 Quintal (100kg)',
+    },
+    priceETB: 11400,
+    changePercent: +2.1,
+    updatedDate: '02 Aug 2026',
+    trend: 'up',
+  },
+  {
+    id: 'mkt-2',
+    commodityKey: 'comm_wheat',
+    commodity: {
+      om: 'Qamadii Adii',
+      am: 'ነጭ ስንዴ',
+      en: 'White Wheat',
+    },
+    market: {
+      om: 'Gabaa Asellaa',
+      am: 'አሰላ ገበያ',
+      en: 'Asella Market',
+    },
+    zone: {
+      om: 'Arsii',
+      am: 'አርሲ',
+      en: 'Arsi',
+    },
+    unit: {
+      om: 'Kuntala 1 (Kg 100)',
+      am: '1 ኲንታል (100 ኪ.ግ)',
+      en: '1 Quintal (100kg)',
+    },
+    priceETB: 6850,
+    changePercent: -0.5,
+    updatedDate: '02 Aug 2026',
+    trend: 'stable',
+  },
+  {
+    id: 'mkt-3',
+    commodityKey: 'comm_maize',
+    commodity: {
+      om: 'Boqqoolloo',
+      am: 'በቆሎ',
+      en: 'Yellow Maize',
+    },
+    market: {
+      om: 'Gabaa Amboo',
+      am: 'አምቦ ገበያ',
+      en: 'Ambo Market',
+    },
+    zone: {
+      om: 'Shawaa Dhihaa',
+      am: 'ምዕራብ ሸዋ',
+      en: 'West Shewa',
+    },
+    unit: {
+      om: 'Kuntala 1 (Kg 100)',
+      am: '1 ኲንታል (100 ኪ.ግ)',
+      en: '1 Quintal (100kg)',
+    },
+    priceETB: 4720,
+    changePercent: -1.8,
+    updatedDate: '02 Aug 2026',
+    trend: 'down',
+  },
+  {
+    id: 'mkt-4',
+    commodityKey: 'comm_coffee',
+    commodity: {
+      om: 'Buna Jimmaa/Harar',
+      am: 'ቡና (ጅማ/ሐረር)',
+      en: 'Raw Coffee (Jimma/Harar)',
+    },
+    market: {
+      om: 'Gabaa Jimmaa',
+      am: 'ጅማ ገበያ',
+      en: 'Jimma Market',
+    },
+    zone: {
+      om: 'Jimmaa',
+      am: 'ጅማ',
+      en: 'Jimma Zone',
+    },
+    unit: {
+      om: 'Kuntala 1 (Kg 100)',
+      am: '1 ኲንታል (100 ኪ.ግ)',
+      en: '1 Quintal (100kg)',
+    },
+    priceETB: 18200,
+    changePercent: +4.3,
+    updatedDate: '01 Aug 2026',
+    trend: 'up',
+  },
+  {
+    id: 'mkt-5',
+    commodityKey: 'comm_cattle',
+    commodity: {
+      om: 'Sangaa Horsiisaa',
+      am: 'የሰበተ በሬ',
+      en: 'Fattened Bull',
+    },
+    market: {
+      om: 'Gabaa Robee',
+      am: 'ሮቤ ገበያ',
+      en: 'Robe Market',
+    },
+    zone: {
+      om: 'Baalee',
+      am: 'ባሌ',
+      en: 'Bale Zone',
+    },
+    unit: {
+      om: 'Mataatti Qee 1',
+      am: 'በአንድ በሬ',
+      en: '1 Live Cattle',
+    },
+    priceETB: 58000,
+    changePercent: +1.2,
+    updatedDate: '01 Aug 2026',
+    trend: 'up',
+  },
+];
+
+export const mockWeather: WeatherInfo = {
+  location: 'weather_finfinne',
+  temperatureC: 23,
+  conditionKey: 'weather_condition',
+  humidity: 68,
+  windKmH: 12,
+  rainfallMm: 4.2,
+  forecast: [
+    { dayKey: 'Kibxata (Tue)', tempHigh: 24, tempLow: 14, conditionKey: 'Rooba Cimaa', iconName: 'CloudRain' },
+    { dayKey: 'Roobii (Wed)', tempHigh: 22, tempLow: 13, conditionKey: 'Dumbulluqii', iconName: 'CloudSun' },
+    { dayKey: 'Kamisa (Thu)', tempHigh: 25, tempLow: 15, conditionKey: 'Aduu Idilee', iconName: 'Sun' },
+  ],
+  plantingAdviceKey: 'weather_planting_text',
+  rainfallAdvisoryKey: 'weather_rainfall_text',
+};
+
+export const mockNews: NewsArticle[] = [
+  {
+    id: 'news-coffee-growth',
+    slug: 'oromia-coffee-production-shows-strong-growth',
+    category: 'news',
+    publishedAt: 'May 14, 2024',
+    updatedAt: 'May 14, 2024',
+    featured: true,
+    status: 'published',
+    readingTime: '4 min read',
+    tags: ['Coffee', 'Export', 'Jimma', 'Guji', 'Productivity'],
+    relatedArticleIds: ['news-irrigation-forum', 'news-digital-tools', 'news-1'],
+    author: {
+      om: 'Biiroo Qonnaa Oromiyaa - Daayrektoreetii Bunaa',
+      am: 'የኦሮሚያ ግብርና ቢሮ - የቡና ልማት ዳይሬክቶሬት',
+      en: 'Oromia Bureau of Agriculture - Coffee Directorate',
+    },
+    responsibleOffice: {
+      om: 'Kutaa Misooma Bunaa fi Qunnamtii Gabaa',
+      am: 'የቡና ልማትና ገበያ ትስስር ክፍል',
+      en: 'Coffee Development & Market Linkage Directorate',
+    },
+    featuredImage: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: {
+      om: 'Ija bunaa diimaa damee irratti',
+      am: 'በዛፍ ላይ የበሰሉ የቡና ፍሬዎች',
+      en: 'Ripe red coffee cherries growing on branches in Oromia',
+    },
+    title: {
+      om: 'Oomishni Buna Oromiyaa Guddina Ol\'aanaa Agarsiise',
+      am: 'የኦሮሚያ የቡና ምርት ከፍተኛ እድገት አሳይቷል',
+      en: 'Oromia Coffee Production Shows Strong Growth',
+    },
+    excerpt: {
+      om: 'Ragaan haaraan oomishtummaan bunaa kutaalee oomishaa gurguddoo Oromiyaa keessatti dabaluu isaa agarsiisa.',
+      am: 'አዳዲስ መረጃዎች እንደሚያሳዩት በኦሮሚያ ዋና ዋና የቡና አብቃይ ዞኖች የምርታማነት ጭማሪ ታይቷል።',
+      en: 'New data shows increased coffee productivity across major producing zones in Oromia.',
+    },
+    translations: {
+      om: true,
+      am: true,
+      en: true,
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Biiroon Qonnaa Oromiyaa gabaasa haaraa oomisha bunaa bara kanaa ilaalchisee baaseen, oomishtummaan buna dhalootaa fi filatamaa kutaalee Jimmaa, Gujii, Buno Baddallee fi Harargee keessatti dhibbeentaa 28n dabaluu beeksiseera.',
+          am: 'የኦሮሚያ ግብርና ቢሮ ይፋ ባደረገው የቅርብ ጊዜ መረጃ መሠረት በጅማ፣ ጉጂ፣ ቡኖ በደሌ እና ሐረርጌ ዞኖች የቡና ምርታማነት በ28 በመቶ እድገት አሳይቷል።',
+          en: 'According to latest official data released by the Oromia Agricultural Bureau, coffee productivity across major coffee growing belts including Jimma, Guji, Bunno Bedele, and Hararghe has surged by 28% year-on-year.',
+        },
+      },
+      {
+        type: 'heading',
+        level: 2,
+        content: {
+          om: 'Mootummaa fi Qonnaan Bultoota Qindoominaan Hojjetan',
+          am: 'የአርሶ አደሮችና የባለሙያዎች ቅንጅታዊ ጥረት',
+          en: 'Agronomic Modernization & Rejuvenation',
+        },
+      },
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Guddinni kun kan dhufe hojii haaromsa mukeen bunaa moofaa, sanyii dhibee dandamatu raabsuu fi meeshaalee qulqullina bunaa fooyyessan qonnaan bultootaaf dhiheessuudhaani.',
+          am: 'ይህ እድገት የተመዘገበው የቆዩ የቡና ዛፎችን በማደስ፣ በሽታን የሚቋቋሙ ዝርያዎችን በማሰራጨት እና የጥራት መቆጣጠሪያ መሳሪያዎችን ለአርሶ አደሮች በማቅረብ ነው።',
+          en: 'The unprecedented harvest output is driven by widespread coffee tree stumping, free distribution of high-yielding disease-resistant seedlings, and modern eco-pulper processing washing stations.',
+        },
+      },
+    ],
+    titleKey: 'news_coffee_title',
+    summaryKey: 'news_coffee_desc',
+    imageUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1200&q=80',
+    date: 'May 14, 2024',
+    readTime: '4 min read',
+  },
+  {
+    id: 'news-irrigation-forum',
+    slug: 'irrigation-innovation-forum',
+    category: 'event',
+    publishedAt: 'May 20, 2024',
+    updatedAt: 'May 20, 2024',
+    featured: false,
+    status: 'published',
+    readingTime: '5 min read',
+    tags: ['Irrigation', 'Water Management', 'Innovation', 'Forum', 'Event'],
+    relatedArticleIds: ['news-coffee-growth', 'news-digital-tools', 'news-1'],
+    author: {
+      om: 'Qindeessitoota Walgahii Jallisii Oromiyaa',
+      am: 'የኦሮሚያ መስኖ ፎረም አስተባባሪ ኮሚቴ',
+      en: 'Oromia Irrigation Forum Secretariat',
+    },
+    responsibleOffice: {
+      om: 'Biiroo Misooma Jallisii fi Qabeenya Bishaan Oromiyaa',
+      am: 'የኦሮሚያ መስኖና ውኃ ሀብት ቢሮ',
+      en: 'Oromia Irrigation & Water Resources Bureau',
+    },
+    featuredImage: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: {
+      om: 'Sirna jallisii dhangala\'aa dirree qonnaa keessatti',
+      am: 'የዘመናዊ የመስኖ ውኃ መርጫ ማሳ ላይ',
+      en: 'High-efficiency center pivot and sprinkler irrigation operating in green field',
+    },
+    title: {
+      om: 'Walgahii Innooveeshinii Jallisii Oromiyaa',
+      am: 'የመስኖ ፈጠራና ቴክኖሎጂ ጉባዔ',
+      en: 'Irrigation Innovation Forum',
+    },
+    excerpt: {
+      om: 'Ogeessonni fi qonnaan bultoonni tooftaalee gaggaarii bishaan qusachuu irratti muuxannoo wal jijjiiru.',
+      am: 'ባለሙያዎችና አርሶ አደሮች ዘላቂ የውኃ አጠቃቀም ላይ ምርጥ ተሞክሮዎችን ይለዋወጣሉ።',
+      en: 'Experts and farmers to share best practices for sustainable water management.',
+    },
+    translations: {
+      om: true,
+      am: true,
+      en: true,
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Walgahiin Innooveeshinii Jallisii Oromiyaa ogeessota saayinsii bishaanii, qonnaan bultoota fi oomishtoota paampii soolaaraa walitti fiduudhaan marii bal\'aa geggeessa.',
+          am: 'የመስኖ ፈጠራ ጉባዔው የውኃ ሳይንስ ባለሙያዎችን፣ አርሶ አደሮችን እና የፀሐይ ኃይል ቴክኖሎጂ አቅራቢዎችን በአንድ ላይ በማሰባሰብ የልምድ ልውውጥ ያካሂዳል።',
+          en: 'The Oromia Irrigation Innovation Forum convenes hydrologists, extension specialists, agronomists, and commercial farmers to accelerate climate-resilient water harvesting and precision drip irrigation across the region.',
+        },
+      },
+    ],
+    titleKey: 'news_irrigation_title',
+    summaryKey: 'news_irrigation_desc',
+    imageUrl: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=1200&q=80',
+    date: 'May 20, 2024',
+    readTime: '5 min read',
+  },
+  {
+    id: 'news-digital-tools',
+    slug: 'digital-tools-empower-oromia-farmers',
+    category: 'news',
+    publishedAt: 'May 10, 2024',
+    updatedAt: 'May 10, 2024',
+    featured: false,
+    status: 'published',
+    readingTime: '4 min read',
+    tags: ['Digital Agri', 'Mobile App', 'Technology', 'Market Access'],
+    relatedArticleIds: ['news-coffee-growth', 'news-irrigation-forum', 'news-3'],
+    author: {
+      om: 'Kutaa Teeknooloojii Odeeffannoo Qonnaa',
+      am: 'የግብርና ኢንፎርሜሽን ቴክኖሎጂ ክፍል',
+      en: 'Bureau Agricultural IT & Digital Directorate',
+    },
+    responsibleOffice: {
+      om: 'Biiroo Qonnaa Oromiyaa - ICT Directorate',
+      am: 'የኦሮሚያ ግብርና ቢሮ - የመረጃ ቴክኖሎጂ ዳይሬክቶሬት',
+      en: 'Oromia Agricultural Bureau - ICT Directorate',
+    },
+    featuredImage: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: {
+      om: 'Qonnaan bulaan koflaa taableetii dijitaalaa fayyadamu',
+      am: 'አርሶ አደር ዲጂታል ታብሌት ሲጠቀም',
+      en: 'Smiling farmer using digital tablet device in agricultural crop field',
+    },
+    title: {
+      om: 'Meeshaaleen Dijitaalaa Qonnaan Bultoota Oromiyaa Humneessaa Jiru',
+      am: 'ዲጂታል ቴክኖሎጂዎች የኦሮሚያ አርሶ አደሮችን እያበረከቱ ነው',
+      en: 'Digital Tools Empower Oromia Farmers',
+    },
+    excerpt: {
+      om: 'Teeknooloojiiwwan qonnaa haaraan oomishtummaa fi carraa gabaa fooyyessaa jiru.',
+      am: 'አዳዲስ የግብርና ቴክኖሎጂዎች ምርታማነትንና የገበያ ተደራሽነትን እያሻሻሉ ነው።',
+      en: 'New agricultural technologies are improving productivity and market access.',
+    },
+    translations: {
+      om: true,
+      am: true,
+      en: true,
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Appilikeeshiniiwwan mobaayilaa fi sirnoonni ergaa gabaabaa (SMS) qonnaan bultoonni odeeffannoo qilleensaa, gatii gabaa guyyaa guyyaa fi qoricha arsiisaa hatattamaan akka argatan taasiseera.',
+          am: 'የሞባይል አፕሊኬሽኖችና የአጭር የጽሑፍ መልዕክቶች (SMS) አርሶ አደሮች የአየር ሁኔታ ትንበያን፣ የገበያ ዋጋንና የበሽታ መከላከያ መረጃዎችን በቀላሉ እንዲያገኙ እያስቻሉ ነው።',
+          en: 'Mobile-based advisory tools and SMS early warning portals are delivering real-time weather forecasts, daily market commodity rates, and pest diagnostic guidance to millions of smallholders throughout Oromia.',
+        },
+      },
+    ],
+    titleKey: 'news_digital_title',
+    summaryKey: 'news_digital_desc',
+    imageUrl: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=1200&q=80',
+    date: 'May 10, 2024',
+    readTime: '4 min read',
+  },
+  {
+    id: 'news-1',
+    slug: 'irrigation-program-launched-in-arsi',
+    category: 'news',
+    publishedAt: 'August 02, 2026',
+    updatedAt: 'August 03, 2026',
+    featured: true,
+    status: 'published',
+    readingTime: '4 min read',
+    tags: ['Irrigation', 'Arsi', 'Water Management', 'Cluster Farming'],
+    relatedArticleIds: ['news-2', 'news-3', 'news-4'],
+    author: {
+      om: 'Waajjira Press Biiroo Qonnaa Oromiyaa',
+      am: 'የኦሮሚያ ግብርና ቢሮ ፕሬስ ጽህፈት ቤት',
+      en: 'Oromia Agricultural Bureau Press Office',
+    },
+    responsibleOffice: {
+      om: 'Biiroo Misooma Jallisii fi Qabeenya Bishaan Oromiyaa',
+      am: 'የኦሮሚያ መስኖና ውኃ ሀብት ልማት ቢሮ',
+      en: 'Oromia Irrigation & Water Resource Bureau',
+    },
+    featuredImage: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: {
+      om: 'Pirojektii jallisii haaraa godina Arsii keessatti',
+      am: 'በአርሲ ዞን አዲሱ የመስኖ ፕሮጀክት',
+      en: 'New irrigation canal infrastructure in Arsi zone',
+    },
+    title: {
+      om: 'Sagantaa Misooma Jallisii Haaraa Godina Arsii fi Arsii Dhihaatti Eegalame',
+      am: 'በአርሲ እና ምዕራብ አርሲ አዲስ የመስኖ ልማት ፕሮጀክት ተመረቀ',
+      en: 'New Modern Irrigation Program Launched in Arsi & West Arsi Zones',
+    },
+    excerpt: {
+      om: 'Biiroon Qonnaa Oromiyaa pirojektii jallisii haaraa hektaara 12,000 uffisu Godina Arsii keessatti bakka bu\'oota qonnaan bultootaa wajjin eegaleera.',
+      am: 'የኦሮሚያ ግብርና ቢሮ 12 ሺህ ሄክታር መሬት የሚያለማ አዲስ የመስኖ ፕሮጀክት በአርሲ ዞን ከአርሶ አደሮች ጋር በመሆን አስጀመረ።',
+      en: 'Oromia Agricultural Bureau has officially launched a 12,000-hectare modern irrigation expansion initiative across Arsi and West Arsi zones.',
+    },
+    translations: {
+      om: true,
+      am: true,
+      en: true,
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Biiroon Qonnaa Oromiyaa sagantaa misooma jallisii haaraa teeknoloojii ammayyaatin deeggarame Godina Arsii fi Arsii Dhihaatti rasmiidhaan eegaleera. Pirojektiin kun hektaara 12,000 caalu irratti kan hojjetamu yoo ta\'u, maatii qonnaan bultoota 28,000 oliif fayyadamummaa bishaanii guutuu ni mirkaneessa.',
+          am: 'የኦሮሚያ ግብርና ቢሮ በዘመናዊ ቴክኖሎጂ የተደገፈ አዲስ የመስኖ ልማት ፕሮግራም በአርሲ እና ምዕራብ አርሲ ዞኖች በይፋ አስጀምሯል። ይህ ፕሮጀክት ከ12,000 ሄክታር በላይ መሬት የሚሸፍን ሲሆን ከ28,000 በላይ የአርሶ አደር አባወራዎችን ተጠቃሚ ያደርጋል።',
+          en: 'The Oromia Agricultural Bureau has officially launched a flagship modern irrigation expansion program in Arsi and West Arsi zones. Covering over 12,000 hectares of arable farmland, the project guarantees year-round water access for more than 28,000 smallholder farming households.',
+        },
+      },
+      {
+        type: 'heading',
+        level: 2,
+        content: {
+          om: 'Kaayyoo fi Bu\'aa Pirojektii Jallisii',
+          am: 'የመስኖ ፕሮጀክቱ ዓላማና ጥቅሞች',
+          en: 'Core Objectives & Economic Impact',
+        },
+      },
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Sagantaan kun hojii misooma jallisii ganna fi bonaa wajjin walqabatee oomishtummaa qamadii, avokaadoo fi fuduraalee dachaan dabaluuf kan qophaa\'eedha. Biiroon qonnaa mooteera paampii soolaaraan hojjetan 450 fi meeshaa dhangala\'aa bishaanii qusatu (drip irrigation) qonnaan bultootaaf raabsuu jalqabeera.',
+          am: 'ፕሮግራሙ በመኸርና በበጋ መስኖ ልማት የስንዴ፣ የአቮካዶና የአትክልት ምርታማነትን በእጥፍ ለማሳደግ ታቅዶ የተዘጋጀ ነው። ቢሮው 450 በፀሐይ ኃይል የሚሰሩ የውኃ ፓምፖችንና የጠብታ መስኖ መሳሪያዎችን ለአርሶ አደሮች ማሰራጨትጀምሯል።',
+          en: 'Designed to drive double-cropping cycles through wet and dry seasons, the initiative focuses on doubling yields for wheat, avocado, and high-value horticulture. The Bureau has commenced distributing 450 solar-powered water pumps and precision drip irrigation kits.',
+        },
+      },
+      {
+        type: 'quote',
+        content: {
+          om: '"Bishaan jallisii teeknoloojiin deeggarame wabii nyaataa naannoo keenyaa mirkaneessuu qofa osoo hin taane, oomisha qamadii gabaa alaatiif dhiheessuufis murteessaadha."',
+          am: '"በቴክኖሎጂ የተደገፈ የመስኖ ልማት የምግብ ዋስትናችንን ማረጋገጥ ብቻ ሳይሆን ለውጭ ገበያ የሚቀርበውን የስንዴ ምርት ለማሳደግ ወሳኝ ነው::"',
+          en: '"Technology-backed irrigation infrastructure is vital not only for securing regional food self-sufficiency, but also for producing export-grade wheat and horticulture."',
+        },
+        source: {
+          om: 'Obbo Kabbadaa Tolaa, Hogganaa Waajjira Qonnaa Godina Arsii',
+          am: 'አቶ ከበደ ቶላ፣ የአርሲ ዞን ግብርና መምሪያ ኃላፊ',
+          en: 'Obbo Kabbada Tola, Head of Arsi Zone Agricultural Office',
+        },
+      },
+      {
+        type: 'image',
+        src: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=1000&q=80',
+        alt: {
+          om: 'Misooma boqqoolloo fi jallisii dirree Arsii keessatti',
+          am: 'በአርሲ የመስኖ አትክልትና ሰብል ልማት',
+          en: 'Irrigated maize and crop fields in Arsi zone',
+        },
+        caption: {
+          om: 'Dirree qamadii fi jallisii teeknoloojii soolaaratiin deeggarame Godina Arsii keessatti.',
+          am: 'በአርሲ ዞን በፀሐይ ኃይል በሚሰራ መስኖ የሚለማ የስንዴ ማሳ።',
+          en: 'Wheat fields cultivated under solar-powered irrigation in Arsi Zone.',
+        },
+      },
+      {
+        type: 'heading',
+        level: 3,
+        content: {
+          om: 'Tarkaanfii fi Gorsa Ogeessaa Qonnaan Bultootaaf',
+          am: 'ለአርሶ አደሮች የተሰጡ ሙያዊ መመሪያዎች',
+          en: 'Key Implementation Milestones & Advisory',
+        },
+      },
+      {
+        type: 'list',
+        ordered: false,
+        items: [
+          {
+            om: 'Waldaalee bu\'uuraa 120 keessatti tajaajila dabaree bishaanii qindeessuu.',
+            am: 'በ120 መሠረታዊ ህብረት ሥራ ማህበራት የውኃ ክፍፍል መርሃ ግብር ማዘጋጀት።',
+            en: 'Establishment of transparent water scheduling protocols across 120 primary cooperatives.',
+          },
+          {
+            om: 'Qonnaan bultoota 5,000 oliif leenjii suphaa paampii soolaaraa kennuu.',
+            am: 'ለ5,000 አርሶ አደሮች የፀሐይ ፓምፕ ጥገና ሥልጠና መስጠት።',
+            en: 'Technical training provided to 5,000 key farmers on solar pump operation and maintenance.',
+          },
+          {
+            om: 'Sanyii qamadii haaraa jalqabaa bonaa (durum wheat) raabsuu.',
+            am: 'ለበጋ መስኖ ተስማሚ የሆነ አዲስ የስንዴ ዘር ማሰራጨት።',
+            en: 'Distribution of rust-resistant durum wheat seed varieties optimized for dry-season irrigation.',
+          },
+        ],
+      },
+      {
+        type: 'highlight',
+        title: {
+          om: 'Itti Fayyadama Bishaan Jallisii',
+          am: 'የመስኖ ውኃ አጠቃቀም ማሳሰቢያ',
+          en: 'Water Conservation Directive',
+        },
+        content: {
+          om: 'Qonnaan bultoonni paampii jallisii sa\'aatii qilleensi qabana\'aa ta\'e (bariidhaan fi waaree booda) fayyadamuudhaan qisaasama bishaanii hurkaatiin dhufu akka xiqqeessan Biiroon gorsa kenneera.',
+          am: 'አርሶ አደሮች በፀሐይ ትንፋሽ ምክንያት የሚፈጠረውን የውኃ ஆቪ ለመቀነስ የመስኖ ውኃን በጠዋትና ከሰዓት በኋላ እንዲጠቀሙ ቢሮው ይመክራል።',
+          en: 'Farmers are strictly advised to operate irrigation systems during cooler early morning or late afternoon hours to minimize evaporative water loss.',
+        },
+      },
+      {
+        type: 'relatedLink',
+        title: {
+          om: 'Kutaa Tajaajila Jallisii Biiroo Qonnaa Ilaali',
+          am: 'የቢሮውን የመስኖ አገልግሎት ክፍል ይመልከቱ',
+          en: 'View Oromia Bureau Irrigation Services Directory',
+        },
+        url: '/services#irrigation',
+      },
+    ],
+    // Backward compatibility props
+    titleKey: 'news1_title',
+    summaryKey: 'news1_summary',
+    imageUrl: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&w=1200&q=80',
+    date: 'August 02, 2026',
+    readTime: '4 min read',
+  },
+
+  {
+    id: 'news-2',
+    slug: 'climate-smart-farming-training-hararghe',
+    category: 'training',
+    publishedAt: 'July 31, 2026',
+    featured: false,
+    status: 'published',
+    readingTime: '5 min read',
+    tags: ['Training', 'Hararghe', 'Climate Resilience', 'Soil Conservation'],
+    relatedArticleIds: ['news-1', 'news-3'],
+    author: {
+      om: 'Kellaa Eksteenshinii Qonnaa Harargee',
+      am: 'የሐረርጌ ግብርና ኤክስቴንሽን ጣቢያ',
+      en: 'Hararghe Agricultural Extension Center',
+    },
+    responsibleOffice: {
+      om: 'Biiroo Qonnaa Oromiyaa - Kutaa Eksteenshinii',
+      am: 'የኦሮሚያ ግብርና ቢሮ - ኤክስቴንሽን ክፍል',
+      en: 'Oromia Bureau of Agriculture - Extension Division',
+    },
+    featuredImage: 'https://images.unsplash.com/photo-1592417817098-8f3d6eb23659?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: {
+      om: 'Leenjii qonnaan bultootaa Godina Harargee Bahaatti',
+      am: 'በምስራቅ ሐረርጌ የአርሶ አደሮች ሥልጠና',
+      en: 'Agricultural extension officer training farmers in East Hararghe',
+    },
+    title: {
+      om: 'Leenjii Qonnaa Haala Qilleensaa Dandamatu Godina Harargee Bahaatti Kenname',
+      am: 'በምስራቅ ሐረርጌ የተሰጠ የአየር ንብረት ተስማሚ ግብርና ሥልጠና',
+      en: 'Climate-Smart Agriculture Training Delivered to Hararghe Farmers',
+    },
+    excerpt: {
+      om: 'Qonnaan bultoota 1,500 caalaaf leenjiin teeknoloojii fi mala qonnaa haala qilleensaa dandamatu godina Harargee Bahaatti kennameera.',
+      am: 'በምስራቅ ሐረርጌ ዞን ከ1,500 በላይ አርሶ አደሮች በአየር ንብረት ለውጥ ተስማሚ የግብርና ቴክኖሎጂዎች ላይ ሥልጠና ወስደዋል።',
+      en: 'Over 1,500 smallholder farmers in East Hararghe completed intensive practical training on drought-tolerant cropping and moisture conservation.',
+    },
+    translations: {
+      om: true,
+      am: true,
+      en: true,
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Garta leenjisaa Biiroo Qonnaa Oromiyaa fi Eksteenshinii Godina Harargee Bahaa qindaa\'uudhaan leenjii qabatamaa qonnaa haala qilleensaa dandamatu gandaalee 42 keessatti xumureera. Leenjiin kun haala roobaa jijjiiramaa jiru dandamachuuf qonnaan bultoota hirmaachiseera.',
+          am: 'የኦሮሚያ ግብርና ቢሮ ከአሰልጣኞችና ከምስራቅ ሐረርጌ ኤክስቴንሽን ጋር በመቀናጀት በ42 ቀበሌዎች ተግባራዊ የአየር ንብረት ተስማሚ ግብርና ሥልጠና አጠናቋል። ሥልጠናው አርሶ አደሮች የሚቀያየረውን የዝናብ ሁኔታ እንዲቋቋሙ ለማስቻል ያለመ ነው።',
+          en: 'Master trainers from the Oromia Bureau of Agriculture in partnership with the East Hararghe Zonal Extension Department have successfully conducted hands-on Climate-Smart Agriculture workshops across 42 rural kebeles.',
+        },
+      },
+      {
+        type: 'heading',
+        level: 2,
+        content: {
+          om: 'Qabiyyee Leenjii fi Mala Biyyee Kunuunsuu',
+          am: 'የሥልጠናው ይዘትና የአፈር እንክብካቤ',
+          en: 'Training Curriculum & Soil Water Retention Methods',
+        },
+      },
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Qonnaan bultoonni tooftaalee jallisiifi jiidha biyyee qusatan, hojii daagaa hojjechuu, fi sanyiiwwan misingaa fi boqqoolloo bona dandamatan oomiishuu irratti leenji\'aniiru. Oggeessonni qonnaa dabalataan tooftaa xaa\'oo uumamaa (compost) qopheessuun dhiheessan agarsiisaniiru.',
+          am: 'አርሶ አደሮች የእርጥበት ማቆያ፣ የእርከን ሥራ እና ድርቅን የሚቋቋሙ የማሽላና የበቆሎ ዘሮችን የማምረት ዘዴዎችን ተማርረዋል። በተጨማሪም የተፈጥሮ ማዳበሪያ (ኮምፖስት) አዘገጃጀት ማሳያ ተሰጥቷል።',
+          en: 'Participants acquired skills in moisture-retaining soil bunds, composting techniques, and cultivating drought-resilient sorghum and maize cultivars. Extension officers conducted practical field demonstrations on bio-fertilizer production.',
+        },
+      },
+      {
+        type: 'quote',
+        content: {
+          om: '"Daagaa hojjechuu fi xaa\'oo uumamaa fayyadamuun jiidha biyyee keenya torban sadiif akka turu gargaareera. Leenjiin kun agarsiisa qabatamaati."',
+          am: '"እርከን መስራትና ኮምፖስት መጠቀም የአፈራችን እርጥበት ለሦስት ሳምንታት እንዲቆይ አድርጓል። ሥልጠናው ለሕይወታችን ትልቅ ለውጥ አምጥቷል።"',
+          en: '"Constructing contour bunds and applying organic compost has allowed our topsoil to hold moisture three weeks longer through dry spells. This practical training is transformative for our harvest."',
+        },
+        source: {
+          om: 'Aaddee Boontuu Mohaammad, Qonnaan Bulaa Ganda Babile',
+          am: 'ወይዘሮ ቦንቱ መሐመድ፣ የባቢሌ ቀበሌ አርሶ አደር',
+          en: 'Wzt. Bontu Mohammed, Farmer in Babile Kebele',
+        },
+      },
+      {
+        type: 'list',
+        ordered: true,
+        items: [
+          {
+            om: 'Tarkaanfii 1: Tooftaa daagaa biyyee fi dhagaa sarara teffii irratti ijjechuu.',
+            am: 'ደረጃ 1፡ በኮንቱር መስመር ላይ የአፈርና ድንጋይ እርከኖችን መስራት።',
+            en: 'Step 1: Constructing contour stone and earthen bunds across slope gradients.',
+          },
+          {
+            om: 'Tarkaanfii 2: Muka fi marga fiixee midhaanii irratti dhaabuu.',
+            am: 'ደረጃ 2፡ የዛፍና የሳር ዝርያዎችን በእርከኖች ጠርዝ ላይ መትከል።',
+            en: 'Step 2: Planting multipurpose agroforestry trees along field boundaries.',
+          },
+          {
+            om: 'Tarkaanfii 3: Raabsa sanyii fi xaa\'oo uumamaa galmee kellaa irraa fudhachuu.',
+            am: 'ደረጃ 3፡ የተፈጥሮ ማዳበሪያና ምርጥ ዘር ከኤክስቴንሽን ጣቢያ መውሰድ።',
+            en: 'Step 3: Registering for verified drought-tolerant seed bundles at kebele extension posts.',
+          },
+        ],
+      },
+      {
+        type: 'highlight',
+        title: {
+          om: 'Galmee Leenjii Marsaa Pirogramaa',
+          am: 'የቀጣይ ሥልጠና ምዝገባ',
+          en: 'Upcoming Training Cohort Registration',
+        },
+        content: {
+          om: 'Qonnaan bultoonni marsaa leenjii itti aanu irratti hirmaachuu fedhan waajjira qonnaa woreda isaaniitti galmaa\'uu ni danda\'u.',
+          am: 'በቀጣዩ የስልጠና ዙር መሳተፍ የሚፈልጉ አርሶ አደሮች በወረዳቸው ግብርና ጽህፈት ቤት መመዝገብ ይችላሉ።',
+          en: 'Farmers interested in joining the next month\'s extension cohort can register at their local Woreda Agriculture Office free of charge.',
+        },
+      },
+    ],
+    // Backward compatibility props
+    titleKey: 'news2_title',
+    summaryKey: 'news2_summary',
+    imageUrl: 'https://images.unsplash.com/photo-1592417817098-8f3d6eb23659?auto=format&fit=crop&w=1200&q=80',
+    date: 'July 31, 2026',
+    readTime: '5 min read',
+  },
+
+  {
+    id: 'news-3',
+    slug: 'cluster-farming-wheat-harvest-expansion',
+    category: 'news',
+    publishedAt: 'July 28, 2026',
+    updatedAt: 'July 29, 2026',
+    featured: false,
+    status: 'published',
+    readingTime: '6 min read',
+    tags: ['Cluster Farming', 'Wheat', 'Food Security', 'Export Grade'],
+    relatedArticleIds: ['news-1', 'news-4'],
+    author: {
+      om: 'Misooma Gabaa fi Oomishiti Biiroo Qonnaa',
+      am: 'የምርትና ገበያ ልማት ቢሮ',
+      en: 'Bureau Market & Crop Development Team',
+    },
+    responsibleOffice: {
+      om: 'Kutaa Misooma Midhaanii fi Sanyii Oromiyaa',
+      am: 'የኦሮሚያ ሰብልና ዘር ልማት ክፍል',
+      en: 'Oromia Crop & Seed Development Department',
+    },
+    featuredImage: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: {
+      om: 'Misooma qamadii klasteeraa Oromiyaa keessatti',
+      am: 'በኦሮሚያ የስንዴ ክላስተር ምርት',
+      en: 'Combine harvester operating on wheat cluster farmland in Oromia',
+    },
+    title: {
+      om: 'Gulaanta Qamadii Misooma Sakatta\'iinsaan Dabalataa Oromiyaa keessatti Galmeeffame',
+      am: 'በኦሮሚያ የተስፋፋው የስንዴ ክላስተር ምርት ከፍተኛ አፈፃፀም አስመዘገበ',
+      en: 'Oromia Expands Wheat Cluster Farming Production Across Key Agricultural Zones',
+    },
+    excerpt: {
+      om: 'Gulaantaa misooma qamadii klasteeraa bara kanaatiin naannoo Oromiyaa keessatti oomishtummaam hektaaraatti kuntala 45n olitti ol guddateera.',
+      am: 'በያዘው በጀት ዓመት በኦሮሚያ የስንዴ ክላስተር ልማት በአንድ ሄክታር ከ45 ኲንታል በላይ ምርት ማስመዝገብ ተችሏል።',
+      en: 'Systematic cluster farming implementation across 21 Oromia zones has boosted national wheat yields to a record average of 4.5 metric tons per hectare.',
+    },
+    translations: {
+      om: true,
+      am: true,
+      en: true,
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Misoomni qamadii klasteeraa Oromiyaa keessatti hojjetamaa jiru bu\'aa boonsaa galmeessisuu itti fufeera. Sakatta\'iinsa duraa Biiroo Qonnaatiin geggeeffameen bara kana qamadiin hektaara miliyoona 2.1 irratti klasteeraan oomishamee sassaabamaa jira.',
+          am: 'በኦሮሚያ ክልል እየተካሄደ ያለው የስንዴ ክላስተር ልማት ከፍተኛ ውጤት ማስመዝገቡን ቀጥሏል። በቢሮው የመጀመሪያ ግምገማ መሠረት በዘመኑ 2.1 ሚሊዮን ሄክታር መሬት በስንዴ ክላስተር ለምቶ እየተሰበሰበ ይገኛል።',
+          en: 'Oromia\'s systematic wheat cluster farming model continues to surpass agricultural benchmarks. Preliminary field assessments from the Agricultural Bureau confirm over 2.1 million hectares harvested under integrated cluster management this season.',
+        },
+      },
+      {
+        type: 'heading',
+        level: 2,
+        content: {
+          om: 'Faayidaa fi Bu\'aa Klasteeraa Qonnaan Bultootaaf',
+          am: 'የክላስተር ግብርና ጥቅሞች ለአርሶ አደሩ',
+          en: 'Socio-Economic Benefits of Mechanized Cluster Farming',
+        },
+      },
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Klasteeraan hojjechuun teeknoloojii fi kombayinaara sassaabbii midhaanii qinnattii akka fayyadaman gargaareera. Dabalataan waldaaleen qonnaan bultootaa galteewwan xaa\'oo fi sanyii gatii madaalawaan akka argatan taasiiseera.',
+          am: 'በክላስተር ማረስ የኮምባይን ሰብል ሰብሰቢዎችንና ዘመናዊ ቴክኖሎጂዎችን በቀላሉ ለመጠቀም አስችሏል። በተጨማሪም የህብረት ሥራ ማህበራት ማዳበሪያና ምርጥ ዘር በተመጣጣኝ ዋጋ እንዲያገኙ አድርጓል።',
+          en: 'Consolidating land plots into operational clusters enables efficient deployment of heavy machinery, including heavy-duty combine harvesters. Furthermore, participating farmers benefit from bulk seed and fertilizer distribution via local primary cooperatives.',
+        },
+      },
+      {
+        type: 'quote',
+        content: {
+          om: '"Klasteeraan oomishuu keenyaan dura kuntala 18-22 argannu turre. Amma teeknoloojii fi sanyii filatamaatiin kuntala 48 hektaaraatti arganneera."',
+          am: '"በክላስተር ከማረሳችን በፊት ከሄክታር 18-22 ኲንታል እናገኝ ነበር። አሁን በዘመናዊ ቴክኖሎጂና ምርጥ ዘር ከሄክታር 48 ኲንታል አግኝተናል።"',
+          en: '"Before joining the cluster scheme, our fields yielded only 18-22 quintals per hectare. Today, with high-quality seed varieties and combine harvesting, we achieved 48 quintals per hectare."',
+        },
+        source: {
+          om: 'Obbo Wandimmuu Baqala, Qonnaan Bulaa Godina Arsii Dhihaa',
+          am: 'አቶ ወንድሙ በቀለ፣ የምዕራብ አርሲ አርሶ አደር',
+          en: 'Obbo Wandimmuu Baqala, Lead Farmer in West Arsi Zone',
+        },
+      },
+      {
+        type: 'highlight',
+        title: {
+          om: 'Gabaa Alaa fi Galii Qonnaan Bultootaa',
+          am: 'የውጭ ገበያ እና የአርሶ አደሩ ገቢ',
+          en: 'Export Quality Certification & Market Access',
+        },
+        content: {
+          om: 'Qamadii klasteera Oromiyaa irraa oomishamu sadarkaa qulqullina gabaa addunyaa uffisuudhaan gara gabaa alaatti erguuf qophiin xumurameera.',
+          am: 'ከኦሮሚያ ክላስተር የሚመረተው ስንዴ ዓለም አቀፍ የጥራት ደረጃን ያሟላ በመሆኑ ለውጭ ገበያ ለማቅረብ ዝግጅቱ ተጠናቋል።',
+          en: 'Wheat produced under certified Oromia cluster frameworks satisfies international grain quality benchmarks, enabling direct supply agreements with agro-processing plants and export markets.',
+        },
+      },
+      {
+        type: 'relatedLink',
+        title: {
+          om: 'Sagantaa Misooma Midhaanii fi Klasteeraa Ilaali',
+          am: 'የሰብልና ክላስተር ልማት ፕሮግራሙን ይመልከቱ',
+          en: 'Learn more about Oromia Agricultural Cluster Programs',
+        },
+        url: '/programs#prog-cluster',
+      },
+    ],
+    // Backward compatibility props
+    titleKey: 'news3_title',
+    summaryKey: 'news3_summary',
+    imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80',
+    date: 'July 28, 2026',
+    readTime: '6 min read',
+  },
+
+  {
+    id: 'news-4',
+    slug: 'oromia-agri-tech-expo-and-tender-announcement',
+    category: 'tender',
+    publishedAt: 'July 25, 2026',
+    updatedAt: 'July 26, 2026',
+    featured: false,
+    status: 'published',
+    readingTime: '3 min read',
+    tags: ['Tender', 'Agri-Tech', 'Exhibition', 'Machinery', 'Finfinnee'],
+    relatedArticleIds: ['news-1', 'news-2', 'news-3'],
+    author: {
+      om: 'Kutaa Bitta fi Caalbaasii Biiroo Qonnaa',
+      am: 'የግብርና ቢሮ የግዢና ጨረታ ክፍል',
+      en: 'Bureau Procurement & Tender Committee',
+    },
+    responsibleOffice: {
+      om: 'Waajjira Raabsaa Teeknoloojii Qonnaa Oromiyaa',
+      am: 'የኦሮሚያ ግብርና ቴክኖሎጂ አቅርቦት ጽህፈት ቤት',
+      en: 'Oromia Agricultural Technology Supply Directorate',
+    },
+    featuredImage: 'https://images.unsplash.com/photo-1615811361523-6bd03d7748e7?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: {
+      om: 'Expoo teeknoloojii qonnaa Adaamaa keessatti',
+      am: 'በአዳማ የተካሄደው የአግሪ-ቴክ ኤክስፖ',
+      en: 'Modern agricultural machinery on exhibit at Oromia Agri-Tech Expo',
+    },
+    title: {
+      om: 'Expoo fi Caalbaasii Bitta Meeshaa Qonnaa Saayinsawaa Bara 2026 Tangisaame',
+      am: 'የ2026 የኦሮሚያ አግሪ-ቴክ ኤክስፖ እና የዘመናዊ ግብርና መሳሪያዎች ጨረታ ማስታወቂያ',
+      en: 'Oromia Agri-Tech Expo 2026 and Modern Farm Machinery Tender Announcement',
+    },
+    excerpt: {
+      om: 'Biiroon Qonnaa Oromiyaa caalbaasii bitta meeshaalee qonnaa saayinsawaa fi expoo teeknoloojii qonnaa Adaamaatti geggeessuu beeksiseera.',
+      am: 'የኦሮሚያ ግብርና ቢሮ በአዳማ ከተማ ለሚካሄደው የአግሪ-ቴክ ኤክስፖ እና ለዘመናዊ የግብርና መሣሪያዎች ግዢ ጨረታ አወጣ።',
+      en: 'The Oromia Agricultural Bureau officially invites vendors and agricultural technology partners to the annual 2026 Agri-Tech Expo and equipment procurement tender.',
+    },
+    translations: {
+      om: true,
+      am: true,
+      en: true,
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Biiroon Qonnaa Oromiyaa Dhiheessitoota teeknoloojii qonnaa, dhaabbilee meeshaa qonnaa oomishanii fi abbootii qabeenyaa expoo teeknoloojii qonnaa bara 2026 fi caalbaasii bitta meeshaa saayinsawaa irratti akka hirmaatan afeereera.',
+          am: 'የኦሮሚያ ግብርና ቢሮ የግብርና ቴክኖሎጂ አቅራቢዎች፣ አምራቾች እና ባለሀብቶች በ2026 የአግሪ-ቴክ ኤክስፖ እና በዘመናዊ መሳሪያዎች ግዢ ጨረታ ላይ እንዲሳተፉ ጥሪ አቅርቧል።',
+          en: 'The Oromia Agricultural Bureau hereby notifies certified agricultural machinery manufacturers, technology providers, and equipment vendors of the upcoming Oromia Annual Agri-Tech Expo and international procurement tender.',
+        },
+      },
+      {
+        type: 'heading',
+        level: 2,
+        content: {
+          om: 'Meeshaalee Caalbaasiin Bittaaf Dhihaatan',
+          am: 'ለጨረታ የቀረቡ የግብርና መሣሪያዎች',
+          en: 'Procurement Scope & Eligible Machinery Categories',
+        },
+      },
+      {
+        type: 'list',
+        ordered: false,
+        items: [
+          {
+            om: 'Tiraaktaroota qonnaa hojii cimaaf ta\'an (Horsepower 85 - 140 HP) mataa 200.',
+            am: '200 ከፍተኛ ጉልበት ያላቸው የግብርና ትራክተሮች (85 - 140 HP)።',
+            en: '200 units of heavy-duty agricultural tractors (85 HP to 140 HP range).',
+          },
+          {
+            om: 'Kombayinaara sassaabbii qamadii fi boqqoolloo mataa 60.',
+            am: '60 የስንዴና የበቆሎ ኮምባይን ሰብሰቢዎች።',
+            en: '60 units of high-efficiency grain combine harvesters.',
+          },
+          {
+            om: 'Paampii bishaan jallisii humna soolaaraa fi diiziliin hojjetan 1,200.',
+            am: '1,200 በፀሐይና በዲዝል የሚሰሩ የመስኖ ውኃ ፓምፖች።',
+            en: '1,200 units of high-capacity solar and diesel irrigation pumping units.',
+          },
+        ],
+      },
+      {
+        type: 'highlight',
+        title: {
+          om: 'Odeeffannoo Caalbaasii fi Sanada Bitta',
+          am: 'የጨረታ ሰነድና የመክፈቻ መረጃ',
+          en: 'Tender Documentation & Submission Deadlines',
+        },
+        content: {
+          om: 'Dhaabbileen hirmaachuu fedhan sanada caalbaasii kaffaltii qarsii 1,000n Waajjira Bitta fi Qabeenya Biiroo Qonnaa Finfinnee irraa fudhachuu ni danda\'u. Caalbaasiin Hagayya 25, 2026 sa\'aatii 4:00 irratti ni cufama.',
+          am: 'ተወዳዳሪዎች የጨረታ ሰነዱን የማይመለስ 1,000 ብር በመክፈል ከቢሮው ግዢ ክፍል አዲስ አበባ መውሰድ ይችላሉ። ጨረታው ነሐሴ 25 ቀን 2026 ዓ.ም ከቀኑ 4፡00 ሰዓት ይዘጋል።',
+          en: 'Eligible bidders may collect complete tender documents upon payment of a non-refundable ETB 1,000 fee from the Bureau Procurement Directorate in Finfinnee. Bids close strictly on August 25, 2026 at 10:00 AM EAT.',
+        },
+      },
+      {
+        type: 'relatedLink',
+        title: {
+          om: 'Beeksisa Caalbaasii fi Sanada Roobsa Ilaali',
+          am: 'የጨረታ ማስታወቂያዎችንና ሰነዶችን ይመልከቱ',
+          en: 'View Official Oromia Bureau Procurement & Tender Portal',
+        },
+        url: '/resources',
+      },
+    ],
+    // Backward compatibility props
+    titleKey: 'news3_title',
+    summaryKey: 'news3_summary',
+    imageUrl: 'https://images.unsplash.com/photo-1615811361523-6bd03d7748e7?auto=format&fit=crop&w=1200&q=80',
+    date: 'July 25, 2026',
+    readTime: '3 min read',
+  },
+];
+
+export const mockAnnouncements: Announcement[] = [
+  {
+    id: 'anc-1',
+    titleKey: 'Caalbaasii Bitta Paampii Jallisii fi Meeshaa Solar (Tender Ref: OAB/09/2026)',
+    date: 'August 02, 2026',
+    category: 'tender',
+    downloadUrl: '#',
+    isImportant: true,
+  },
+  {
+    id: 'anc-2',
+    titleKey: 'Beeksisa Leenjii Tooftaa Ulfeessa Saawwaa Aannanii Godina Jimmaatti',
+    date: 'July 30, 2026',
+    category: 'training',
+    downloadUrl: '#',
+  },
+  {
+    id: 'anc-3',
+    titleKey: 'Caalbaasii Dhiheessii Sanyii Avokaadoo Filatamaa Quintala 2000',
+    date: 'July 27, 2026',
+    category: 'tender',
+    downloadUrl: '#',
+  },
+  {
+    id: 'anc-4',
+    titleKey: 'Beeksisa Hojii Uummata Kunuunsa Biyyee fi Mukkeen Dhaabuu Bara 2018/2026',
+    date: 'July 24, 2026',
+    category: 'notice',
+    downloadUrl: '#',
+  },
+];
+
+export const mockPublications: Publication[] = [
+  {
+    id: 'pub-1',
+    titleKey: 'res_crop_cal',
+    descriptionKey: 'res_crop_cal_desc',
+    type: 'calendar',
+    fileSize: '3.4 MB',
+    language: 'Afaan Oromoo / Amharic / English',
+    downloadUrl: '#',
+    format: 'PDF',
+  },
+  {
+    id: 'pub-2',
+    titleKey: 'res_pest_guide',
+    descriptionKey: 'res_pest_guide_desc',
+    type: 'guidance',
+    fileSize: '5.1 MB',
+    language: 'Afaan Oromoo',
+    downloadUrl: '#',
+    format: 'PDF',
+  },
+  {
+    id: 'pub-3',
+    titleKey: 'res_livestock_manual',
+    descriptionKey: 'res_livestock_manual_desc',
+    type: 'manual',
+    fileSize: '8.2 MB',
+    language: 'Afaan Oromoo',
+    downloadUrl: '#',
+    format: 'PDF',
+  },
+  {
+    id: 'pub-4',
+    titleKey: 'res_policy',
+    descriptionKey: 'res_policy_desc',
+    type: 'policy',
+    fileSize: '2.8 MB',
+    language: 'Afaan Oromoo & English',
+    downloadUrl: '#',
+    format: 'PDF',
+  },
+  {
+    id: 'pub-5',
+    titleKey: 'res_videos',
+    descriptionKey: 'res_videos_desc',
+    type: 'video',
+    fileSize: '45 MB',
+    language: 'Afaan Oromoo',
+    downloadUrl: '#',
+    format: 'MP4',
+  },
+  {
+    id: 'pub-6',
+    titleKey: 'res_forms',
+    descriptionKey: 'res_forms_desc',
+    type: 'form',
+    fileSize: '1.1 MB',
+    language: 'Afaan Oromoo',
+    downloadUrl: '#',
+    format: 'DOCX',
+  },
+];
+
+export const mockOffices: Office[] = [
+  {
+    id: 'off-1',
+    nameKey: 'Waajjira Qonnaa Godina Shawaa Bahaa',
+    zoneKey: 'Shawaa Bahaa (Adaamaa)',
+    headName: 'Obbo Kabbadaa Tolaa',
+    phone: '+251 22 111 2345',
+    email: 'east.shewa@oab.gov.et',
+    address: 'Mormor Street, Adaamaa City',
+    operatingHours: 'Wiixata-Jimaata 2:30-11:30 WB',
+  },
+  {
+    id: 'off-2',
+    nameKey: 'Waajjira Qonnaa Godina Arsii',
+    zoneKey: 'Arsii (Asellaa)',
+    headName: 'Dr. Tashoomaa Nagaasaa',
+    phone: '+251 22 331 8901',
+    email: 'arsi@oab.gov.et',
+    address: 'Near Main Stadium, Asellaa',
+    operatingHours: 'Wiixata-Jimaata 2:30-11:30 WB',
+  },
+  {
+    id: 'off-3',
+    nameKey: 'Waajjira Qonnaa Godina Jimmaa',
+    zoneKey: 'Jimmaa (Majiang/Jimma)',
+    headName: 'Aaddee Boontuu Hundee',
+    phone: '+251 47 111 4567',
+    email: 'jimma@oab.gov.et',
+    address: 'Hermata Office Complex, Jimma',
+    operatingHours: 'Wiixata-Jimaata 2:30-11:30 WB',
+  },
+  {
+    id: 'off-4',
+    nameKey: 'Waajjira Qonnaa Godina Harargee Bahaa',
+    zoneKey: 'Harargee Bahaa (Harrar/Ciroo)',
+    headName: 'Obbo Mohaammad Aliyyii',
+    phone: '+251 25 666 3210',
+    email: 'east.hararghe@oab.gov.et',
+    address: 'Bate Road, Harar Region',
+    operatingHours: 'Wiixata-Jimaata 2:30-11:30 WB',
+  },
+  {
+    id: 'off-5',
+    nameKey: 'Waajjira Qonnaa Godina Baalee',
+    zoneKey: 'Baalee (Robee)',
+    headName: 'Obbo Wandimmuu Baqala',
+    phone: '+251 22 665 1122',
+    email: 'bale@oab.gov.et',
+    address: 'Central Zone Office, Robee',
+    operatingHours: 'Wiixata-Jimaata 2:30-11:30 WB',
+  },
+];
+
+export const mockTimeline: AchievementMilestone[] = [
+  {
+    id: 'mile-2024',
+    year: '2024',
+    title: {
+      om: 'Baballina Sagantaa Jallisii',
+      am: 'የመስኖ አውታሮች መስፋፋት',
+      en: 'Expansion of Irrigation Schemes',
+    },
+    description: {
+      om: 'Gamtaalee 17 keessatti ijaarama misooma jallisii ammayyaa, oomisha gogaa kessatti guddina ol-aanaa fiduun.',
+      am: 'በ17 ወረዳዎች ውስጥ አዳዲስ የመስኖ መሰረተ ልማቶች በመገንባታቸው በበጋ ወቅት የሚመረተውን ምርት በእጅጉ ጨምሯል።',
+      en: 'New irrigation infrastructure built in 17 districts, increasing dry season production significantly.',
+    },
+    program: {
+      om: 'Misooma Jallisii & Bishaanii',
+      am: 'የመስኖና ውኃ ልማት',
+      en: 'Irrigation & Water Development',
+    },
+    zone: {
+      om: 'Shawaa Bahaa',
+      am: 'ምስራቅ ሸዋ',
+      en: 'East Shewa Zone',
+    },
+    thumbnail: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&q=80&w=400',
+    achievementSlug: 'expansion-of-irrigation-schemes-east-shewa',
+  },
+  {
+    id: 'mile-2023',
+    year: '2023',
+    title: {
+      om: 'Duula Fayyaa Beeyladaa fi Talaallii',
+      am: 'የእንስሳት ጤናና የክትባት ዘመቻ',
+      en: 'Livestock Health Campaign',
+    },
+    description: {
+      om: 'Talaallii fi tajaajilli fayyaa beeyladaa beeylada miliyoona 4.5 olif naannoo Oromiyaa keessatti kennameera.',
+      am: 'በኦሮሚያ ክልል ከ4.5 ሚሊዮን በላይ ለሚሆኑ እንስሳት የክትባት እና የእንስሳት ጤና አገልግሎት ተሰጥቷል።',
+      en: 'Mass vaccination and animal health services reached more than 4.5M livestock across Oromia.',
+    },
+    program: {
+      om: 'Tajaajila Véterineerii fi Beeyladaa',
+      am: 'የእንስሳት ጤና አገልግሎት',
+      en: 'Veterinary & Animal Health Services',
+    },
+    zone: {
+      om: 'Boorana fi Gujii',
+      am: 'ቦረና እና ጉጂ',
+      en: 'Borena & Guji Zones',
+    },
+    thumbnail: 'https://images.unsplash.com/photo-1546445317-29f4545f9d52?auto=format&fit=crop&q=80&w=400',
+    achievementSlug: 'livestock-health-vaccination-campaign',
+  },
+  {
+    id: 'mile-2022',
+    year: '2022',
+    title: {
+      om: 'Biyooyyee fi Qabeenya Bishaanii Eeguu',
+      am: 'የአፈርና ውኃ ጥበቃ ሥራዎች',
+      en: 'Soil & Water Conservation',
+    },
+    description: {
+      om: 'Hojiiwwan madaallii lolaa fi eegumsa biyooyyee ganda 340 ol keessatti milka\'inaan xumuramaniiru.',
+      am: 'በ340 በላይ ቀበሌዎች የተፋሰስ ማቋቋም እና የአፈርና ውኃ ጥበቃ ሥራዎች ተጠናቀዋል።',
+      en: 'Watershed rehabilitation and soil conservation works completed in over 340 kebeles.',
+    },
+    program: {
+      om: 'Eegumsa Qabeenya Uumamaa',
+      am: 'የተፈጥሮ ሀብት እንክብካቤ',
+      en: 'Natural Resource Conservation',
+    },
+    zone: {
+      om: 'Arsii Lixaa',
+      am: 'ምዕራብ አርሲ',
+      en: 'West Arsi Zone',
+    },
+    thumbnail: 'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&q=80&w=400',
+    achievementSlug: 'soil-water-conservation-west-arsi',
+  },
+  {
+    id: 'mile-2021',
+    year: '2021',
+    title: {
+      om: 'Sagantaa Leenjii Qonnaan Bulaa',
+      am: 'የአርሶ አደር ስልጠና ኢኒሼቲቭ',
+      en: 'Farmer Training Initiative',
+    },
+    description: {
+      om: 'Sagantaaleen leenjii 320 ol haala teeknoolojii qonnaa fi bulchiinsa lafa irratti kennamaniiru.',
+      am: 'ስለ ተሻሻሉ የግብርና አሰራሮች እና የኢንተርፕራይዝ አመራር ከ320 በላይ የስልጠና ፕሮግራሞች ተሰጥተዋል።',
+      en: 'Delivered 320+ training programs on improved agronomic practices and farm management.',
+    },
+    program: {
+      om: 'Eksteenshinii Qonnaa & Leenjii',
+      am: 'የግብርና ማስፋፊያና ስልጠና',
+      en: 'Agricultural Extension & Training',
+    },
+    zone: {
+      om: 'Arsii & Shawaa Lixaa',
+      am: 'አርሲ እና ምዕራብ ሸዋ',
+      en: 'Arsi & West Shewa Zones',
+    },
+    thumbnail: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&q=80&w=400',
+    achievementSlug: 'farmer-training-agronomy-initiative',
+  },
+];
+
+export const mockProgramImpacts: ProgramImpact[] = [
+  {
+    id: 'prog-1',
+    programKey: 'crop',
+    title: {
+      om: 'Oomisha Midhaanii',
+      am: 'የሰብል ምርት',
+      en: 'Crop Production',
+    },
+    initiativesCount: '210+ Initiatives',
+    summary: {
+      om: 'Oomishitummaa dabaluu, sanyii filatamaa raabsamuu fi wabii nyaata fooyyessuu.',
+      am: 'ምርታማነትን ማሳደግ፣ የተሻሻሉ ዘሮችን ማሰራጨት እና የምግብ ዋስትናን ማሻሻል::',
+      en: 'Increased productivity, distribution of improved seed varieties, and enhanced food security.',
+    },
+    image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=600',
+    iconName: 'Sprout',
+  },
+  {
+    id: 'prog-2',
+    programKey: 'livestock',
+    title: {
+      om: 'Misooma Beeyladaa',
+      am: 'የእንስሳት ልማት',
+      en: 'Livestock Development',
+    },
+    initiativesCount: '150+ Initiatives',
+    summary: {
+      om: 'Fayyaa beeyladaa eeguu, sanyii fooyyessuu fi jireenya beeylada teessisaa cimsaniiru.',
+      am: 'የእንስሳት ጤና ጥበቃ፣ የዝርያ ማሻሻል እና የእንስሳት አርቢዎችን ኑሮ ማጠናከር::',
+      en: 'Healthier animals, breeding improvement, and stronger livestock livelihoods.',
+    },
+    image: 'https://images.unsplash.com/photo-1546445317-29f4545f9d52?auto=format&fit=crop&q=80&w=600',
+    iconName: 'Beef',
+  },
+  {
+    id: 'prog-3',
+    programKey: 'resource',
+    title: {
+      om: 'Eegumsa Qabeenya Uumamaa',
+      am: 'የተፈጥሮ ሀብት እንክብካቤ',
+      en: 'Natural Resource Management',
+    },
+    initiativesCount: '120+ Initiatives',
+    summary: {
+      om: 'Lafa eeguu, bosona haaromsuu fi sirna ekoolojii deebisanii bayyanachiisuu.',
+      am: 'መሬትን መንከባከብ፣ ደንን ማልማት እና ስነ-ምህዳርን ወደ ነበረበት መመለስ::',
+      en: 'Protecting land, afforestation, and restoring degraded agricultural ecosystems.',
+    },
+    image: 'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&q=80&w=600',
+    iconName: 'Trees',
+  },
+  {
+    id: 'prog-4',
+    programKey: 'irrigation',
+    title: {
+      om: 'Misooma Jallisii',
+      am: 'የመስኖ ልማት',
+      en: 'Irrigation Development',
+    },
+    initiativesCount: '80+ Initiatives',
+    summary: {
+      om: 'Ijaarsa jallisii ammayyaa fi xixiqqoo, dhiheessii bishaanii babal\'isuu.',
+      am: 'አነስተኛና አበይት የመስኖ ግንባታዎች፣ የውኃ ተደራሽነትን ማሳደግ::',
+      en: 'Small & large scale irrigation projects to expand dry-season water access.',
+    },
+    image: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&q=80&w=600',
+    iconName: 'Droplets',
+  },
+  {
+    id: 'prog-5',
+    programKey: 'training',
+    title: {
+      om: 'Eksteenshinii Qonnaa',
+      am: 'የግብርና ማስፋፊያ',
+      en: 'Agricultural Extension',
+    },
+    initiativesCount: '320+ Initiatives',
+    summary: {
+      om: 'Tajaajila leenjii, beekumsaa fi teeknoolojii gara qonnaan bulaatti dabarsuu.',
+      am: 'የስልጠና አገልግሎት፣ እውቀትና ቴክኖሎጂ ሽግግር ለአርሶ አደሮች ማቅረብ::',
+      en: 'Extension services, field training, and technology transfer to smallholders.',
+    },
+    image: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&q=80&w=600',
+    iconName: 'GraduationCap',
+  },
+  {
+    id: 'prog-6',
+    programKey: 'empowerment',
+    title: {
+      om: 'Dandettii Dargaggoo fi Dubartootaa',
+      am: 'የወጣቶችና ሴቶች ማብቃት',
+      en: 'Youth & Women Empowerment',
+    },
+    initiativesCount: '95+ Initiatives',
+    summary: {
+      om: 'Carraa qonnaa uumuu, hirmaannaa keessatti sochoosuu fi hoggansa cimsaniiru.',
+      am: 'የስራ እድል መፍጠር፣ በስራ ፈጠራ እና አመራር ላይ ያተኮረ ድጋፍ::',
+      en: 'Entrepreneurship, leadership, access to land resources, and agri-business micro-grants.',
+    },
+    image: 'https://images.unsplash.com/photo-1531206715517-5c0ba140b2b8?auto=format&fit=crop&q=80&w=600',
+    iconName: 'Users',
+  },
+];
+
+export const mockBeforeAfter: BeforeAfterItem = {
+  id: 'ba-west-arsi',
+  projectTitle: {
+    om: 'Hojii Madaallii Lolaa fi Eegumsa Biyooyyee Lixa Arsii',
+    am: 'በምዕራብ አርሲ የተከናወነ የተፋሰስ ማቋቋም እና የአፈር ጥበቃ',
+    en: 'Watershed Rehabilitation & Soil Protection in West Arsi',
+  },
+  beforeImage: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&q=80&w=800',
+  afterImage: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=800',
+  beforeDescription: {
+    om: 'Lafa biyyooyyen isaa dhiqamee fi oomishitummaan isaa gadi bu\'e yeroo rooba lolaan miidhame.',
+    am: 'በአፈር መሸርሸር የተጎዳ እና ምርታማነቱ የቀነሰ ደረቅ መሬት።',
+    en: 'Severely eroded soil, seasonal gulley formation, and depleted crop yield before restoration.',
+  },
+  afterDescription: {
+    om: 'Lafa daagaa hojjetamee, marga miidhagaa qabu fi oomishitummaan isaa dabale.',
+    am: 'በእርከን፣ በዛፍ ተከላና በተፈጥሮ ማዳበሪያ የታደሰና ከፍተኛ ምርት የሚሰጥ አረንጓዴ መሬት።',
+    en: 'Restoration of degraded watersheds has improved soil fertility, water availability, and boosted crop yields.',
+  },
+  metrics: [
+    {
+      label: { om: 'Lafa Hojjetame', am: 'የለማ መሬት', en: 'Land Treated' },
+      value: '12,500 ha',
+    },
+    {
+      label: { om: 'Guddina Oomishaa', am: 'የምርት ጭማሪ', en: 'Increase in Yield' },
+      value: '45%',
+    },
+    {
+      label: { om: 'Gandoota Uwwifaman', am: 'የተሸፈኑ ቀበሌዎች', en: 'Kebeles Covered' },
+      value: '68',
+    },
+    {
+      label: { om: 'Qonnaan Bultoota Fayyadaman', am: 'ተጠቃሚ ህዝብ', en: 'People Benefited' },
+      value: '35,000+',
+    },
+  ],
+  zone: { om: 'Arsii Lixaa', am: 'ምዕራብ አርሲ', en: 'West Arsi Zone' },
+  period: '2021–2024',
+};
+
+export const mockReports: ImpactReport[] = [
+  {
+    id: 'rep-1',
+    title: {
+      om: 'Gabaasa Raawwii Waggaa Biiroo Qonnaa 2023/2024',
+      am: 'የግብርና ቢሮ ዓመታዊ የሥራ አፈፃፀም ሪፖርት 2016 ዓ.ም',
+      en: 'Annual Performance Report 2023/2024',
+    },
+    year: '2024',
+    format: 'PDF',
+    fileSize: '6.4 MB',
+    downloadUrl: '#',
+  },
+  {
+    id: 'rep-2',
+    title: {
+      om: 'Gabaasa Gamaggama Dhiibbaa Misooma Qonnaa 2023',
+      am: 'የግብርና ልማት ተፅዕኖ ግምገማ ሪፖርት 2015/2016',
+      en: 'Impact Assessment Report 2023',
+    },
+    year: '2023',
+    format: 'PDF',
+    fileSize: '6.7 MB',
+    downloadUrl: '#',
+  },
+  {
+    id: 'rep-3',
+    title: {
+      om: 'Waraqaa Gabaasa Pirojektoota Qonnaa Oromiyaa',
+      am: 'የኦሮሚያ ግብርና ፕሮጀክቶች ማጠቃለያ መጽሔት',
+      en: 'Project Summary Brochure 2023/2024',
+    },
+    year: '2024',
+    format: 'PDF',
+    fileSize: '4.2 MB',
+    downloadUrl: '#',
+  },
+  {
+    id: 'rep-4',
+    title: {
+      om: 'Istatistiksii fi Ragaa Oomisha Qonnaa 2024',
+      am: 'የግብርና ምርት ስታቲስቲክስ እና መረጃ 2016',
+      en: 'Agricultural Statistics Report 2024',
+    },
+    year: '2024',
+    format: 'PDF',
+    fileSize: '3.1 MB',
+    downloadUrl: '#',
+  },
+];
+
+export const mockAchievements: Achievement[] = [
+  {
+    id: 'ach-1',
+    slug: 'improving-wheat-productivity-bale-zone',
+    title: {
+      om: 'Fooyya\'iinsa Oomishitummaa Kamadii Godina Baalee Keessatti',
+      am: 'በባሌ ዞን የስንዴ ምርታማነትን ማሻሻል',
+      en: 'Improving Wheat Productivity in Bale Zone',
+    },
+    excerpt: {
+      om: 'Raabsa sanyii filatamaa, leenjii qonnaan bulaa fi tooftaalee qonnaa ammayyaatiin oomishini kamadii guddina ol-aanaa agarsiiseera.',
+      am: 'በተሻሻለ የዘር वितरण፣ የአርሶ አደር ስልጠና እና በዘመናዊ የግብርና አሰራር በባሌ ዞን የስንዴ ምርት ከፍተኛ እድገት አስመዝግቧል።',
+      en: 'Through improved seed distribution, farmer training, and modern agricultural practices, participating communities achieved measurable improvements in wheat production.',
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Misoomi kamadii bonaa fi gannaa Godina Baalee keessatti hojjetame bu\'aa guddaa agarsiiseera. Sanyiiwwan ammayyaa dandamannaa dhukkubaa fi haala qilleensaa qaban qonnaan bultoota 12,000 olif raabsamaniiru.',
+          am: 'በባሌ ዞን የተካሄደው የመስኖና የመኸር ስንዴ ልማት ከፍተኛ ውጤት አሳይቷል። የበሽታና የአየር ሁኔታ ተቋቋሚነት ያላቸው አዳዲስ የዘር ዝርያዎች ለ12,000 አርሶ አደሮች ተሰራጭተዋል።',
+          en: 'Wheat production in the Bale Zone underwent significant transformation over the 2022–2024 implementation period. By distributing rust-resistant seed varieties and introducing precision row planting, local farmers achieved historic output levels.',
+        },
+      },
+      {
+        type: 'heading',
+        level: 2,
+        content: {
+          om: 'Tarkaanfii fi Tooftaa Hojiirra Oole',
+          am: 'የተወሰዱ እርምጃዎች እና ስልቶች',
+          en: 'Key Interventions & Implementation Strategy',
+        },
+      },
+      {
+        type: 'list',
+        ordered: false,
+        items: [
+          {
+            om: 'Sanyii filatamaa Kantaarii 14,500 qonnaan bultoota woredawwan 18f raabsuu.',
+            am: '14,500 ኩንታል የተሻሻለ የዘር ዝርያ በ18 ወረዳዎች ለሚገኙ አርሶ አደሮች ማከፋፈል።',
+            en: 'Distribution of over 14,500 quintals of certified high-yielding wheat seed varieties across 18 districts.',
+          },
+          {
+            om: 'Leenjii gorsa teknikaa fi beekumsa tooftaa jallisii qonnaan bultoota 12,000f kennuu.',
+            am: 'ለ12,000 አርሶ አደሮች የግብርና ቴክኖሎጂ እና የመስኖ አጠቃቀም ስልጠና መስጠት።',
+            en: 'Hands-on training for 12,000 lead farmers and extension personnel on integrated pest management and efficient irrigation.',
+          },
+          {
+            om: 'Tajaajila maashina harvesting fi thresher ammayyaa dhiheessuu.',
+            am: 'የዘመናዊ ኮምባይን ሃርቨስተር እና የውቅያ ማሽኖች አገልግሎት ማመቻቸት።',
+            en: 'Facilitating access to mechanized combine harvesters to minimize post-harvest losses.',
+          },
+        ],
+      },
+      {
+        type: 'quote',
+        content: {
+          om: 'Gorsaa fi sanyii filatamaa Biiroo Qonnaa irraa arganneen oomishini kamadii koo dachaa sadiin dabaleera. Amma maatii koo gargaareenis gabaaf dhiheessuu danda\'era.',
+          am: 'ከግብርና ቢሮ ያገኘነው ምክርና የተሻሻለ ዘር የስንዴ ምርቴን በሦስት እጥፍ አሳድጎታል። አሁን ቤተሰቤን ደግፌ ለገበያ ማቅረብ ችያለሁ።',
+          en: 'With the improved seed varieties and technical guidance provided by the Bureau, my wheat yield tripled. I can now fully support my family and send surplus to the regional market.',
+        },
+        source: {
+          om: 'Obbo Kabiiraa Ahimad, Qonnaan Bulaa Godina Baalee (Sinana)',
+          am: 'አቶ ከቢራ አህመድ፣ በባሌ ዞን (ሲናና) አርሶ አደር',
+          en: 'Demonstration Farmer, Sinana Woreda, Bale Zone',
+        },
+      },
+      {
+        type: 'heading',
+        level: 2,
+        content: {
+          om: 'Bu\'aa fi Dhiibbaa Galmeeffame',
+          am: 'የተመዘገቡ ውጤቶች እና ተፅዕኖ',
+          en: 'Measurable Impact & Results',
+        },
+      },
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Oomishitummaan kamadii hektaara tokko irraa giddu galeessaan kantaarii 28 irraa gara kantaarii 42ttii ol ka\'eera. Kunis galii qonnaan bultootaa %35n fooyyessuu danda\'eera.',
+          am: 'በሄክታር የሚገኘው አማካይ የስንዴ ምርት ከ28 ኩንታል ወደ 42 ኩንታል አድጓል። ይህም የአርሶ አደሮችን ገቢ በ35% አሳድጎታል።',
+          en: 'Average productivity per hectare increased from 28 quintals to 42 quintals. Total harvested output reached over 1.8 million quintals, supplying regional flour processing plants and bolstering regional grain reserves.',
+        },
+      },
+    ],
+    category: 'crop',
+    program: {
+      om: 'Sagantaa Baballina Kamadii & Jallisii',
+      am: 'የስንዴና መስኖ ልማት ፕሮግራም',
+      en: 'Wheat Productivity Expansion Initiative',
+    },
+    zone: { om: 'Godina Baalee', am: 'ባሌ ዞን', en: 'Bale Zone' },
+    woreda: { om: 'Sinaanaa, Agaarfa, Goobbaa', am: 'ሲናና፣ አጋርፋ፣ ጎባ', en: 'Sinana, Agarfa, Goba' },
+    year: '2024',
+    implementationPeriod: '2022–2024',
+    featuredImage: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=1200',
+    imageAlt: {
+      om: 'Misooma Kamadii fi Jallisii Godina Baalee',
+      am: 'በባሌ ዞን የስንዴ ልማት እና የመስኖ አጠቃቀም',
+      en: 'Irrigated wheat production fields in Bale Zone',
+    },
+    gallery: [
+      'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&q=80&w=800',
+    ],
+    metrics: [
+      {
+        label: { om: 'Qonnaan Bultoota Qaqqabaman', am: 'የተደገፉ አርሶ አደሮች', en: 'Farmers Reached' },
+        value: '12,000+',
+      },
+      {
+        label: { om: 'Aanaalee Hirmaatan', am: 'የተሳተፉ ወረዳዎች', en: 'Districts Involved' },
+        value: '18',
+      },
+      {
+        label: { om: 'Guddina Oomishitummaa', am: 'የምርታማነት ጭማሪ', en: 'Productivity Increase' },
+        value: '30%',
+      },
+    ],
+    beforeAfter: mockBeforeAfter,
+    responsibleOffice: {
+      om: 'Waajjira Qonnaa Godina Baalee & Biiroo Qonnaa Oromiyaa',
+      am: 'የባሌ ዞን ግብርና ጽሕፈት ቤት እና የኦሮሚያ ግብርና ቢሮ',
+      en: 'Bale Zonal Agricultural Office & Oromia Agricultural Bureau',
+    },
+    reportIds: ['rep-1', 'rep-3'],
+    relatedAchievementIds: ['ach-2', 'ach-4'],
+    featured: true,
+    status: 'published',
+    publishedAt: '2024-06-15',
+  },
+  {
+    id: 'ach-2',
+    slug: 'expansion-of-irrigation-schemes-east-shewa',
+    title: {
+      om: 'Baballina Sagantaa Jallisii Shawaa Bahaa Keessatti',
+      am: 'በምስራቅ ሸዋ የመስኖ አውታሮች መስፋፋት',
+      en: 'Expansion of Irrigation Schemes in East Shewa',
+    },
+    excerpt: {
+      om: 'Ijaarsa pirojektoota jallisii ammayyaa aanaalee 17 keessatti oomisha bonaa gara sadarkaa ol-aanaatti ceesiseera.',
+      am: 'በ17 ወረዳዎች ውስጥ አዳዲስ የመስኖ መሰረተ ልማቶች በመገንባታቸው በበጋ ወቅት የሚመረተውን ምርት በእጅጉ ጨምሯል።',
+      en: 'New irrigation infrastructure built in 17 districts, increasing dry season production significantly.',
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Misoomi jallisii Shawaa Bahaa keessatti ijaarame lafa hektaara 8,500 ol bishaaniin uwwiseera. Kunis qonnaan bultoonni waggaatti si\'a sadii akka oomishan gargaareera.',
+          am: 'በምስራቅ ሸዋ የተገነቡት የመስኖ ፕሮጀክቶች ከ8,500 ሄክታር በላይ መሬት በማልማት አርሶ አደሮች በዓመት ሦስት ጊዜ እንዲያመርቱ አስችለዋል።',
+          en: 'Comprehensive irrigation infrastructure upgrades across East Shewa provided year-round water security to thousands of smallholder horticultural and grain farmers.',
+        },
+      },
+    ],
+    category: 'irrigation',
+    program: {
+      om: 'Misooma Jallisii & Bishaanii',
+      am: 'የመስኖና ውኃ ልማት',
+      en: 'Small & Medium Irrigation Expansion Program',
+    },
+    zone: { om: 'Shawaa Bahaa', am: 'ምስራቅ ሸዋ', en: 'East Shewa Zone' },
+    year: '2024',
+    implementationPeriod: '2023–2024',
+    featuredImage: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&q=80&w=1000',
+    imageAlt: { om: 'Misooma Jallisii Shawaa Bahaa', am: 'የምስራቅ ሸዋ የመስኖ ልማት', en: 'Modern center-pivot and sprinkler irrigation in East Shewa' },
+    metrics: [
+      { label: { om: 'Lafa Jallisame', am: 'የለማ የመስኖ መሬት', en: 'Hectares Irrigated' }, value: '8,500 ha' },
+      { label: { om: 'Aanaalee Uwwifaman', am: 'የተሸፈኑ ወረዳዎች', en: 'Districts Covered' }, value: '17' },
+      { label: { om: 'Dabaltaa Oomishaa', am: 'የምርት ጭማሪ', en: 'Yield Increase' }, value: '42%' },
+    ],
+    responsibleOffice: { om: 'Waajjira Qonnaa Godina Shawaa Bahaa', am: 'የምስራቅ ሸዋ ዞን ግብርና ጽሕፈት ቤት', en: 'East Shewa Zonal Agricultural Office' },
+    featured: false,
+    status: 'published',
+    publishedAt: '2024-05-10',
+  },
+  {
+    id: 'ach-3',
+    slug: 'livestock-health-vaccination-campaign',
+    title: {
+      om: 'Duula Talaallii fi Fayyaa Beeyladaa Oromiyaa',
+      am: 'የእንስሳት ጤናና የክትባት አገር አቀፍ ዘመቻ',
+      en: 'Livestock Health & Mass Vaccination Campaign',
+    },
+    excerpt: {
+      om: 'Talaallii fi tajaajilli fayyaa beeyladaa beeylada miliyoona 4.5 olif naannoo Oromiyaa keessatti kennameera.',
+      am: 'በኦሮሚያ ክልል ከ4.5 ሚሊዮን በላይ ለሚሆኑ እንስሳት የክትባት እና የእንስሳት ጤና አገልግሎት ተሰጥቷል።',
+      en: 'Mass vaccination and animal health services reached more than 4.5M livestock across Oromia.',
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Duulli talaallii dhukkuboota beeyladaa akka FMD fi Anthrax ittisuuf geggeeffame beeylada miliyoona 4.5 olii dhaqqabeera.',
+          am: 'የእንስሳት በሽታዎችን ለመከላከል የተካሄደው አገር አቀፍ የክትባት ዘመቻ ከ4.5 ሚሊዮን በላይ እንስሳትን ተደራሽ አድርጓል።',
+          en: 'Deploying 85 mobile veterinary teams across pastoralist and agro-pastoralist zones prevented endemic disease outbreaks and stabilized pastoral livelihoods.',
+        },
+      },
+    ],
+    category: 'livestock',
+    program: {
+      om: 'Tajaajila Véterineerii fi Beeyladaa',
+      am: 'የእንስሳት ጤና አገልግሎት',
+      en: 'Regional Veterinary Services Program',
+    },
+    zone: { om: 'Boorana fi Gujii', am: 'ቦረና እና ጉጂ', en: 'Borena & Guji Zones' },
+    year: '2023',
+    implementationPeriod: '2022–2023',
+    featuredImage: 'https://images.unsplash.com/photo-1546445317-29f4545f9d52?auto=format&fit=crop&q=80&w=1000',
+    imageAlt: { om: 'Duula Talaallii Beeyladaa', am: 'የእንስሳት ክትባት ዘመቻ', en: 'Veterinary officers administering livestock vaccination' },
+    metrics: [
+      { label: { om: 'Beeylada Talaallaman', am: 'የተከተቡ እንስሳት', en: 'Animals Vaccinated' }, value: '4.5M+' },
+      { label: { om: 'Gareelee Socho\'an', am: 'ተንቀሳቃሽ የህክምና ቡድኖች', en: 'Mobile Vet Teams' }, value: '85' },
+      { label: { om: 'Hir\'ina Dhukkubaa', am: 'የበሽታ ቅናሽ', en: 'Outbreak Reduction' }, value: '92%' },
+    ],
+    responsibleOffice: { om: 'Sektera Misooma Beeyladaa Biiroo Qonnaa', am: 'የእንስሳት ሀብት ልማት ዘርፍ', en: 'Livestock Development Sector, OAB' },
+    featured: false,
+    status: 'published',
+    publishedAt: '2023-11-20',
+  },
+  {
+    id: 'ach-4',
+    slug: 'soil-water-conservation-west-arsi',
+    title: {
+      om: 'Eegumsa Biyooyyee fi Qabeenya Bishaanii Lixa Arsii',
+      am: 'በምዕራብ አርሲ የተከናወነ የተፋሰስ ማቋቋም እና የአፈር ጥበቃ',
+      en: 'Watershed Rehabilitation & Soil Conservation in West Arsi',
+    },
+    excerpt: {
+      om: 'Hojiiwwan madaallii lolaa fi eegumsa biyooyyee ganda 340 ol keessatti milka\'inaan xumuramaniiru.',
+      am: 'በ340 በላይ ቀበሌዎች የተፋሰስ ማቋቋም እና የአፈርና ውኃ ጥበቃ ሥራዎች ተጠናቀዋል።',
+      en: 'Watershed rehabilitation and soil conservation works completed in over 340 kebeles.',
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Hawaasni Lixa Arsii duula eegumsa biyooyyee irratti hirmaachuun lafa hektaara 12,500 ha deebisaniii bayyanachiisaniiru.',
+          am: 'የምዕራብ አርሲ ህብረተሰብ በተፋሰስ ማልማት ተሳትፎ 12,500 ሄክታር መሬት እንዲያንሰራራ አድርጓል።',
+          en: 'Community mobilization in watershed management generated massive soil conservation structures, terracing, and tree planting across West Arsi.',
+        },
+      },
+    ],
+    category: 'resource',
+    program: {
+      om: 'Eegumsa Qabeenya Uumamaa',
+      am: 'የተፈጥሮ ሀብት እንክብካቤ',
+      en: 'Natural Resource Conservation Initiative',
+    },
+    zone: { om: 'Arsii Lixaa', am: 'ምዕራብ አርሲ', en: 'West Arsi Zone' },
+    year: '2022',
+    implementationPeriod: '2021–2022',
+    featuredImage: 'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&q=80&w=1000',
+    imageAlt: { om: 'Eegumsa Biyooyyee Lixa Arsii', am: 'የምዕራብ አርሲ ተፋሰስ ልማት', en: 'Terraced hillside and soil conservation structures' },
+    metrics: [
+      { label: { om: 'Lafa Hojjetame', am: 'የለማ መሬት', en: 'Land Treated' }, value: '12,500 ha' },
+      { label: { om: 'Gandoota Uwwifaman', am: 'የተሸፈኑ ቀበሌዎች', en: 'Kebeles Covered' }, value: '68' },
+      { label: { om: 'Qonnaan Bultoota Fayyadaman', am: 'ተጠቃሚ ህዝብ', en: 'People Benefited' }, value: '35,000+' },
+    ],
+    beforeAfter: mockBeforeAfter,
+    responsibleOffice: { om: 'Waajjira Qonnaa Godina Arsii Lixaa', am: 'የምዕራብ አርሲ ዞን ግብርና ጽሕፈት ቤት', en: 'West Arsi Zonal Agricultural Office' },
+    featured: false,
+    status: 'published',
+    publishedAt: '2022-10-12',
+  },
+  {
+    id: 'ach-5',
+    slug: 'farmer-training-agronomy-initiative',
+    title: {
+      om: 'Sagantaa Leenjii fi Eksteenshinii Qonnaan Bulaa',
+      am: 'የአርሶ አደር ስልጠና እና የአግሮኖሚ ማስፋፊያ',
+      en: 'Farmer Training & Agronomy Extension Initiative',
+    },
+    excerpt: {
+      om: 'Sagantaaleen leenjii 320 ol haala teeknoolojii qonnaa fi bulchiinsa lafa irratti kennamaniiru.',
+      am: 'ስለ ተሻሻሉ የግብርና አሰራሮች እና የኢንተርፕራይዝ አመራር ከ320 በላይ የስልጠና ፕሮግራሞች ተሰጥተዋል።',
+      en: 'Delivered 320+ training programs on improved agronomic practices and farm management.',
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Leenjiin oogummaa qonnaan bultoota 45,000 olii dhiheessii teeknoolojii fi haala gabaa irratti hubannoo ol-aanaa uumeera.',
+          am: 'ለ45,000 አርሶ አደሮች የተሰጠው የተግባር ስልጠና አዲስ አሰራርን የመተግበር አቅማቸውን አሳድጎታል።',
+          en: 'Practical demonstration workshops conducted at Farmer Training Centers (FTCs) dramatically improved adoption rates for climate-resilient practices.',
+        },
+      },
+    ],
+    category: 'training',
+    program: {
+      om: 'Eksteenshinii Qonnaa & Leenjii',
+      am: 'የግብርና ማስፋፊያና ስልጠና',
+      en: 'Agricultural Extension & Capacity Building',
+    },
+    zone: { om: 'Arsii & Shawaa Lixaa', am: 'አርሲ እና ምዕራብ ሸዋ', en: 'Arsi & West Shewa Zones' },
+    year: '2021',
+    implementationPeriod: '2020–2021',
+    featuredImage: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&q=80&w=1000',
+    imageAlt: { om: 'Leenjii Qonnaan Bultootaa', am: 'የአርሶ አደር ስልጠና', en: 'Farmers participating in field training session' },
+    metrics: [
+      { label: { om: 'Sagantaa Leenjii', am: 'የተሰጡ ስልጠናዎች', en: 'Training Sessions' }, value: '320+' },
+      { label: { om: 'Qonnaan Bultoota Leenji\'an', am: 'የሰለጠኑ አርሶ አደሮች', en: 'Farmers Trained' }, value: '45,000+' },
+      { label: { om: 'Sadarkaa Fudhatamaa', am: 'የቴክኖሎጂ ተቀባይነት', en: 'Adoption Rate' }, value: '95%' },
+    ],
+    responsibleOffice: { om: 'Sektera Leenjii fi Eksteenshinii Biiroo Qonnaa', am: 'የግብርና ስልጠና እና ማስፋፊያ ዘርፍ', en: 'Extension & Training Directorate, OAB' },
+    featured: false,
+    status: 'published',
+    publishedAt: '2021-08-30',
+  },
+  {
+    id: 'ach-6',
+    slug: 'smallholder-farmer-empowerment-jimma',
+    title: {
+      om: 'Dandettii Dargaggoo fi Dubartootaa Qonna Jimmaa Keessatti',
+      am: 'በጂማ ዞን የወጣቶችና ሴቶች ግብርና ኢንተርፕራይዝ ማብቃት',
+      en: 'Youth & Women Empowerment in Agricultural Enterprise',
+    },
+    excerpt: {
+      om: 'Dargaggoota fi dubartoota 18,000 olif carraa hojii qonna ammayyaa fi deeggarsa liqii dhiheessuu.',
+      am: 'ከ18,000 በላይ ወጣቶችና ሴቶች በዘመናዊ ግብርና ኢንተርፕራይዝ እና በፋይናንስ ድጋፍ ተጠቃሚ ሆነዋል።',
+      en: 'Creating sustainable opportunities, boosting entrepreneurship, and driving community leadership.',
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Pirojektiin dandettii dubartootaa fi dargaggootaa Jimmaa keessatti gamtaalee hojii gamtaa 350 uumuun oomisha bunaa, avokaado fi beeylada ammayyaa irratti bobbaaseera.',
+          am: 'በጂማ ዞን የተካሄደው የሴቶችና ወጣቶች ፕሮጀክት 350 የኅብረት ሥራ ማህበራትን በማቋቋም በቡና፣ አቮካዶ እና እንስሳት እርባታ ላይ አሰማርቷል።',
+          en: 'Empowering women and youth cooperatives in Jimma Zone through micro-grants, avocado seedling nurseries, coffee washing stations, and poultry enterprises.',
+        },
+      },
+    ],
+    category: 'empowerment',
+    program: {
+      om: 'Hirmaannaa Dargaggoo fi Dubartootaa',
+      am: 'የወጣቶችና ሴቶች ማብቃት',
+      en: 'Youth & Gender Economic Inclusion in Agriculture',
+    },
+    zone: { om: 'Godina Jimmaa', am: 'ጂማ ዞን', en: 'Jimma Zone' },
+    year: '2024',
+    implementationPeriod: '2023–2024',
+    featuredImage: 'https://images.unsplash.com/photo-1531206715517-5c0ba140b2b8?auto=format&fit=crop&q=80&w=1000',
+    imageAlt: { om: 'Dubartoota fi Dargaggoota Qonnaa Jimmaa', am: 'በጂማ ዞን በግብርና የተሰማሩ ሴቶችና ወጣቶች', en: 'Smiling Ethiopian female smallholder farmer holding harvest' },
+    metrics: [
+      { label: { om: 'Dubartoota fi Dargaggoota', am: 'ተጠቃሚ ወጣቶችና ሴቶች', en: 'Youth & Women Supported' }, value: '18,000+' },
+      { label: { om: 'Gamtaalee Uumaman', am: 'የተቋቋሙ ማህበራት', en: 'Cooperatives Formed' }, value: '350' },
+      { label: { om: 'Deeggarsa Liqii (ETB)', am: 'የፋይናንስ ድጋፍ (ብር)', en: 'Grants Disbursed' }, value: '8.2M ETB' },
+    ],
+    responsibleOffice: { om: 'Waajjira Qonnaa Godina Jimmaa', am: 'የጂማ ዞን ግብርና ጽሕፈት ቤት', en: 'Jimma Zonal Agricultural Office' },
+    featured: false,
+    status: 'published',
+    publishedAt: '2024-04-18',
+  },
+];
+

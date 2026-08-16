@@ -1,0 +1,177 @@
+import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../../context/LanguageContext';
+import { Search, X, ArrowRight, FileText, Sprout, Newspaper, Building2 } from 'lucide-react';
+import { mockServices, mockNews, mockPublications, mockOffices } from '../../data/mockData';
+import { Link } from 'react-router-dom';
+
+interface SearchModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
+  const { t, getLocalizedText } = useLanguage();
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const filteredServices = query.trim()
+    ? mockServices.filter((s) => t(s.titleKey).toLowerCase().includes(query.toLowerCase()))
+    : mockServices.slice(0, 3);
+
+  const filteredNews = query.trim()
+    ? mockNews.filter((n) => t(n.titleKey).toLowerCase().includes(query.toLowerCase()))
+    : mockNews.slice(0, 2);
+
+  const filteredPubs = query.trim()
+    ? mockPublications.filter((p) => t(p.titleKey).toLowerCase().includes(query.toLowerCase()))
+    : mockPublications.slice(0, 2);
+
+  const filteredOffices = query.trim()
+    ? mockOffices.filter((o) => o.nameKey.toLowerCase().includes(query.toLowerCase()) || o.zoneKey.toLowerCase().includes(query.toLowerCase()))
+    : [];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-16 backdrop-blur-xs animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="search-modal-title"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl overflow-hidden rounded-2xl border border-emerald-900/20 dark:border-white/[0.12] bg-white dark:bg-[#181c19] shadow-2xl transition-colors duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 border-b border-gray-100 dark:border-white/[0.08] px-4 py-3.5 bg-[#F8F7F2] dark:bg-[#111613]">
+          <Search className="h-5 w-5 text-[#087A4B] dark:text-[#74d62c] shrink-0" />
+          <input
+            id="search-modal-title"
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('search_placeholder')}
+            autoFocus
+            className="w-full bg-transparent text-sm font-semibold text-[#14251D] dark:text-[#f5f6f3] placeholder-[#637069] dark:placeholder-[#737b75] focus:outline-none"
+          />
+          <button
+            onClick={onClose}
+            aria-label={t('close')}
+            className="rounded-xl p-2 text-[#637069] dark:text-[#a5aba6] hover:bg-gray-200 dark:hover:bg-[#161d18] dark:hover:text-[#f5f6f3] min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="max-h-[70vh] overflow-y-auto p-4 space-y-4">
+          {/* Services */}
+          <div>
+            <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#087A4B] dark:text-[#74d62c]">
+              <Sprout className="h-4 w-4 text-[#D7A928] dark:text-[#e4ad37]" /> {t('nav_services')}
+            </h3>
+            <div className="mt-2 space-y-1">
+              {filteredServices.map((srv) => (
+                <Link
+                  key={srv.id}
+                  to={srv.linkUrl}
+                  onClick={onClose}
+                  className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#14251D] dark:text-[#f5f6f3] hover:bg-[#EFF8F2] dark:hover:bg-[#161d18] dark:hover:text-[#74d62c] min-h-[44px] transition-colors"
+                >
+                  <span>{t(srv.titleKey)}</span>
+                  <ArrowRight className="h-3.5 w-3.5 text-[#087A4B] dark:text-[#74d62c]" />
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Publications */}
+          <div>
+            <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#087A4B] dark:text-[#74d62c]">
+              <FileText className="h-4 w-4 text-[#D7A928] dark:text-[#e4ad37]" /> {t('nav_resources')}
+            </h3>
+            <div className="mt-2 space-y-1">
+              {filteredPubs.map((pub) => (
+                <Link
+                  key={pub.id}
+                  to="/resources"
+                  onClick={onClose}
+                  className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#14251D] dark:text-[#f5f6f3] hover:bg-[#EFF8F2] dark:hover:bg-[#161d18] dark:hover:text-[#74d62c] min-h-[44px] transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{t(pub.titleKey)}</span>
+                    <span className="rounded-md bg-emerald-100 dark:bg-[#111613] border border-transparent dark:border-white/[0.08] px-1.5 py-0.5 text-[10px] text-[#087A4B] dark:text-[#74d62c] font-bold">{pub.format}</span>
+                  </div>
+                  <ArrowRight className="h-3.5 w-3.5 text-[#087A4B] dark:text-[#74d62c]" />
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* News */}
+          <div>
+            <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#087A4B] dark:text-[#74d62c]">
+              <Newspaper className="h-4 w-4 text-[#D7A928] dark:text-[#e4ad37]" /> {t('nav_news')}
+            </h3>
+            <div className="mt-2 space-y-1">
+              {filteredNews.map((news) => {
+                const titleText = typeof news.title === 'string'
+                  ? news.title
+                  : news.title
+                  ? getLocalizedText(news.title)
+                  : news.titleKey
+                  ? t(news.titleKey)
+                  : '';
+
+                return (
+                  <Link
+                    key={news.id}
+                    to={`/news/${news.slug}`}
+                    onClick={onClose}
+                    className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#14251D] dark:text-[#f5f6f3] hover:bg-[#EFF8F2] dark:hover:bg-[#161d18] dark:hover:text-[#74d62c] min-h-[44px] transition-colors"
+                  >
+                    <span className="truncate max-w-md">{titleText}</span>
+                    <span className="text-[10px] text-[#637069] dark:text-[#a5aba6]">{news.publishedAt || news.date}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Offices */}
+          {filteredOffices.length > 0 && (
+            <div>
+              <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#087A4B] dark:text-[#74d62c]">
+                <Building2 className="h-4 w-4 text-[#D7A928] dark:text-[#e4ad37]" /> Regional Offices
+              </h3>
+              <div className="mt-2 space-y-1">
+                {filteredOffices.map((off) => (
+                  <Link
+                    key={off.id}
+                    to="/contact"
+                    onClick={onClose}
+                    className="flex items-center justify-between rounded-xl p-3 text-xs font-semibold text-[#14251D] dark:text-[#f5f6f3] hover:bg-[#EFF8F2] dark:hover:bg-[#161d18] dark:hover:text-[#74d62c] min-h-[44px] transition-colors"
+                  >
+                    <span>{off.nameKey}</span>
+                    <span className="text-[10px] text-[#637069] dark:text-[#a5aba6]">{off.phone}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

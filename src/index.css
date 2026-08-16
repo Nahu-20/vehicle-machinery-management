@@ -1,0 +1,382 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Near-Black Dark Foundation */
+  --color-dark-page: #070908;
+  --color-dark-page-soft: #0a0d0b;
+  --color-dark-surface-1: #0d110f;
+  --color-dark-surface-2: #111613;
+  --color-dark-surface-3: #161d18;
+  --color-dark-surface-overlay: #181c19;
+
+  /* Dark Borders */
+  --color-dark-border: rgba(255, 255, 255, 0.08);
+  --color-dark-border-strong: rgba(255, 255, 255, 0.13);
+
+  /* Dark Typography */
+  --color-dark-text: #f5f6f3;
+  --color-dark-text-secondary: #a5aba6;
+  --color-dark-text-muted: #737b75;
+
+  /* Primary OAB Accents */
+  --color-oab-green: #74d62c;
+  --color-oab-green-hover: #8be63a;
+  --color-oab-deep-green: #14532d;
+  --color-wheat-gold: #e4ad37;
+  --color-wheat-gold-soft: #f0cf7a;
+
+  /* Controlled Category Accent Tokens */
+  --color-cat-crop: #65d936;
+  --color-cat-livestock: #a96df5;
+  --color-cat-market: #58a6ff;
+  --color-cat-water: #f5a623;
+  --color-cat-investment: #ef5b8e;
+  --color-cat-alert: #f3c84b;
+  --color-cat-infrastructure: #4fd1c5;
+
+  /* Data & Chart Palette */
+  --color-chart-green: #74d62c;
+  --color-chart-blue: #55a7ff;
+  --color-chart-purple: #a56df2;
+  --color-chart-orange: #f3a62d;
+  --color-chart-pink: #eb638c;
+  --color-chart-gold: #dbae42;
+  --color-chart-cyan: #46c9bb;
+
+  /* Status Colors */
+  --color-dark-success: #65d936;
+  --color-dark-warning: #f3c84b;
+  --color-dark-danger: #f05252;
+}
+
+:root {
+  --color-forest: #063D2A;
+  --color-primary: #087A4B;
+  --color-bright: #3FAE5A;
+  --color-lime: #A3E635;
+  --color-gold: #D7A928;
+  --color-soft-green: #EFF8F2;
+  --color-warm-white: #F6F7F3;
+  --color-dark-editorial: #0A1912;
+  --color-white: #FFFFFF;
+  --color-text-primary: #111310;
+  --color-text-muted: #56635B;
+  --color-text-subtle: #738379;
+  --color-border: #E2E8E3;
+  --color-border-strong: #C4D1C7;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #F9FAF7;
+  --color-surface-soft: #EFF8F2;
+  --font-size-multiplier: 1;
+}
+
+html.dark {
+  color-scheme: dark;
+
+  /* Primary Dark Canvas Tokens (Near-Black Foundation) */
+  --dark-page: #070908;
+  --dark-page-soft: #0a0d0b;
+
+  /* Dark Surface Hierarchy (Level 0 -> Level 3 + Overlay) */
+  --dark-surface-1: #0d110f;
+  --dark-surface-2: #111613;
+  --dark-surface-3: #161d18;
+  --dark-surface-overlay: #181c19;
+
+  /* Border Tokens */
+  --dark-border: rgba(255, 255, 255, 0.08);
+  --dark-border-subtle: rgba(255, 255, 255, 0.07);
+  --dark-border-strong: rgba(255, 255, 255, 0.13);
+
+  /* Typography Tokens */
+  --dark-text: #f5f6f3;
+  --dark-text-secondary: #a5aba6;
+  --dark-text-muted: #737b75;
+
+  /* OAB Agricultural Accents */
+  --oab-green: #74d62c;
+  --oab-green-hover: #8be63a;
+  --oab-green-soft: rgba(116, 214, 44, 0.12);
+  --oab-deep-green: #14532d;
+
+  /* Wheat Gold Accents */
+  --wheat-gold: #e4ad37;
+  --wheat-soft: rgba(228, 173, 55, 0.12);
+  --wheat-gold-soft: #f0cf7a;
+
+  /* Category Accents */
+  --crop: #65d936;
+  --crop-bg: rgba(101, 217, 54, 0.09);
+  --crop-border: rgba(101, 217, 54, 0.24);
+
+  --livestock: #a96df5;
+  --livestock-bg: rgba(169, 109, 245, 0.09);
+  --livestock-border: rgba(169, 109, 245, 0.24);
+
+  --market: #58a6ff;
+  --market-bg: rgba(88, 166, 255, 0.09);
+  --market-border: rgba(88, 166, 255, 0.24);
+
+  --water: #f5a623;
+  --water-bg: rgba(245, 166, 35, 0.09);
+  --water-border: rgba(245, 166, 35, 0.24);
+
+  --investment: #ef5b8e;
+  --investment-bg: rgba(239, 91, 142, 0.09);
+  --investment-border: rgba(239, 91, 142, 0.24);
+
+  --alert: #f3c84b;
+  --alert-bg: rgba(228, 173, 55, 0.08);
+  --alert-border: rgba(228, 173, 55, 0.25);
+
+  --infrastructure: #4fd1c5;
+  --infrastructure-bg: rgba(79, 209, 197, 0.09);
+  --infrastructure-border: rgba(79, 209, 197, 0.24);
+
+  /* Status Colors */
+  --dark-success: #65d936;
+  --dark-warning: #f3c84b;
+  --dark-danger: #f05252;
+
+  /* Semantic Framework Bindings */
+  --color-warm-white: #070908;
+  --color-text-primary: #f5f6f3;
+  --color-text-muted: #a5aba6;
+  --color-text-subtle: #737b75;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.13);
+  --color-surface: #0d110f;
+  --color-surface-elevated: #111613;
+  --color-surface-soft: #161d18;
+}
+
+body {
+  background-color: var(--color-warm-white);
+  color: var(--color-text-primary);
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: calc(1rem * var(--font-size-multiplier, 1));
+  line-height: 1.6;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html.dark body {
+  background-color: #070908;
+  background-image: radial-gradient(
+    circle at 50% 0%,
+    rgba(20, 83, 45, 0.18),
+    transparent 40%
+  );
+  background-attachment: fixed;
+  color: var(--dark-text);
+}
+
+/* Custom design system utilities */
+.bg-forest { background-color: #063D2A; }
+.bg-primary-green { background-color: #087A4B; }
+.bg-bright-green { background-color: #3FAE5A; }
+.bg-agri-lime { background-color: #A3E635; }
+.bg-agri-gold { background-color: #D7A928; }
+.bg-soft-green { background-color: #EFF8F2; }
+.bg-warm-white { background-color: #F6F7F3; }
+.bg-dark-editorial { background-color: #0A1912; }
+
+.text-forest { color: #063D2A; }
+.text-primary-green { color: #087A4B; }
+.text-bright-green { color: #3FAE5A; }
+.text-agri-lime { color: #A3E635; }
+.text-agri-gold { color: #D7A928; }
+.text-dark-primary { color: #111310; }
+.text-muted-green { color: #56635B; }
+
+.border-agri { border-color: #E2E8E3; }
+.border-agri-lime { border-color: #A3E635; }
+
+/* Dark Mode Surface Hierarchy Utilities */
+.dark-surface-base {
+  background-color: var(--dark-surface-1, #0d110f);
+  border: 1px solid var(--dark-border, rgba(255, 255, 255, 0.08));
+}
+
+.dark-surface-elevated {
+  background-color: var(--dark-surface-2, #111613);
+  border: 1px solid var(--dark-border-strong, rgba(255, 255, 255, 0.13));
+}
+
+.dark-surface-soft {
+  background-color: var(--dark-surface-3, #161d18);
+  border: 1px solid var(--dark-border, rgba(255, 255, 255, 0.08));
+}
+
+.dark-header-surface {
+  background: rgba(8, 10, 9, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dark-footer-surface {
+  background: #0b0f0c;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dark-card-assistance {
+  background: linear-gradient(135deg, #101410 0%, #0b0e0c 100%);
+  border: 1px solid rgba(228, 173, 55, 0.20);
+}
+
+/* Category Specific Card Accents */
+.dark-card-crop {
+  background: linear-gradient(145deg, rgba(101, 217, 54, 0.10), rgba(13, 17, 15, 0.97) 55%);
+  border: 1px solid rgba(101, 217, 54, 0.22);
+}
+
+.dark-card-livestock {
+  background: linear-gradient(145deg, rgba(169, 109, 245, 0.10), rgba(13, 17, 15, 0.97) 55%);
+  border: 1px solid rgba(169, 109, 245, 0.22);
+}
+
+.dark-card-market {
+  background: linear-gradient(145deg, rgba(88, 166, 255, 0.10), rgba(13, 17, 15, 0.97) 55%);
+  border: 1px solid rgba(88, 166, 255, 0.22);
+}
+
+.dark-card-water {
+  background: linear-gradient(145deg, rgba(245, 166, 35, 0.10), rgba(13, 17, 15, 0.97) 55%);
+  border: 1px solid rgba(245, 166, 35, 0.22);
+}
+
+.dark-card-investment {
+  background: linear-gradient(145deg, rgba(239, 91, 142, 0.10), rgba(13, 17, 15, 0.97) 55%);
+  border: 1px solid rgba(239, 91, 142, 0.22);
+}
+
+.dark-gradient-card {
+  background: linear-gradient(135deg, #101410 0%, #0b0e0c 100%);
+}
+
+.dark-gradient-gold {
+  background: linear-gradient(135deg, #e4ad37 0%, #f59e0b 50%, #b45309 100%);
+}
+
+.dark-gradient-emerald {
+  background: linear-gradient(135deg, #74d62c 0%, #10b981 50%, #047857 100%);
+}
+
+.dark-glass-panel {
+  background: rgba(8, 10, 9, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Accessible focus ring */
+*:focus-visible {
+  outline: 3px solid #D7A928 !important;
+  outline-offset: 2px !important;
+}
+
+html.dark *:focus-visible {
+  outline: 2px solid #74d62c !important;
+  outline-offset: 3px !important;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #EFF8F2;
+}
+::-webkit-scrollbar-thumb {
+  background: #A3C9B0;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #087A4B;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #070908;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #1e2621;
+  border-radius: 4px;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #2e3b33;
+}
+
+/* Smooth card elevate transitions */
+.card-hover {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, background 0.3s ease;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px -8px rgba(6, 61, 42, 0.12);
+  border-color: #087A4B;
+}
+
+html.dark .card-hover:hover {
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Article Print Styles */
+@media print {
+  header,
+  footer,
+  nav,
+  aside,
+  .print\:hidden,
+  #chat-launcher,
+  #chat-panel {
+    display: none !important;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+  }
+
+  main, article, .max-w-5xl, .max-w-4xl {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  h1, h2, h3, h4, h5, h6, p, span, div, li, td, th {
+    color: #000000 !important;
+  }
+
+  article, figure, blockquote, img, h1, h2, h3 {
+    break-inside: avoid;
+  }
+
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+}
+

@@ -1,0 +1,86 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules for Oromia Agricultural Bureau Platform
+// Milestone 2.2B-1B: Secure Private Media Staging Upload Service
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function staffExists() {
+      return firestore.exists(/databases/(default)/documents/staffUsers/$(request.auth.uid));
+    }
+
+    function staffProfile() {
+      return firestore.get(/databases/(default)/documents/staffUsers/$(request.auth.uid)).data;
+    }
+
+    function isActiveStaff() {
+      return isSignedIn() && staffExists() && staffProfile().active == true;
+    }
+
+    function canUploadNewsMedia() {
+      return isSignedIn();
+    }
+
+    function isValidMediaId(mediaId) {
+      return mediaId.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$');
+    }
+
+    function isValidNewsImage() {
+      return request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 10 * 1024 * 1024
+        && (
+          request.resource.contentType == 'image/jpeg' ||
+          request.resource.contentType == 'image/png' ||
+          request.resource.contentType == 'image/webp'
+        );
+    }
+
+    function hasValidStagingMetadata(uid, mediaId) {
+      return request.resource.metadata != null
+        && request.resource.metadata.mediaId == mediaId
+        && request.resource.metadata.ownerUid == uid
+        && request.resource.metadata.ownerUid == request.auth.uid
+        && (request.resource.metadata.module == 'news' || request.resource.metadata.module == 'achievement');
+    }
+
+    // Secure Private Media Staging Path
+    match /media/staging/{uid}/{mediaId} {
+      allow create: if isSignedIn()
+        && uid == request.auth.uid
+        && canUploadNewsMedia()
+        && isValidMediaId(mediaId)
+        && isValidNewsImage()
+        && hasValidStagingMetadata(uid, mediaId);
+
+      allow get: if isSignedIn();
+
+      allow list: if false;
+
+      allow update: if false;
+
+      allow delete: if isSignedIn();
+    }
+
+    // Processed Private Media Path (Deny all direct browser storage reads/writes)
+    match /media/processed/{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Public Media Storage Path (Direct browser storage reads/writes denied; public delivery occurs via servePublicNewsMedia HTTP endpoint)
+    match /media/public/{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Catch-all default deny
+    match /{allPaths=**} {
+      allow get, list, create, update, delete: if false;
+    }
+  }
+}

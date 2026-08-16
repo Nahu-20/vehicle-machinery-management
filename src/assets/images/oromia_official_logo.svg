@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <defs>
+    <!-- Circular Text Paths -->
+    <!-- Top arc for Afaan Oromo text -->
+    <path id="topArc" d="M 62,250 A 188,188 0 1,1 438,250" fill="none" />
+    <!-- Bottom arc for English & Amharic text -->
+    <path id="bottomArc" d="M 438,250 A 188,188 0 0,1 62,250" fill="none" />
+    
+    <!-- Clip Path for inner artwork -->
+    <clipPath id="innerCircleClip">
+      <circle cx="250" cy="250" r="148" />
+    </clipPath>
+
+    <linearGradient id="sunGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF000" />
+      <stop offset="100%" stop-color="#FFD700" />
+    </linearGradient>
+
+    <linearGradient id="waterGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#33C2F5" />
+      <stop offset="100%" stop-color="#0099E6" />
+    </linearGradient>
+  </defs>
+
+  <!-- Outer Red Ring Border -->
+  <circle cx="250" cy="250" r="242" fill="#FFFFFF" stroke="#E31B23" stroke-width="12" />
+
+  <!-- Inner Dark Red Separator Ring -->
+  <circle cx="250" cy="250" r="152" fill="none" stroke="#E31B23" stroke-width="4" />
+
+  <!-- Circular Outer Text - Afaan Oromo (Top Arc) -->
+  <text font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="28" fill="#0A0A0A" letter-spacing="2.5">
+    <textPath href="#topArc" startOffset="50%" text-anchor="middle">
+      BIIROO QONNAA OROMIYAA
+    </textPath>
+  </text>
+
+  <!-- Circular Outer Text - English & Amharic (Bottom Arc) -->
+  <text font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="21" fill="#0A0A0A" letter-spacing="1">
+    <textPath href="#bottomArc" startOffset="26%" text-anchor="middle">
+      OROMIA BUREAU OF AGRICULTURE
+    </textPath>
+  </text>
+
+  <text font-family="Arial, 'Noto Sans Ethiopic', sans-serif" font-weight="800" font-size="22" fill="#0A0A0A">
+    <textPath href="#bottomArc" startOffset="74%" text-anchor="middle">
+      የኦሮሚያ ግብርና ቢሮ
+    </textPath>
+  </text>
+
+  <!-- Blue Separator Stars -->
+  <g fill="#0055A5">
+    <!-- Left Star -->
+    <polygon points="82,250 86,240 96,240 88,233 91,223 82,229 73,223 76,233 68,240 78,240" transform="translate(-10, 8) scale(0.95)" />
+    <!-- Right Star -->
+    <polygon points="418,250 422,240 432,240 424,233 427,223 418,229 409,223 412,233 404,240 414,240" transform="translate(10, 8) scale(0.95)" />
+  </g>
+
+  <!-- ================= INNER ARTWORK ================= -->
+  <g clip-path="url(#innerCircleClip)">
+    <!-- Yellow Sky Background -->
+    <rect x="100" y="100" width="300" height="155" fill="url(#sunGrad)" />
+
+    <!-- Sunburst Rays -->
+    <g fill="#FFFFFF" opacity="0.95">
+      <polygon points="250,250 250,100 236,100" />
+      <polygon points="250,250 220,100 202,100" />
+      <polygon points="250,250 180,100 160,104" />
+      <polygon points="250,250 140,118 124,130" />
+      <polygon points="250,250 110,150 102,168" />
+      <polygon points="250,250 100,195 100,212" />
+
+      <polygon points="250,250 264,100 280,100" />
+      <polygon points="250,250 298,100 318,104" />
+      <polygon points="250,250 338,112 356,126" />
+      <polygon points="250,250 376,144 388,162" />
+      <polygon points="250,250 398,188 400,208" />
+    </g>
+
+    <!-- Center Acacia Tree -->
+    <g id="acaciaTree">
+      <!-- Trunk -->
+      <path d="M 242,252 L 246,205 C 242,198 238,195 232,190 C 238,190 244,195 248,198 C 251,195 258,190 266,190 C 260,195 254,198 252,205 L 258,252 Z" fill="#3D2314" />
+      <!-- Lush Canopy -->
+      <ellipse cx="250" cy="180" rx="46" ry="16" fill="#007A33" />
+      <ellipse cx="250" cy="174" rx="38" ry="14" fill="#119A46" />
+      <ellipse cx="228" cy="182" rx="22" ry="10" fill="#006428" />
+      <ellipse cx="272" cy="182" rx="22" ry="10" fill="#1B9E4B" />
+      <ellipse cx="250" cy="168" rx="28" ry="10" fill="#34C765" />
+    </g>
+
+    <!-- Green Horizon Field -->
+    <path d="M 100,248 Q 250,240 400,248 L 400,285 L 100,285 Z" fill="#2E9E44" />
+
+    <!-- Terraced Soil Bands (Left side) -->
+    <g fill="none" stroke="#7A4215" stroke-width="12" stroke-linecap="round">
+      <path d="M 100,288 Q 180,280 230,298" />
+      <path d="M 100,314 Q 180,302 245,325" fill="#7A4215" />
+      <path d="M 100,342 Q 180,330 258,358" />
+    </g>
+    <g fill="#8C531B">
+      <path d="M 100,280 Q 185,270 235,292 L 230,305 Q 180,285 100,296 Z" />
+      <path d="M 100,310 Q 190,295 248,322 L 242,336 Q 180,312 100,326 Z" />
+      <path d="M 100,340 Q 195,325 262,356 L 254,370 Q 180,340 100,358 Z" />
+    </g>
+
+    <!-- Irrigation Water Streams (Right side) -->
+    <g fill="#33B5E5">
+      <path d="M 235,292 Q 320,265 400,272 L 400,288 Q 320,280 230,305 Z" fill="url(#waterGrad)" />
+      <path d="M 248,322 Q 330,292 400,302 L 400,320 Q 330,310 242,336 Z" fill="url(#waterGrad)" />
+      <path d="M 262,356 Q 340,324 400,338 L 400,358 Q 340,342 254,370 Z" fill="url(#waterGrad)" />
+    </g>
+
+    <!-- White Contour Dividers between Streams -->
+    <g fill="none" stroke="#FFFFFF" stroke-width="3">
+      <path d="M 235,292 Q 320,265 400,272" />
+      <path d="M 248,322 Q 330,292 400,302" />
+      <path d="M 262,356 Q 340,324 400,338" />
+    </g>
+  </g>
+</svg>
