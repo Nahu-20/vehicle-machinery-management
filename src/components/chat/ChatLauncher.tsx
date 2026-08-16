@@ -32,7 +32,7 @@ export const ChatLauncher: React.FC<ChatLauncherProps> = ({ onClick, isOpen, unr
         </span>
 
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#D7A928] text-[10px] font-black text-[#063D2A] shadow-md ring-2 ring-white">
+          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-black text-slate-950 shadow-md ring-2 ring-white">
             {unreadCount}
           </span>
         )}

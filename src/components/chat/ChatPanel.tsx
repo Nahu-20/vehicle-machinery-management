@@ -107,7 +107,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="w-full sm:w-[420px] h-full sm:h-[620px] max-h-full sm:max-h-[calc(100vh-80px)] bg-white dark:bg-[#0B1912] sm:rounded-2xl border border-[#DDE8E1] dark:border-emerald-900/80 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200 focus:outline-none"
+        className="w-full sm:w-[420px] h-full sm:h-[620px] max-h-full sm:max-h-[calc(100vh-80px)] bg-white dark:bg-[#0B1912] sm:rounded-2xl border border-gray-200 dark:border-emerald-900/80 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200 focus:outline-none"
       >
         <ChatHeader
           onClose={onClose}

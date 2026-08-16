@@ -529,14 +529,14 @@ export const MapboxMapContainer: React.FC<MapboxMapContainerProps> = ({
   if (error) {
     return (
       <div
-        className={`flex flex-col items-center justify-center gap-3 rounded-2xl border border-[#D7A928]/40 bg-[#D7A928]/5 p-6 text-center ${className}`}
+        className={`flex flex-col items-center justify-center gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-6 text-center ${className}`}
         style={{ height }}
       >
-        <AlertTriangle className="h-8 w-8 text-[#D7A928]" />
-        <p className="text-sm font-extrabold text-[#7A5B0B] dark:text-[#D7A928]">
+        <AlertTriangle className="h-8 w-8 text-amber-500" />
+        <p className="text-sm font-extrabold text-amber-800 dark:text-amber-300">
           Mapbox engine unavailable
         </p>
-        <p className="max-w-md text-xs text-[#637069] dark:text-emerald-300/70">
+        <p className="max-w-md text-xs text-[#56635B] dark:text-[#a5aba6]">
           {error} Switch to the OpenLayers engine above, which needs no access token.
         </p>
       </div>
@@ -547,7 +547,7 @@ export const MapboxMapContainer: React.FC<MapboxMapContainerProps> = ({
     <div className={`space-y-2 ${className}`}>
       <div className="relative overflow-hidden rounded-2xl" style={{ height }}>
         {loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-[#063D2A]/60 text-sm text-[#A3E635]">
+          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-[#0A1912]/60 text-sm text-[#A3E635]">
             <Loader2 className="h-5 w-5 animate-spin" />
             <span>Loading Oromia GIS boundaries…</span>
           </div>
@@ -677,7 +677,7 @@ export const MapboxMapContainer: React.FC<MapboxMapContainerProps> = ({
         {/* 2D / 3D camera toggle */}
         <button
           onClick={toggle3D}
-          className="absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-lg border border-[#A3E635]/40 bg-[#063D2A]/85 px-2.5 py-1.5 text-[11px] font-bold text-[#A3E635] shadow-lg backdrop-blur transition-colors hover:bg-[#063D2A] cursor-pointer"
+          className="absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-lg border border-[#A3E635]/40 bg-[#0A1912]/85 px-2.5 py-1.5 text-[11px] font-bold text-[#A3E635] shadow-lg backdrop-blur transition-colors hover:bg-[#0A1912] cursor-pointer"
           title={is3D ? 'Switch to flat 2D view' : 'Switch to 3D terrain view'}
         >
           {is3D ? <Square className="h-3.5 w-3.5" /> : <Box className="h-3.5 w-3.5" />}
@@ -688,7 +688,7 @@ export const MapboxMapContainer: React.FC<MapboxMapContainerProps> = ({
             read without clicking through to the profile panel. */}
         {hover && (
           <div
-            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-[calc(100%+14px)] rounded-lg border border-[#A3E635]/40 bg-[#063D2A]/95 px-3 py-2 text-xs shadow-xl backdrop-blur"
+            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-[calc(100%+14px)] rounded-lg border border-[#A3E635]/40 bg-[#0A1912]/95 px-3 py-2 text-xs shadow-xl backdrop-blur"
             style={{ left: hover.x, top: hover.y }}
           >
             <div className="font-bold text-white">{hover.name}</div>
@@ -700,7 +700,7 @@ export const MapboxMapContainer: React.FC<MapboxMapContainerProps> = ({
                 )}
               </div>
             ) : (
-              <div className="mt-0.5 text-emerald-100/60">
+              <div className="mt-0.5 text-[#a5aba6]">
                 {selectedCommodity ? 'No data published' : 'Select a commodity'}
               </div>
             )}
@@ -710,20 +710,20 @@ export const MapboxMapContainer: React.FC<MapboxMapContainerProps> = ({
 
       {/* Status strip, mirroring the other engines so the toggle feels consistent. */}
       <div className="flex flex-wrap items-center gap-2 text-[11px]">
-        <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#DDE8E1] bg-[#EFF8F2] px-2 py-1 font-mono dark:border-emerald-800/60 dark:bg-[#183627]">
-          <MapPin className="h-3 w-3 text-[#087A4B] dark:text-[#A3E635]" />
-          <span className="font-bold text-[#087A4B] dark:text-[#A3E635]">Mapbox GL Engine</span>
-          <span className="text-[#637069] dark:text-emerald-300/70">
+        <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#E2EFE0] bg-[#F0F7EE] px-2 py-1 font-mono dark:border-white/10 dark:bg-[#161d18]">
+          <MapPin className="h-3 w-3 text-[#075B36] dark:text-[#A3E635]" />
+          <span className="font-bold text-[#075B36] dark:text-[#A3E635]">Mapbox GL Engine</span>
+          <span className="text-[#56635B] dark:text-[#a5aba6]">
             | {featureCount} Candidate Polygons
           </span>
         </span>
         {checksumOk && (
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#DDE8E1] bg-[#EFF8F2] px-2 py-1 font-bold text-[#087A4B] dark:border-emerald-800/60 dark:bg-[#183627] dark:text-[#A3E635]">
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#E2EFE0] bg-[#F0F7EE] px-2 py-1 font-bold text-[#075B36] dark:border-white/10 dark:bg-[#161d18] dark:text-[#A3E635]">
             <ShieldCheck className="h-3 w-3" />
             GIS Checksum Verified
           </span>
         )}
-        <span className="text-[#637069] dark:text-emerald-300/70">
+        <span className="text-[#56635B] dark:text-[#a5aba6]">
           Drag to pan · right-drag to tilt and rotate · hover a zone for details
         </span>
       </div>

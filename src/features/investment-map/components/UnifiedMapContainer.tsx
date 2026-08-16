@@ -50,9 +50,9 @@ export const UnifiedMapContainer: React.FC<UnifiedMapContainerProps> = ({
   return (
     <div className={`space-y-3 ${className}`}>
       {/* Map Engine Selector Header Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-[#EFF8F2] dark:bg-[#12281D] p-2 rounded-2xl border border-[#DDE8E1] dark:border-emerald-900/60">
-        <div className="flex items-center gap-2 text-xs font-extrabold text-[#063D2A] dark:text-emerald-100">
-          <Layers className="w-4 h-4 text-[#087A4B] dark:text-[#A3E635] shrink-0" />
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-[#F0F7EE] dark:bg-[#111613] p-2 rounded-2xl border border-[#E2EFE0] dark:border-white/10">
+        <div className="flex items-center gap-2 text-xs font-extrabold text-[#0A1912] dark:text-[#f5f6f3]">
+          <Layers className="w-4 h-4 text-[#075B36] dark:text-[#A3E635] shrink-0" />
           <span>GIS Map Rendering Engine:</span>
         </div>
 
@@ -67,10 +67,10 @@ export const UnifiedMapContainer: React.FC<UnifiedMapContainerProps> = ({
             }
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
               !mapboxAvailable
-                ? 'bg-[#F6F7F3] dark:bg-[#0F1F17] text-[#9AA69F] dark:text-emerald-300/30 border border-[#DDE8E1] dark:border-emerald-900/40 cursor-not-allowed'
+                ? 'bg-[#F0F7EE] dark:bg-[#0D110F] text-[#9CA3AF] dark:text-gray-600 border border-[#E2EFE0] dark:border-white/5 cursor-not-allowed'
                 : engine === 'mapbox'
-                ? 'bg-[#087A4B] text-white shadow-xs cursor-pointer'
-                : 'bg-white dark:bg-[#183627] text-[#637069] dark:text-emerald-300/80 hover:text-[#063D2A] dark:hover:text-white border border-[#DDE8E1] dark:border-emerald-800/60 cursor-pointer'
+                ? 'bg-[#075B36] text-white shadow-xs cursor-pointer'
+                : 'bg-white dark:bg-[#161d18] text-[#56635B] dark:text-[#a5aba6] hover:text-[#0A1912] dark:hover:text-white border border-[#E2EFE0] dark:border-white/10 cursor-pointer'
             }`}
           >
             <Globe2 className="w-3.5 h-3.5" />
@@ -81,13 +81,13 @@ export const UnifiedMapContainer: React.FC<UnifiedMapContainerProps> = ({
             onClick={() => setEngine('openlayers')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
               engine === 'openlayers'
-                ? 'bg-[#087A4B] text-white shadow-xs'
-                : 'bg-white dark:bg-[#183627] text-[#637069] dark:text-emerald-300/80 hover:text-[#063D2A] dark:hover:text-white border border-[#DDE8E1] dark:border-emerald-800/60'
+                ? 'bg-[#075B36] text-white shadow-xs'
+                : 'bg-white dark:bg-[#161d18] text-[#56635B] dark:text-[#a5aba6] hover:text-[#0A1912] dark:hover:text-white border border-[#E2EFE0] dark:border-white/10'
             }`}
           >
             <MapPin className="w-3.5 h-3.5" />
             <span>OpenLayers (Primary GIS Engine)</span>
-            <span className="bg-[#A3E635]/25 text-[#063D2A] dark:bg-[#A3E635]/15 dark:text-[#A3E635] text-[10px] px-1.5 py-0.2 rounded font-mono font-bold">
+            <span className="bg-[#A3E635]/25 text-[#0A1912] dark:bg-[#A3E635]/15 dark:text-[#A3E635] text-[10px] px-1.5 py-0.2 rounded font-mono font-bold">
               Primary
             </span>
           </button>
@@ -96,8 +96,8 @@ export const UnifiedMapContainer: React.FC<UnifiedMapContainerProps> = ({
             onClick={() => setEngine('svg')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
               engine === 'svg'
-                ? 'bg-[#087A4B] text-white shadow-xs'
-                : 'bg-white dark:bg-[#183627] text-[#637069] dark:text-emerald-300/80 hover:text-[#063D2A] dark:hover:text-white border border-[#DDE8E1] dark:border-emerald-800/60'
+                ? 'bg-[#075B36] text-white shadow-xs'
+                : 'bg-white dark:bg-[#161d18] text-[#56635B] dark:text-[#a5aba6] hover:text-[#0A1912] dark:hover:text-white border border-[#E2EFE0] dark:border-white/10'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
@@ -108,14 +108,14 @@ export const UnifiedMapContainer: React.FC<UnifiedMapContainerProps> = ({
 
       {/* Fallback Notification Banner */}
       {fallbackNotice && (
-        <div className="bg-[#D7A928]/10 border border-[#D7A928]/40 text-[#7A5B0B] dark:text-[#D7A928] rounded-2xl p-3 text-xs flex items-center justify-between gap-3">
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 rounded-2xl p-3 text-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-[#D7A928] shrink-0" />
+            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
             <span>OpenLayers map unavailable. Compatibility map activated.</span>
           </div>
           <button
             onClick={() => setFallbackNotice(false)}
-            className="text-[#7A5B0B] dark:text-[#D7A928] hover:underline font-bold text-[11px] shrink-0"
+            className="text-amber-700 dark:text-amber-400 hover:underline font-bold text-[11px] shrink-0"
           >
             Dismiss
           </button>
@@ -124,14 +124,14 @@ export const UnifiedMapContainer: React.FC<UnifiedMapContainerProps> = ({
 
       {/* Mapbox Failure Notification Banner */}
       {mapboxFailed && (
-        <div className="bg-[#D7A928]/10 border border-[#D7A928]/40 text-[#7A5B0B] dark:text-[#D7A928] rounded-2xl p-3 text-xs flex items-center justify-between gap-3">
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 rounded-2xl p-3 text-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-[#D7A928] shrink-0" />
+            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
             <span>Mapbox basemap unavailable. OpenLayers engine activated.</span>
           </div>
           <button
             onClick={() => setMapboxFailed(false)}
-            className="text-[#7A5B0B] dark:text-[#D7A928] hover:underline font-bold text-[11px] shrink-0"
+            className="text-amber-700 dark:text-amber-400 hover:underline font-bold text-[11px] shrink-0"
           >
             Dismiss
           </button>
