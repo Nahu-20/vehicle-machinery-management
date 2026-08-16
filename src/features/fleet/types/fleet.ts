@@ -109,6 +109,16 @@ export interface FleetAsset {
   insuranceExpiry?: Timestamp | null;
   inspectionExpiry?: Timestamp | null;
 
+  /**
+   * Photograph of this machine.
+   *
+   * Optional, and a URL rather than an upload: a register is far more useful
+   * with a picture of the actual machine than a generic icon, but nobody should
+   * be blocked from recording an asset because they have not got a photo yet.
+   * Absent, the UI draws a placeholder from the asset type.
+   */
+  imageUrl?: string;
+
   acquiredAt?: Timestamp | null;
   notes?: LocalizedText;
 

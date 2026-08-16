@@ -40,6 +40,7 @@ import {
   FleetButton,
   FleetEmptyState,
 } from '../../../features/fleet/components/FleetUI';
+import { AssetImage } from '../../../features/fleet/components/AssetImage';
 import {
   reportFault,
   listWorkOrdersForAsset,
@@ -283,7 +284,14 @@ export function AdminFleetAssetDetailPage() {
       {/* Identity */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+          <div className="flex items-start gap-4">
+            <AssetImage
+              assetType={asset.assetType}
+              imageUrl={asset.imageUrl}
+              alt={`${asset.make} ${asset.model}`}
+              size="card"
+            />
+            <div>
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-extrabold text-slate-900 dark:text-white font-mono">
                 {asset.assetId}
@@ -301,6 +309,7 @@ export function AdminFleetAssetDetailPage() {
               {asset.year ? ` · ${asset.year}` : ''}
               {asset.plateNumber ? ` · ${asset.plateNumber}` : ''}
             </p>
+            </div>
           </div>
 
           <div className="text-right">

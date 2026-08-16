@@ -15,7 +15,13 @@ import { logAuditEvent } from '../../../services/auditService';
 import type { StaffUser } from '../../../types/auth';
 import type { FleetAsset, FleetAssignment } from '../types/fleet';
 import { isIssuable } from '../constants/fleetVocabulary';
-import { FLEET_ASSETS_COLLECTION, FleetNotFoundError, FleetVersionConflictError } from './fleetService';
+import {
+  FLEET_ASSETS_COLLECTION,
+  FleetNotFoundError,
+  FleetVersionConflictError,
+  isDemoFleet,
+} from './fleetService';
+import { DEMO_ASSIGNMENTS } from '../data/demoFleet';
 
 /**
  * Issuing and returning assets — the sign-out book.
@@ -220,6 +226,11 @@ export async function returnAsset(
 
 /** Assignment history for one asset, newest first. */
 export async function listAssignmentsForAsset(assetId: string): Promise<FleetAssignment[]> {
+  if (isDemoFleet()) {
+    return DEMO_ASSIGNMENTS.filter((a) => a.assetId === assetId).sort(
+      (x, y) => y.issuedAt.toMillis() - x.issuedAt.toMillis()
+    );
+  }
   const database = requireDb();
   const snap = await getDocs(
     query(
@@ -234,6 +245,9 @@ export async function listAssignmentsForAsset(assetId: string): Promise<FleetAss
 
 /** Every assignment still open, used for the overdue count on the dashboard. */
 export async function listActiveAssignments(): Promise<FleetAssignment[]> {
+  if (isDemoFleet()) {
+    return DEMO_ASSIGNMENTS.filter((a) => a.status === 'active');
+  }
   const database = requireDb();
   const snap = await getDocs(
     query(

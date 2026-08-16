@@ -17,6 +17,7 @@ import {
   METER_UNIT_LABEL,
 } from '../../../features/fleet/constants/fleetVocabulary';
 import { FleetPanel, FleetButton } from '../../../features/fleet/components/FleetUI';
+import { AssetImage } from '../../../features/fleet/components/AssetImage';
 import {
   CANONICAL_ZONE_IDS,
   CANONICAL_ZONE_METADATA,
@@ -90,6 +91,7 @@ export function AdminFleetAssetFormPage() {
   const [lastServiceMeter, setLastServiceMeter] = useState('');
   const [insuranceExpiry, setInsuranceExpiry] = useState('');
   const [inspectionExpiry, setInspectionExpiry] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [notes, setNotes] = useState('');
 
   /** Road vehicles carry documents; farm machinery does not. */
@@ -126,6 +128,7 @@ export function AdminFleetAssetFormPage() {
         setLastServiceMeter(asset.lastServiceMeter ? String(asset.lastServiceMeter) : '');
         setInsuranceExpiry(toDateInput(asset.insuranceExpiry));
         setInspectionExpiry(toDateInput(asset.inspectionExpiry));
+        setImageUrl(asset.imageUrl ?? '');
         setNotes(typeof asset.notes === 'string' ? asset.notes : asset.notes?.en ?? '');
         setVersion(asset.version ?? 1);
       } catch (err) {
@@ -174,6 +177,7 @@ export function AdminFleetAssetFormPage() {
       lastServiceMeter: lastServiceMeter ? Number(lastServiceMeter) : undefined,
       insuranceExpiry: isRoadVehicle ? fromDateInput(insuranceExpiry) : null,
       inspectionExpiry: isRoadVehicle ? fromDateInput(inspectionExpiry) : null,
+      imageUrl: imageUrl.trim() || undefined,
       notes: notes.trim() ? { en: notes.trim() } : undefined,
     };
 
@@ -423,6 +427,33 @@ export function AdminFleetAssetFormPage() {
           </div>
         </FleetPanel>
       )}
+
+      <FleetPanel
+        title="Photograph"
+        description="Optional. Paste a link to a photo of this machine; leave it blank and a placeholder is drawn from the asset type."
+      >
+        <div className="p-6 flex flex-col sm:flex-row items-start gap-6">
+          <AssetImage
+            assetType={assetType}
+            imageUrl={imageUrl.trim() || undefined}
+            alt="Preview"
+            size="card"
+          />
+          <div className="flex-1 w-full">
+            <label className={LABEL}>Image URL</label>
+            <input
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://…/tractor-tr-014.jpg"
+              className={INPUT}
+            />
+            <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+              The preview updates as you type. A link that stops working falls back to the
+              placeholder rather than showing a broken image.
+            </p>
+          </div>
+        </div>
+      </FleetPanel>
 
       <FleetPanel title="Notes">
         <div className="p-6">

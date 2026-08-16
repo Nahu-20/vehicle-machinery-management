@@ -23,6 +23,7 @@ import {
   FleetEmptyState,
   FleetButton,
 } from '../../../features/fleet/components/FleetUI';
+import { AssetImage } from '../../../features/fleet/components/AssetImage';
 import {
   CANONICAL_ZONE_IDS,
   CANONICAL_ZONE_METADATA,
@@ -228,15 +229,24 @@ export function AdminFleetRegisterPage() {
                       className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
                     >
                       <td className="px-6 py-3">
-                        <Link
-                          to={`/admin/fleet/register/${encodeURIComponent(asset.assetId)}`}
-                          className="font-bold text-xs text-emerald-700 dark:text-emerald-400 hover:underline"
-                        >
-                          {asset.assetId}
-                        </Link>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                          {asset.make} {asset.model}
-                          {asset.plateNumber ? ` · ${asset.plateNumber}` : ''}
+                        <div className="flex items-center gap-3">
+                          <AssetImage
+                            assetType={asset.assetType}
+                            imageUrl={asset.imageUrl}
+                            alt={`${asset.make} ${asset.model}`}
+                          />
+                          <div className="min-w-0">
+                            <Link
+                              to={`/admin/fleet/register/${encodeURIComponent(asset.assetId)}`}
+                              className="font-bold text-xs text-emerald-700 dark:text-emerald-400 hover:underline"
+                            >
+                              {asset.assetId}
+                            </Link>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                              {asset.make} {asset.model}
+                              {asset.plateNumber ? ` · ${asset.plateNumber}` : ''}
+                            </div>
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-3 text-xs text-slate-600 dark:text-slate-300">

@@ -12,7 +12,7 @@ import {
   Timestamp,
   type QueryConstraint,
 } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { db, isFirebaseDemoMode } from '../../../lib/firebase';
 import { logAuditEvent } from '../../../services/auditService';
 import type { StaffUser } from '../../../types/auth';
 import type {
@@ -23,6 +23,7 @@ import type {
   FleetZoneAvailability,
 } from '../types/fleet';
 import { isIssuable, isServiceDue } from '../constants/fleetVocabulary';
+import { DEMO_ASSETS } from '../data/demoFleet';
 import {
   CANONICAL_ZONE_IDS,
   isCanonicalZoneId,
@@ -40,6 +41,14 @@ import {
  */
 
 export const FLEET_ASSETS_COLLECTION = 'fleetAssets';
+
+/**
+ * Whether the module is serving the demonstration register.
+ *
+ * True only when Firebase is unconfigured. Exported so the UI can say so out
+ * loud rather than letting anyone mistake sample figures for the real fleet.
+ */
+export const isDemoFleet = (): boolean => isFirebaseDemoMode || !db;
 
 export class FleetVersionConflictError extends Error {
   constructor(public readonly expected: number, public readonly actual: number) {
@@ -85,6 +94,9 @@ function mapAsset(id: string, data: any): FleetAsset {
 /* ------------------------------------------------------------------ reads */
 
 export async function getAssetById(assetId: string): Promise<FleetAsset | null> {
+  if (isDemoFleet()) {
+    return DEMO_ASSETS.find((a) => a.assetId === assetId) ?? null;
+  }
   const database = requireDb();
   const snap = await getDoc(doc(database, FLEET_ASSETS_COLLECTION, assetId));
   return snap.exists() ? mapAsset(snap.id, snap.data()) : null;
@@ -101,6 +113,18 @@ export async function getAssetById(assetId: string): Promise<FleetAsset | null> 
  * needed — and a stored flag would go stale the moment a meter moved.
  */
 export async function listAssets(filters: FleetAssetFilters = {}): Promise<FleetAsset[]> {
+  if (isDemoFleet()) {
+    return applyClientFilters(
+      DEMO_ASSETS.filter(
+        (a) =>
+          (!filters.zoneId || filters.zoneId === 'all' || a.zoneId === filters.zoneId) &&
+          (!filters.status || filters.status === 'all' || a.status === filters.status) &&
+          (!filters.assetType || filters.assetType === 'all' || a.assetType === filters.assetType)
+      ),
+      filters
+    );
+  }
+
   const database = requireDb();
 
   const constraints: QueryConstraint[] = [];
@@ -117,7 +141,12 @@ export async function listAssets(filters: FleetAssetFilters = {}): Promise<Fleet
   constraints.push(fsLimit(1000));
 
   const snap = await getDocs(query(collection(database, FLEET_ASSETS_COLLECTION), ...constraints));
-  let assets = snap.docs.map((d) => mapAsset(d.id, d.data()));
+  return applyClientFilters(snap.docs.map((d) => mapAsset(d.id, d.data())), filters);
+}
+
+/** Filters Firestore cannot express: substring search and derived service-due. */
+function applyClientFilters(input: FleetAsset[], filters: FleetAssetFilters): FleetAsset[] {
+  let assets = input;
 
   if (filters.serviceDueOnly) {
     assets = assets.filter(isServiceDue);
@@ -132,7 +161,7 @@ export async function listAssets(filters: FleetAssetFilters = {}): Promise<Fleet
     );
   }
 
-  return assets;
+  return [...assets].sort((a, b) => a.assetId.localeCompare(b.assetId));
 }
 
 /* ----------------------------------------------------------------- writes */
@@ -154,6 +183,7 @@ export interface CreateAssetInput {
   insuranceExpiry?: Timestamp | null;
   inspectionExpiry?: Timestamp | null;
   acquiredAt?: Timestamp | null;
+  imageUrl?: string;
   notes?: FleetAsset['notes'];
 }
 

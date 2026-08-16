@@ -20,7 +20,8 @@ import type {
   FleetWorkOrderStatus,
 } from '../types/fleet';
 import { canTransitionWorkOrder, OPEN_WORK_ORDER_STATUSES } from '../constants/fleetVocabulary';
-import { FLEET_ASSETS_COLLECTION, FleetNotFoundError } from './fleetService';
+import { FLEET_ASSETS_COLLECTION, FleetNotFoundError, isDemoFleet } from './fleetService';
+import { DEMO_WORK_ORDERS } from '../data/demoFleet';
 
 /**
  * Fault reports and garage work.
@@ -243,6 +244,12 @@ export async function advanceWorkOrder(
 }
 
 export async function listWorkOrders(openOnly = false): Promise<FleetWorkOrder[]> {
+  if (isDemoFleet()) {
+    const sorted = [...DEMO_WORK_ORDERS].sort(
+      (a, b) => b.reportedAt.toMillis() - a.reportedAt.toMillis()
+    );
+    return openOnly ? sorted.filter((w) => OPEN_WORK_ORDER_STATUSES.includes(w.status)) : sorted;
+  }
   const database = requireDb();
   const snap = await getDocs(
     query(
@@ -256,6 +263,11 @@ export async function listWorkOrders(openOnly = false): Promise<FleetWorkOrder[]
 }
 
 export async function listWorkOrdersForAsset(assetId: string): Promise<FleetWorkOrder[]> {
+  if (isDemoFleet()) {
+    return DEMO_WORK_ORDERS.filter((w) => w.assetId === assetId).sort(
+      (a, b) => b.reportedAt.toMillis() - a.reportedAt.toMillis()
+    );
+  }
   const database = requireDb();
   const snap = await getDocs(
     query(

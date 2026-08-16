@@ -1,8 +1,9 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Truck, Wrench, BarChart3, Map as MapIcon } from 'lucide-react';
+import { LayoutDashboard, Truck, Wrench, BarChart3, Map as MapIcon, Info } from 'lucide-react';
 import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
 import { hasPermission } from '../../../lib/permissions';
+import { isDemoFleet } from '../../../features/fleet/services/fleetService';
 
 /**
  * Shell for the fleet module, mirroring InvestmentAdminLayout so the two
@@ -105,6 +106,17 @@ export function FleetAdminLayout() {
             })}
         </div>
       </div>
+
+      {isDemoFleet() && (
+        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+          <Info className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            <strong>Demonstration register.</strong> Firebase is not configured, so these are
+            sample vehicles rather than the Bureau&apos;s real fleet. Adding, issuing and repairing
+            are disabled until the VITE_FIREBASE_* values are set.
+          </span>
+        </div>
+      )}
 
       <div>
         <Outlet />
