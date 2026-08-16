@@ -1,8 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Truck, CheckCircle2, Wrench, AlertOctagon, MapPin, ArrowRight } from 'lucide-react';
+import {
+  Truck,
+  CheckCircle2,
+  Wrench,
+  AlertOctagon,
+  MapPin,
+  ArrowRight,
+  Clock,
+} from 'lucide-react';
 import { listAssets, summariseFleet } from '../../../features/fleet/services/fleetService';
-import type { FleetAsset } from '../../../features/fleet/types/fleet';
+import { listWorkOrders, countGrounded } from '../../../features/fleet/services/fleetWorkOrderService';
+import {
+  listActiveAssignments,
+  countOverdue,
+} from '../../../features/fleet/services/fleetAssignmentService';
+import type {
+  FleetAsset,
+  FleetAssignment,
+  FleetWorkOrder,
+} from '../../../features/fleet/types/fleet';
 import { StatCard, FleetPanel, FleetEmptyState } from '../../../features/fleet/components/FleetUI';
 import { CANONICAL_ZONE_METADATA } from '../../../features/investment-map/constants/canonicalZones';
 
@@ -16,6 +33,8 @@ import { CANONICAL_ZONE_METADATA } from '../../../features/investment-map/consta
  */
 export function AdminFleetDashboardPage() {
   const [assets, setAssets] = useState<FleetAsset[]>([]);
+  const [workOrders, setWorkOrders] = useState<FleetWorkOrder[]>([]);
+  const [activeAssignments, setActiveAssignments] = useState<FleetAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,8 +42,18 @@ export function AdminFleetDashboardPage() {
     let cancelled = false;
     (async () => {
       try {
-        const all = await listAssets();
-        if (!cancelled) setAssets(all);
+        // Faults and open assignments load alongside the register so the headline
+        // counts come from records rather than sitting at zero.
+        const [all, faults, act] = await Promise.all([
+          listAssets(),
+          listWorkOrders().catch(() => [] as FleetWorkOrder[]),
+          listActiveAssignments().catch(() => [] as FleetAssignment[]),
+        ]);
+        if (!cancelled) {
+          setAssets(all);
+          setWorkOrders(faults);
+          setActiveAssignments(act);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Could not load the fleet.');
@@ -38,13 +67,10 @@ export function AdminFleetDashboardPage() {
     };
   }, []);
 
-  /**
-   * Grounded and overdue counts arrive with the work-order and assignment
-   * collections. Passing zero rather than inventing a number keeps the card
-   * honest until those exist — an invented figure on a dashboard is worse than
-   * an empty one, because nobody can tell it is invented.
-   */
-  const summary = useMemo(() => summariseFleet(assets, 0, 0), [assets]);
+  const summary = useMemo(
+    () => summariseFleet(assets, countOverdue(activeAssignments), countGrounded(workOrders)),
+    [assets, activeAssignments, workOrders]
+  );
 
   const inService = summary.byStatus.available + summary.byStatus.assigned;
   const down =
@@ -75,6 +101,29 @@ export function AdminFleetDashboardPage() {
       {error && (
         <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs text-amber-800 dark:text-amber-300">
           {error}
+        </div>
+      )}
+
+      {!loading && (summary.groundedCount > 0 || summary.overdueReturnCount > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {summary.groundedCount > 0 && (
+            <StatCard
+              label="Machines grounded"
+              value={summary.groundedCount}
+              icon={AlertOctagon}
+              tone="bad"
+              hint="Cannot work until repaired"
+            />
+          )}
+          {summary.overdueReturnCount > 0 && (
+            <StatCard
+              label="Overdue returns"
+              value={summary.overdueReturnCount}
+              icon={Clock}
+              tone="bad"
+              hint="Out past the agreed date"
+            />
+          )}
         </div>
       )}
 

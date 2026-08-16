@@ -51,6 +51,8 @@ import { AdminFleetRegisterPage } from './pages/admin/fleet/AdminFleetRegisterPa
 import { AdminFleetAssetFormPage } from './pages/admin/fleet/AdminFleetAssetFormPage';
 import { AdminFleetAssetDetailPage } from './pages/admin/fleet/AdminFleetAssetDetailPage';
 import { AdminFleetGaragePage } from './pages/admin/fleet/AdminFleetGaragePage';
+import { AdminFleetReportsPage } from './pages/admin/fleet/AdminFleetReportsPage';
+import { AdminFleetMapPage } from './pages/admin/fleet/AdminFleetMapPage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { ContentManagementPage } from './pages/admin/ContentManagementPage';
 import { AdminNewsListPage } from './pages/admin/news/AdminNewsListPage';
@@ -436,6 +438,8 @@ export default function App() {
                       <Route path="register/:assetId/edit" element={<AdminFleetAssetFormPage />} />
                       <Route path="register/:assetId" element={<AdminFleetAssetDetailPage />} />
                       <Route path="garage" element={<AdminFleetGaragePage />} />
+                      <Route path="reports" element={<AdminFleetReportsPage />} />
+                      <Route path="map" element={<AdminFleetMapPage />} />
                     </Route>
                     <Route
                       path="settings"
