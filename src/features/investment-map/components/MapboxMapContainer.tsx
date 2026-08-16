@@ -170,6 +170,10 @@ export const MapboxMapContainer: React.FC<MapboxMapContainerProps> = ({
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
 
+  // Whether the map ever finished loading. Once it has, the engine is working and
+  // no later error should tear it down.
+  const hasLoadedRef = useRef(false);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -340,6 +344,43 @@ export const MapboxMapContainer: React.FC<MapboxMapContainerProps> = ({
       });
     }
   }, [bbox, is3D]);
+
+  /**
+   * Only genuine engine failures may hand back to OpenLayers.
+   *
+   * Mapbox GL emits `error` for anything that goes wrong, including things that
+   * do not affect the map: a single tile that failed, and notably the telemetry
+   * POST to events.mapbox.com, which returned 503 in production while the style,
+   * icon set and terrain DEM all returned 200. Treating that as fatal swapped a
+   * working map for the fallback engine at random.
+   *
+   * A rejected token is the case that genuinely cannot recover, so 401 and 403
+   * still fall back. Everything else is logged and ignored, and once the map has
+   * loaded nothing tears it down at all.
+   */
+  const handleMapError = useCallback((evt: { error?: Error & { status?: number } }) => {
+    const status = evt?.error?.status;
+    const isAuthFailure = status === 401 || status === 403;
+
+    if (!isAuthFailure) {
+      console.warn('[MapboxMap] non-fatal map error, continuing:', evt?.error?.message ?? evt);
+      return;
+    }
+
+    if (hasLoadedRef.current) {
+      console.warn('[MapboxMap] token rejected after load; leaving the rendered map in place.');
+      return;
+    }
+
+    setError('Mapbox rejected the access token. It may be invalid or URL-restricted.');
+    onErrorRef.current?.();
+  }, []);
+
+  const handleLoad = useCallback(() => {
+    hasLoadedRef.current = true;
+    fitToBounds();
+  }, [fitToBounds]);
+
 
   /**
    * Frame once the map has actually settled.
@@ -563,7 +604,7 @@ export const MapboxMapContainer: React.FC<MapboxMapContainerProps> = ({
           // makes a single region look like a planet. Mercator suits a regional map.
           projection={{ name: 'mercator' }}
           interactiveLayerIds={showValueHeights ? ['oromia-zone-extrusion'] : ['oromia-zone-fill']}
-          onLoad={fitToBounds}
+          onLoad={handleLoad}
           onClick={handleClick}
           onMouseMove={handleMouseMove}
           onMouseOut={handleMouseLeave}
@@ -573,10 +614,7 @@ export const MapboxMapContainer: React.FC<MapboxMapContainerProps> = ({
           dragRotate
           pitchWithRotate
           maxPitch={80}
-          onError={() => {
-            setError('Mapbox failed to load. The access token may be invalid or restricted.');
-            onErrorRef.current?.();
-          }}
+          onError={handleMapError}
           attributionControl
         >
           <NavigationControl position="top-right" visualizePitch showCompass />
