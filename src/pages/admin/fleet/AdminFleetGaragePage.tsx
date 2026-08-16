@@ -7,10 +7,17 @@ import {
   listWorkOrders,
   advanceWorkOrder,
 } from '../../../features/fleet/services/fleetWorkOrderService';
-import type { FleetWorkOrder, FleetWorkOrderStatus } from '../../../features/fleet/types/fleet';
+import { listAssets } from '../../../features/fleet/services/fleetService';
+import type {
+  FleetAsset,
+  FleetWorkOrder,
+  FleetWorkOrderStatus,
+} from '../../../features/fleet/types/fleet';
 import {
   WORK_ORDER_TRANSITIONS,
   OPEN_WORK_ORDER_STATUSES,
+  humanise,
+  isGarageStatus,
 } from '../../../features/fleet/constants/fleetVocabulary';
 import {
   SeverityPill,
@@ -53,6 +60,7 @@ export function AdminFleetGaragePage() {
   const canMaintain = hasPermission(staffUser, 'fleet.maintenance.manage');
 
   const [orders, setOrders] = useState<FleetWorkOrder[]>([]);
+  const [assets, setAssets] = useState<FleetAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -62,7 +70,12 @@ export function AdminFleetGaragePage() {
     setLoading(true);
     setError(null);
     try {
-      setOrders(await listWorkOrders());
+      const [wos, all] = await Promise.all([
+        listWorkOrders(),
+        listAssets().catch(() => [] as FleetAsset[]),
+      ]);
+      setOrders(wos);
+      setAssets(all);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load the garage queue.');
       setOrders([]);
@@ -85,6 +98,37 @@ export function AdminFleetGaragePage() {
   );
   const grounded = useMemo(() => open.filter((o) => o.severity === 'grounded'), [open]);
   const awaitingParts = useMemo(() => open.filter((o) => o.status === 'awaiting_parts'), [open]);
+
+  /**
+   * Machines whose status and whose paperwork disagree.
+   *
+   * Two contradictions, not every difference. A machine marked as being in the
+   * garage with no job against it is invisible on this page, which lists jobs
+   * rather than assets — it reads as in the garage everywhere else and nobody
+   * is ever asked to fix it. A machine with a grounded fault still showing as
+   * available is the dangerous one: it will be offered to the next person.
+   *
+   * Out of service alongside an open job is left alone. A machine withdrawn
+   * pending a decision is genuinely both, and flagging it would train people to
+   * scroll past this panel.
+   *
+   * The status change now keeps these in step by itself. This catches records
+   * written before it did, or edited straight in the database.
+   */
+  const mismatched = useMemo(() => {
+    const withOpenJob = new Set(open.map((o) => o.assetId));
+    const withGroundedJob = new Set(grounded.map((o) => o.assetId));
+    return assets.flatMap((a) => {
+      if (a.status === 'disposed') return [];
+      if (isGarageStatus(a.status) && !withOpenJob.has(a.assetId)) {
+        return [{ asset: a, problem: 'no_job' as const }];
+      }
+      if ((a.status === 'available' || a.status === 'assigned') && withGroundedJob.has(a.assetId)) {
+        return [{ asset: a, problem: 'still_offered' as const }];
+      }
+      return [];
+    });
+  }, [assets, open, grounded]);
 
   const advance = async (wo: FleetWorkOrder, next: FleetWorkOrderStatus) => {
     if (!staffUser || busyId) return;
@@ -138,6 +182,38 @@ export function AdminFleetGaragePage() {
         </div>
       )}
 
+      {!loading && mismatched.length > 0 && (
+        <FleetPanel
+          title={`Needs reconciling — ${mismatched.length}`}
+          description="The machine's status and the garage queue disagree. Open the record and set the status; that now moves both together."
+        >
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {mismatched.map(({ asset, problem }) => (
+              <div
+                key={asset.assetId}
+                className="p-4 flex flex-wrap items-center justify-between gap-3"
+              >
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <Link
+                    to={`/admin/fleet/register/${encodeURIComponent(asset.assetId)}`}
+                    className="font-mono font-bold text-xs text-emerald-700 dark:text-emerald-400 hover:underline"
+                  >
+                    {asset.assetId}
+                  </Link>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    {asset.make} {asset.model} · {CANONICAL_ZONE_METADATA[asset.zoneId]?.displayName ?? asset.zoneId}
+                  </span>
+                </div>
+                <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                  {problem === 'no_job'
+                    ? `Marked ${humanise(asset.status)} with no job on the queue`
+                    : `Grounded by an open fault but still marked ${humanise(asset.status)}`}
+                </span>
+              </div>
+            ))}
+          </div>
+        </FleetPanel>
+      )}
       <FleetPanel
         title={showClosed ? `Closed jobs — ${closed.length}` : `Open jobs — ${open.length}`}
         description={

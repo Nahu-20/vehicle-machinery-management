@@ -14,7 +14,7 @@ import { db } from '../../../lib/firebase';
 import { logAuditEvent } from '../../../services/auditService';
 import type { StaffUser } from '../../../types/auth';
 import type { FleetAsset, FleetAssignment } from '../types/fleet';
-import { isIssuable } from '../constants/fleetVocabulary';
+import { humanise, isIssuable } from '../constants/fleetVocabulary';
 import {
   FLEET_ASSETS_COLLECTION,
   FleetNotFoundError,
@@ -83,7 +83,7 @@ export async function issueAsset(
     // register would refuse.
     if (!isIssuable(asset)) {
       throw new Error(
-        `${input.assetId} is currently ${asset.status.replace('_', ' ')} and cannot be issued.`
+        `${input.assetId} is currently ${humanise(asset.status)} and cannot be issued.`
       );
     }
     if (asset.meterType !== 'none' && input.meterOut < asset.currentMeter) {
@@ -121,7 +121,7 @@ export async function issueAsset(
     }
     if (!isIssuable(asset)) {
       throw new Error(
-        `${input.assetId} is currently ${asset.status.replace('_', ' ')} and cannot be issued.`
+        `${input.assetId} is currently ${humanise(asset.status)} and cannot be issued.`
       );
     }
     // A meter that goes backwards means somebody mistyped, or the wrong machine

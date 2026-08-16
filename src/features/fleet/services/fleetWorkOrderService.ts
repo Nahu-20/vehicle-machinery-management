@@ -20,7 +20,11 @@ import type {
   FleetWorkOrderPart,
   FleetWorkOrderStatus,
 } from '../types/fleet';
-import { canTransitionWorkOrder, OPEN_WORK_ORDER_STATUSES } from '../constants/fleetVocabulary';
+import {
+  canTransitionWorkOrder,
+  humanise,
+  OPEN_WORK_ORDER_STATUSES,
+} from '../constants/fleetVocabulary';
 import { FLEET_ASSETS_COLLECTION, FleetNotFoundError, isDemoFleet } from './fleetService';
 import {
   demoListWorkOrders,
@@ -179,7 +183,7 @@ export async function advanceWorkOrder(
     if (!wo) throw new Error('That work order no longer exists.');
     if (!canTransitionWorkOrder(wo.status, input.next)) {
       throw new Error(
-        `A ${wo.status.replace('_', ' ')} job cannot move to ${input.next.replace('_', ' ')}.`
+        `A ${humanise(wo.status)} job cannot move to ${humanise(input.next)}.`
       );
     }
 
@@ -238,7 +242,7 @@ export async function advanceWorkOrder(
       throw new Error('This work order was changed by someone else. Reload and try again.');
     }
     if (!canTransitionWorkOrder(wo.status, input.next)) {
-      throw new Error(`A ${wo.status.replace('_', ' ')} job cannot move to ${input.next.replace('_', ' ')}.`);
+      throw new Error(`A ${humanise(wo.status)} job cannot move to ${humanise(input.next)}.`);
     }
 
     const parts = input.partsUsed ?? wo.partsUsed;

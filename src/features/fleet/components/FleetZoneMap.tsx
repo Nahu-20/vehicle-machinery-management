@@ -8,7 +8,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { loadAndValidateOromiaGeoJSON } from '../../investment-map/services/gisLoader';
 import type { GisValidationResult } from '../../investment-map/types/gis';
 import type { FleetAsset } from '../types/fleet';
-import { STATUS_PILL_CLASSES } from '../constants/fleetVocabulary';
+import { STATUS_PILL_CLASSES, humanise } from '../constants/fleetVocabulary';
 
 const MAPBOX_TOKEN = import.meta.env?.VITE_MAPBOX_TOKEN || '';
 
@@ -327,7 +327,7 @@ export const FleetZoneMap: React.FC<FleetZoneMapProps> = ({
               <button
                 type="button"
                 title={`${asset.assetId} — ${asset.make} ${asset.model}`}
-                aria-label={`${asset.assetId}, ${asset.status.replace('_', ' ')}`}
+                aria-label={`${asset.assetId}, ${humanise(asset.status)}`}
                 className={`flex items-center gap-1 px-1.5 py-1 rounded-full border shadow-md transition-transform cursor-pointer ${
                   selected
                     ? 'bg-white dark:bg-slate-100 border-slate-900 scale-125 z-10'

@@ -43,6 +43,18 @@ export const ALL_PERMISSIONS: Permission[] = [
   'investment.opportunities.manage',
   'investment.config.manage',
   'gis.manage',
+  // Kept in step with ALL_PERMISSIONS in ../auth/permissions.ts. The two
+  // tables are checked against each other in fleetConsistencyTests, because
+  // they drifted once already: fleetOfficer was added to the role map here
+  // but the permissions never reached this list, so superAdmin — which is
+  // built from it — could open the fleet pages from the nav and then found
+  // every button on them missing.
+  'fleet.view',
+  'fleet.asset.manage',
+  'fleet.assign',
+  'fleet.maintenance.manage',
+  'fleet.reports.view',
+  'fleet.asset.retire',
 ];
 
 export const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {

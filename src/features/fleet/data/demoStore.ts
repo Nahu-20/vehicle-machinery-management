@@ -251,3 +251,47 @@ export function demoReset(): void {
   statusEvents = [];
   notify();
 }
+
+/* --------------------------------------- single-collection reconciliation */
+
+/*
+ * The three below touch one collection each and never the asset row.
+ *
+ * Deliberate: when a status change has to close a sign-out and open a job as
+ * well, exactly one writer may own the asset's status, or the reconciliation
+ * ends up fighting the change that triggered it. That writer is demoSetStatus.
+ */
+
+/** Close a sign-out without moving the asset. */
+export function demoCloseAssignment(assignmentId: string, meterIn: number, actorUid: string): void {
+  const i = assignments.findIndex((a) => a.assignmentId === assignmentId);
+  if (i === -1) return;
+  assignments[i] = {
+    ...assignments[i],
+    returnedAt: Timestamp.now(),
+    meterIn,
+    status: 'returned',
+    returnedByUid: actorUid,
+  };
+  notify();
+}
+
+/** Append a job without moving the asset. */
+export function demoAppendWorkOrder(workOrder: Omit<FleetWorkOrder, 'workOrderId'>): string {
+  const id = nextId('wo');
+  workOrders = [...workOrders, { ...workOrder, workOrderId: id }];
+  notify();
+  return id;
+}
+
+/** Close every open job on an asset without moving the asset. */
+export function demoCancelOpenWorkOrders(assetId: string, openStatuses: readonly string[]): number {
+  let closed = 0;
+  workOrders = workOrders.map((w) => {
+    if (w.assetId !== assetId || !openStatuses.includes(w.status)) return w;
+    closed += 1;
+    return { ...w, status: 'cancelled' as FleetWorkOrder['status'], version: w.version + 1 };
+  });
+  if (closed) notify();
+  return closed;
+}

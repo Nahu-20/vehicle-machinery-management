@@ -191,3 +191,98 @@ export function formatMeter(value: number, meterType: FleetMeterType): string {
   if (meterType === 'none') return '—';
   return `${value.toLocaleString()} ${METER_UNIT_LABEL[meterType]}`.trim();
 }
+
+/**
+ * A status or work-order value written for a person.
+ *
+ * Every underscore, not the first: `.replace('_', ' ')` turns out_of_service
+ * into 'out of_service', which is how it reached the timeline and the status
+ * dropdown.
+ */
+export function humanise(value: string): string {
+  return value.replace(/_/g, ' ');
+}
+
+/* ------------------------------------------------- status consistency */
+
+/**
+ * Statuses that only mean something because a work order says so.
+ *
+ * A machine is not "in the garage" because a field says it is; it is in the
+ * garage because there is a job on it. Keeping the two apart is what let an
+ * asset read "In garage" on every screen while the garage queue had no job for
+ * it — visible to everyone, actionable by nobody.
+ */
+export const GARAGE_STATUSES: readonly FleetAssetStatus[] = ['in_maintenance', 'awaiting_parts'];
+
+export function isGarageStatus(status: FleetAssetStatus): boolean {
+  return GARAGE_STATUSES.includes(status);
+}
+
+/**
+ * Statuses an administrator may set by hand.
+ *
+ * `assigned` is absent because issuing needs a holder, a purpose and a meter
+ * reading, none of which a status dropdown collects — setting it directly
+ * produced a machine recorded as out on loan to nobody. `disposed` is absent
+ * because retiring is irreversible and belongs to the retire action.
+ */
+export const MANUAL_ASSET_STATUSES: readonly FleetAssetStatus[] = [
+  'available',
+  'in_maintenance',
+  'awaiting_parts',
+  'out_of_service',
+];
+
+/** What else has to change so the register still agrees with itself. */
+export interface StatusChangePlan {
+  /** Close the open sign-out: the holder no longer has it. */
+  closeAssignment: boolean;
+  /** Raise a job, so the garage can see what it has been given. */
+  raiseWorkOrder: boolean;
+  /** Close the open jobs: the machine has left the garage. */
+  cancelWorkOrders: boolean;
+}
+
+export interface StatusChangeContext {
+  hasActiveAssignment: boolean;
+  openWorkOrderCount: number;
+}
+
+/**
+ * Work out what a status change implies for the other two collections.
+ *
+ * Pure and separate from the writes so both the demo store and Firestore reach
+ * the same conclusion, and so the invariants can be tested without a project or
+ * a network. See `fleetStatusService.ts` for the half that executes it.
+ */
+export function planStatusChange(
+  from: FleetAssetStatus,
+  to: FleetAssetStatus,
+  ctx: StatusChangeContext
+): StatusChangePlan {
+  if (from === 'disposed') {
+    throw new Error('A retired asset cannot be returned to service.');
+  }
+  if (from === to) {
+    throw new Error('That is already the current status.');
+  }
+  if (!MANUAL_ASSET_STATUSES.includes(to)) {
+    throw new Error(
+      to === 'assigned'
+        ? 'Issue the machine instead — that records who has it and on what reading.'
+        : `${humanise(to)} cannot be set from here.`
+    );
+  }
+
+  const leavingGarage = isGarageStatus(from) && !isGarageStatus(to);
+  const inGarage = isGarageStatus(to);
+
+  return {
+    closeAssignment: from === 'assigned' && ctx.hasActiveAssignment,
+    // Only when nothing is open: a machine moved from repair to awaiting parts
+    // is the same job continuing, not a second fault.
+    raiseWorkOrder: inGarage && ctx.openWorkOrderCount === 0,
+    cancelWorkOrders: leavingGarage && ctx.openWorkOrderCount > 0,
+  };
+}

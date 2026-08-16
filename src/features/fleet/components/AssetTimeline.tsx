@@ -7,7 +7,7 @@ import type {
   FleetTimelineEntry,
   FleetWorkOrder,
 } from '../types/fleet';
-import { formatMeter } from '../constants/fleetVocabulary';
+import { formatMeter, humanise } from '../constants/fleetVocabulary';
 import { StatusPill, SeverityPill, FleetEmptyState } from './FleetUI';
 
 /**
@@ -42,7 +42,7 @@ export function buildTimeline(
       id: `st-${e.eventId}`,
       kind: 'status',
       at: e.at,
-      title: `Status changed to ${e.to.replace('_', ' ')}`,
+      title: `Status changed to ${humanise(e.to)}`,
       detail: e.reason,
       actorName: e.actorName,
       statusTo: e.to,

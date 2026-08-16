@@ -10,12 +10,12 @@ import {
   Wrench,
   History,
   Gauge,
+  CheckCircle2,
 } from 'lucide-react';
 import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
 import { hasPermission } from '../../../lib/permissions';
 import {
   getAssetById,
-  setAssetStatus,
   listStatusEvents,
 } from '../../../features/fleet/services/fleetService';
 import {
@@ -38,7 +38,8 @@ import {
   isIssuable,
   meterUntilService,
   METER_UNIT_LABEL,
-  FLEET_ASSET_STATUSES,
+  MANUAL_ASSET_STATUSES,
+  humanise,
 } from '../../../features/fleet/constants/fleetVocabulary';
 import {
   StatusPill,
@@ -48,6 +49,10 @@ import {
   FleetButton,
   FleetEmptyState,
 } from '../../../features/fleet/components/FleetUI';
+import {
+  changeAssetStatus,
+  type ChangeAssetStatusResult,
+} from '../../../features/fleet/services/fleetStatusService';
 import { AssetImage } from '../../../features/fleet/components/AssetImage';
 import { AssetTimeline } from '../../../features/fleet/components/AssetTimeline';
 import {
@@ -60,6 +65,27 @@ const INPUT =
   'w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-emerald-500';
 const LABEL =
   'block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5';
+
+/**
+ * What a status change did beyond the status.
+ *
+ * Closing a colleague's sign-out or opening a job in the garage are other
+ * people's work appearing out of nowhere, so the person who caused it is told
+ * plainly rather than left to notice on another page.
+ */
+function summarise(outcome: ChangeAssetStatusResult): string {
+  const parts: string[] = ['Status updated'];
+  if (outcome.closedAssignmentId) parts.push('the open sign-out was closed');
+  if (outcome.raisedWorkOrderId) parts.push('a job was raised under Garage & Repairs');
+  if (outcome.cancelledWorkOrders > 0) {
+    parts.push(
+      `${outcome.cancelledWorkOrders} open garage job${
+        outcome.cancelledWorkOrders === 1 ? ' was' : 's were'
+      } cancelled`
+    );
+  }
+  return parts.length === 1 ? `${parts[0]}.` : `${parts[0]} — ${parts.slice(1).join(', ')}.`;
+}
 
 function fmtDate(ts?: { toDate?: () => Date } | null): string {
   if (!ts?.toDate) return '—';
@@ -105,6 +131,7 @@ export function AdminFleetAssetDetailPage() {
   const [showStatus, setShowStatus] = useState(false);
   const [nextStatus, setNextStatus] = useState<FleetAssetStatus>('available');
   const [statusReason, setStatusReason] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!assetId) return;
@@ -127,7 +154,14 @@ export function AdminFleetAssetDetailPage() {
       setAssignments(history);
       setWorkOrders(faults);
       setStatusEvents(events);
-      if (a) setNextStatus(a.status);
+      // Not a.status: the current status is often one the dropdown does not
+      // offer, and defaulting to a value that is not in the list leaves the
+      // select showing the first option while the state says another.
+      if (a) {
+        setNextStatus(
+          MANUAL_ASSET_STATUSES.includes(a.status) ? a.status : MANUAL_ASSET_STATUSES[0]
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load the asset.');
     } finally {
@@ -214,11 +248,20 @@ export function AdminFleetAssetDetailPage() {
     setBusy(true);
     setError(null);
     try {
-      await setAssetStatus(asset.assetId, nextStatus, asset.version, staffUser, {
-        reason: statusReason.trim() || undefined,
-      });
+      const outcome = await changeAssetStatus(
+        {
+          assetId: asset.assetId,
+          next: nextStatus,
+          expectedVersion: asset.version,
+          reason: statusReason.trim() || undefined,
+        },
+        staffUser
+      );
       setShowStatus(false);
       setStatusReason('');
+      // Say what else moved. A status change that quietly closed someone's
+      // sign-out or opened a garage job should not be silent about it.
+      setNotice(summarise(outcome));
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not change the status.');
@@ -327,6 +370,13 @@ export function AdminFleetAssetDetailPage() {
         <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-xs text-red-700 dark:text-red-300 flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {notice && (
+        <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{notice}</span>
         </div>
       )}
 
@@ -525,7 +575,7 @@ export function AdminFleetAssetDetailPage() {
       {showStatus && (
         <FleetPanel
           title="Change status"
-          description="Direct override. Issuing, returning and garage work already move the status on their own, so use this for corrections and for anything the workflow does not cover."
+          description="Moves the machine and the paperwork together — sending it to the garage raises a job there, and bringing it back closes the open ones."
         >
           <form onSubmit={handleStatusChange} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
@@ -535,15 +585,16 @@ export function AdminFleetAssetDetailPage() {
                 onChange={(e) => setNextStatus(e.target.value as FleetAssetStatus)}
                 className={INPUT}
               >
-                {FLEET_ASSET_STATUSES.filter((st) => st !== 'disposed').map((st) => (
+                {MANUAL_ASSET_STATUSES.map((st) => (
                   <option key={st} value={st}>
-                    {st.replace('_', ' ')}
+                    {humanise(st)}
                   </option>
                 ))}
               </select>
               <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                Retiring an asset is deliberately not here — it is irreversible and sits with a
-                super admin.
+                Assigned is not here: issuing records who has the machine and on what
+                reading, which a dropdown cannot. Retiring is not here either — it is
+                irreversible and sits with a super admin.
               </p>
             </div>
             <div>
