@@ -45,6 +45,9 @@ import { UnauthorizedPage } from './pages/admin/UnauthorizedPage';
 
 // Admin Layout & Subpages
 import { AdminLayout } from './components/admin/AdminLayout';
+import { FleetAdminLayout } from './pages/admin/fleet/FleetAdminLayout';
+import { AdminFleetDashboardPage } from './pages/admin/fleet/AdminFleetDashboardPage';
+import { AdminFleetRegisterPage } from './pages/admin/fleet/AdminFleetRegisterPage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { ContentManagementPage } from './pages/admin/ContentManagementPage';
 import { AdminNewsListPage } from './pages/admin/news/AdminNewsListPage';
@@ -410,6 +413,22 @@ export default function App() {
                       <Route path="config" element={<AdminMapConfigPage />} />
                       <Route path="activity" element={<AdminInvestmentActivityPage />} />
                       <Route path="tests" element={<AdminInvestmentTestsPage />} />
+                    </Route>
+
+                    {/* Vehicle & Machinery Management */}
+                    <Route
+                      path="fleet"
+                      element={
+                        <RequirePermission
+                          requiredPermission="fleet.view"
+                          moduleTitle="Vehicle & Machinery Management"
+                        >
+                          <FleetAdminLayout />
+                        </RequirePermission>
+                      }
+                    >
+                      <Route index element={<AdminFleetDashboardPage />} />
+                      <Route path="register" element={<AdminFleetRegisterPage />} />
                     </Route>
                     <Route
                       path="settings"

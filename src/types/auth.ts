@@ -3,7 +3,8 @@ export type StaffRole =
   | 'contentAdmin'
   | 'editor'
   | 'marketOfficer'
-  | 'advisoryOfficer';
+  | 'advisoryOfficer'
+  | 'fleetOfficer';
 
 export type SupportedLanguage = 'om' | 'am' | 'en';
 
@@ -60,7 +61,13 @@ export type Permission =
   | 'investment.datasets.manage'
   | 'investment.opportunities.manage'
   | 'investment.config.manage'
-  | 'gis.manage';
+  | 'gis.manage'
+  | 'fleet.view'
+  | 'fleet.asset.manage'
+  | 'fleet.assign'
+  | 'fleet.maintenance.manage'
+  | 'fleet.reports.view'
+  | 'fleet.asset.retire';
 
 export type StaffAuthorizationStatus =
   | 'loading'

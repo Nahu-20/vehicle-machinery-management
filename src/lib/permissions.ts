@@ -119,6 +119,14 @@ export const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
     'alert.review',
     'investment.view',
   ],
+  fleetOfficer: [
+    'dashboard.view',
+    'fleet.view',
+    'fleet.asset.manage',
+    'fleet.assign',
+    'fleet.maintenance.manage',
+    'fleet.reports.view',
+  ],
 };
 
 export function hasPermission(user: StaffUser | null, permission: Permission): boolean {

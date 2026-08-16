@@ -1,0 +1,116 @@
+import React from 'react';
+import { NavLink, Outlet } from 'react-router-dom';
+import { LayoutDashboard, Truck, Wrench, BarChart3, Map as MapIcon } from 'lucide-react';
+import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
+import { hasPermission } from '../../../lib/permissions';
+
+/**
+ * Shell for the fleet module, mirroring InvestmentAdminLayout so the two
+ * sections of the admin area behave identically — same header card, same tab
+ * bar, same active-state treatment.
+ */
+export function FleetAdminLayout() {
+  const { staffUser } = useStaffAuthorizationContext();
+
+  const canView = hasPermission(staffUser, 'fleet.view');
+  const canMaintain = hasPermission(staffUser, 'fleet.maintenance.manage');
+  const canReport = hasPermission(staffUser, 'fleet.reports.view');
+
+  const navTabs = [
+    {
+      id: 'dashboard',
+      label: 'Overview',
+      to: '/admin/fleet',
+      end: true,
+      icon: LayoutDashboard,
+      visible: canView,
+    },
+    {
+      id: 'register',
+      label: 'Vehicle Register',
+      to: '/admin/fleet/register',
+      end: false,
+      icon: Truck,
+      visible: canView,
+    },
+    {
+      id: 'garage',
+      label: 'Garage & Repairs',
+      to: '/admin/fleet/garage',
+      end: false,
+      icon: Wrench,
+      visible: canMaintain,
+    },
+    {
+      id: 'reports',
+      label: 'Reports',
+      to: '/admin/fleet/reports',
+      end: false,
+      icon: BarChart3,
+      visible: canReport,
+    },
+    {
+      id: 'map',
+      label: 'Zone Map',
+      to: '/admin/fleet/map',
+      end: false,
+      icon: MapIcon,
+      visible: canView,
+    },
+  ];
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 flex items-center gap-2.5">
+              Vehicle &amp; Machinery Management
+            </h1>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Live register of Bureau vehicles, tractors and equipment — where each one is, who
+              holds it, and what needs repair.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/50">
+              Role: <strong className="uppercase">{staffUser?.role || 'Guest'}</strong>
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-1 overflow-x-auto scrollbar-none">
+          {navTabs
+            .filter((t) => t.visible)
+            .map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <NavLink
+                  key={tab.id}
+                  to={tab.to}
+                  end={tab.end}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold rounded-t-lg transition-colors border-b-2 whitespace-nowrap ${
+                      isActive
+                        ? 'border-emerald-600 text-emerald-700 bg-emerald-50/60 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-400'
+                        : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/50'
+                    }`
+                  }
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span>{tab.label}</span>
+                </NavLink>
+              );
+            })}
+        </div>
+      </div>
+
+      <div>
+        <Outlet />
+      </div>
+    </div>
+  );
+}
+
+export default FleetAdminLayout;

@@ -42,6 +42,12 @@ export const ALL_PERMISSIONS: Permission[] = [
   'investment.opportunities.manage',
   'investment.config.manage',
   'gis.manage',
+  'fleet.view',
+  'fleet.asset.manage',
+  'fleet.assign',
+  'fleet.maintenance.manage',
+  'fleet.reports.view',
+  'fleet.asset.retire',
 ];
 
 export const VALID_STAFF_ROLES: StaffRole[] = [
@@ -50,6 +56,7 @@ export const VALID_STAFF_ROLES: StaffRole[] = [
   'editor',
   'marketOfficer',
   'advisoryOfficer',
+  'fleetOfficer',
 ];
 
 export const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
@@ -118,6 +125,17 @@ export const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
     'alert.edit',
     'alert.review',
     'investment.view',
+  ],
+  // Runs the vehicle and machinery register day to day: adds assets, issues and
+  // receives them, and manages garage work. Retiring an asset is withheld — it
+  // is the one irreversible action here, and it belongs with a super admin.
+  fleetOfficer: [
+    'dashboard.view',
+    'fleet.view',
+    'fleet.asset.manage',
+    'fleet.assign',
+    'fleet.maintenance.manage',
+    'fleet.reports.view',
   ],
 };
 
