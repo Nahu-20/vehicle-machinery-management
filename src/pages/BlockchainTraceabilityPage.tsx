@@ -9,19 +9,22 @@ import {
   Package, 
   Sprout, 
   Truck, 
-  Award 
+  Award,
+  Clock
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { QrScanner } from '../components/ui/QrScanner';
 
 interface TraceabilityEvent {
   id: string;
+  stage: number;
   date: string;
   title: string;
   location: string;
   description: string;
-  icon: 'sprout' | 'package' | 'award' | 'truck';
+  icon: string;
   actor: string;
+  isPending?: boolean;
 }
 
 // Dummy data removed in favor of real blockchain data
@@ -99,22 +102,41 @@ export const BlockchainTraceabilityPage: React.FC = () => {
         setIsScanning(false);
         setBatchDetails(data.batch);
         
-        const mappedEvents = data.history.map((evt: any, i: number) => {
-          let icon: 'sprout' | 'package' | 'award' | 'truck' = 'sprout';
-          let title = 'Cultivation & Harvest';
-          if (evt.stage === 1) { icon = 'package'; title = 'Washing & Processing'; }
-          else if (evt.stage === 2) { icon = 'award'; title = 'Quality Certification'; }
-          else if (evt.stage === 3) { icon = 'truck'; title = 'Export Packaging & Shipment'; }
+        const STANDARD_STAGES = [
+          { stage: 0, title: 'Cultivation & Harvest', icon: 'sprout' },
+          { stage: 1, title: 'Washing & Processing', icon: 'package' },
+          { stage: 2, title: 'Quality Certification', icon: 'award' },
+          { stage: 3, title: 'Export Packaging & Shipment', icon: 'truck' }
+        ];
 
-          return {
-            id: `evt-${i}`,
-            date: new Date(evt.timestamp).toLocaleDateString(),
-            title,
-            location: evt.location,
-            description: evt.description,
-            icon,
-            actor: evt.actor
-          };
+        const mappedEvents = STANDARD_STAGES.map((std, i) => {
+          // Find if this stage was logged in history
+          const evt = data.history.find((h: any) => h.stage === std.stage);
+          if (evt) {
+            return {
+              id: `evt-${i}`,
+              stage: std.stage,
+              date: new Date(evt.timestamp).toLocaleDateString(),
+              title: std.title,
+              location: evt.location,
+              description: evt.description,
+              icon: std.icon,
+              actor: evt.actor,
+              isPending: false
+            };
+          } else {
+            return {
+              id: `evt-${i}`,
+              stage: std.stage,
+              date: 'Pending',
+              title: std.title,
+              location: 'Awaiting completion',
+              description: 'This stage has not been logged on the blockchain yet.',
+              icon: std.icon,
+              actor: 'N/A',
+              isPending: true
+            };
+          }
         });
         setScanResult(mappedEvents);
       } else {
@@ -128,13 +150,14 @@ export const BlockchainTraceabilityPage: React.FC = () => {
     }
   };
 
-  const renderIcon = (iconType: string) => {
+  const renderIcon = (iconType: string, isPending?: boolean) => {
+    const opacity = isPending ? 'opacity-40 grayscale' : '';
     switch (iconType) {
-      case 'sprout': return <Sprout className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />;
-      case 'package': return <Package className="w-5 h-5 text-amber-600 dark:text-amber-400" />;
-      case 'award': return <Award className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
-      case 'truck': return <Truck className="w-5 h-5 text-purple-600 dark:text-purple-400" />;
-      default: return <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />;
+      case 'sprout': return <Sprout className={`w-5 h-5 text-emerald-600 dark:text-emerald-400 ${opacity}`} />;
+      case 'package': return <Package className={`w-5 h-5 text-amber-600 dark:text-amber-400 ${opacity}`} />;
+      case 'award': return <Award className={`w-5 h-5 text-blue-600 dark:text-blue-400 ${opacity}`} />;
+      case 'truck': return <Truck className={`w-5 h-5 text-purple-600 dark:text-purple-400 ${opacity}`} />;
+      default: return <CheckCircle2 className={`w-5 h-5 text-emerald-600 dark:text-emerald-400 ${opacity}`} />;
     }
   };
 
@@ -263,26 +286,34 @@ export const BlockchainTraceabilityPage: React.FC = () => {
                       className="relative pl-6"
                     >
                       {/* Timeline Dot with Icon */}
-                      <div className="absolute -left-[17px] top-1 w-8 h-8 rounded-full bg-white dark:bg-[#0E241B] border-2 border-[#087A4B] dark:border-[#A3E635] flex items-center justify-center shadow-sm">
-                        {renderIcon(event.icon)}
+                      <div className={`absolute -left-[17px] top-1 w-8 h-8 rounded-full bg-white dark:bg-[#0E241B] border-2 ${event.isPending ? 'border-gray-300 dark:border-gray-700' : 'border-[#087A4B] dark:border-[#A3E635]'} flex items-center justify-center shadow-sm`}>
+                        {renderIcon(event.icon, event.isPending)}
                       </div>
                       
-                      <div className="bg-white dark:bg-[#0E241B] border border-[#E2E8E3] dark:border-[#183327] p-4 rounded-2xl shadow-sm">
+                      <div className={`bg-white dark:bg-[#0E241B] border ${event.isPending ? 'border-gray-200 dark:border-gray-800 opacity-60' : 'border-[#E2E8E3] dark:border-[#183327]'} p-4 rounded-2xl shadow-sm`}>
                         <div className="flex justify-between items-start mb-2 gap-4">
-                          <h4 className="font-bold text-[#0A1912] dark:text-emerald-50 text-base">{event.title}</h4>
-                          <span className="text-xs font-medium text-[#56635B] dark:text-emerald-100/50 whitespace-nowrap bg-black/5 dark:bg-white/5 px-2 py-1 rounded-md">
+                          <h4 className={`font-bold text-base ${event.isPending ? 'text-gray-500 dark:text-gray-400' : 'text-[#0A1912] dark:text-emerald-50'}`}>{event.title}</h4>
+                          <span className={`text-xs font-medium whitespace-nowrap px-2 py-1 rounded-md ${event.isPending ? 'bg-gray-100 text-gray-500 dark:bg-gray-800/50 dark:text-gray-400' : 'text-[#56635B] dark:text-emerald-100/50 bg-black/5 dark:bg-white/5'}`}>
                             {event.date}
                           </span>
                         </div>
                         
-                        <p className="text-[#56635B] dark:text-emerald-100/80 text-sm leading-relaxed mb-3">
+                        <p className={`text-sm leading-relaxed mb-3 ${event.isPending ? 'text-gray-400 dark:text-gray-500' : 'text-[#56635B] dark:text-emerald-100/80'}`}>
                           {event.description}
                         </p>
                         
-                        <div className="flex items-center gap-2 text-xs text-[#087A4B] dark:text-[#A3E635] bg-[#087A4B]/5 dark:bg-[#A3E635]/10 p-2 rounded-lg font-medium">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Verified by {event.actor}
-                        </div>
+                        {!event.isPending && (
+                          <div className="flex items-center gap-2 text-xs text-[#087A4B] dark:text-[#A3E635] bg-[#087A4B]/5 dark:bg-[#A3E635]/10 p-2 rounded-lg font-medium">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Verified by {event.actor}
+                          </div>
+                        )}
+                        {event.isPending && (
+                          <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/30 p-2 rounded-lg font-medium">
+                            <Clock className="w-3.5 h-3.5" />
+                            Awaiting verification
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   ))}

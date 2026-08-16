@@ -4,7 +4,6 @@ dotenv.config();
 import express, { Request, Response } from 'express';
 import path from 'path';
 import multer from 'multer';
-import { createServer as createViteServer } from 'vite';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
@@ -31,11 +30,10 @@ if (!getApps().length) {
   }
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
+const PORT = 3000;
 
-  app.use(express.json());
+app.use(express.json());
 
   // Serve static GIS candidate assets directly via Express to ensure fast streaming without Vite middleware buffering
   app.use('/data/gis', express.static(path.join(process.cwd(), 'public', 'data', 'gis'), {
@@ -569,7 +567,9 @@ async function startServer() {
       res.json({ success: true, txHash: receipt.hash });
     } catch (err: any) {
       console.error('[Blockchain API] Error creating batch:', err);
-      res.status(500).json({ success: false, error: err.message || 'Failed to create batch' });
+      // Extract human-readable revert reason from ethers.js error
+      const cleanError = err.reason || (err.message && err.message.match(/reason="([^"]+)"/)?.[1]) || 'Failed to create batch';
+      res.status(500).json({ success: false, error: cleanError });
     }
   });
 
@@ -582,21 +582,38 @@ async function startServer() {
       let tx;
       if (stage === 'cultivation') {
         tx = await contract.logCultivation(batchId, actor, location, description, ipfsHash);
-      } else if (stage === 'processing') {
-        tx = await contract.logProcessing(batchId, actor, location, description, ipfsHash);
-      } else if (stage === 'quality') {
-        tx = await contract.logQuality(batchId, actor, location, description, ipfsHash);
-      } else if (stage === 'export') {
-        tx = await contract.logExport(batchId, actor, location, description, ipfsHash);
       } else {
-        return res.status(400).json({ success: false, error: 'Invalid stage' });
+        // Enforce sequential logging by checking history for prerequisite stages
+        const history = await contract.getBatchHistory(batchId);
+        const stagesLogged = history.map((event: any) => Number(event.stage));
+
+        if (stage === 'processing') {
+          if (!stagesLogged.includes(1)) {
+            return res.status(400).json({ success: false, error: 'Cannot log Processing. The Cultivation & Harvest stage is missing. Please log Cultivation first.' });
+          }
+          tx = await contract.logProcessing(batchId, actor, location, description, ipfsHash);
+        } else if (stage === 'quality') {
+          if (!stagesLogged.includes(2)) {
+            return res.status(400).json({ success: false, error: 'Cannot log Quality Certification. The Washing & Processing stage is missing. Please log Processing first.' });
+          }
+          tx = await contract.logQuality(batchId, actor, location, description, ipfsHash);
+        } else if (stage === 'export') {
+          if (!stagesLogged.includes(3)) {
+            return res.status(400).json({ success: false, error: 'Cannot log Export. The Quality Certification stage is missing. Please log Quality first.' });
+          }
+          tx = await contract.logExport(batchId, actor, location, description, ipfsHash);
+        } else {
+          return res.status(400).json({ success: false, error: 'Invalid stage' });
+        }
       }
 
       const receipt = await tx.wait();
       res.json({ success: true, txHash: receipt.hash });
     } catch (err: any) {
       console.error('[Blockchain API] Error logging attestation:', err);
-      res.status(500).json({ success: false, error: err.message || 'Failed to log attestation' });
+      // Extract human-readable revert reason from ethers.js error
+      const cleanError = err.reason || (err.message && err.message.match(/reason="([^"]+)"/)?.[1]) || 'Failed to log attestation';
+      res.status(500).json({ success: false, error: cleanError });
     }
   });
 
@@ -636,24 +653,29 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
+  if (process.env.VERCEL !== '1' && process.env.NODE_ENV !== 'production') {
+    // Only in local development: import and use Vite
+    import('vite').then(async ({ createServer: createViteServer }) => {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+      
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on http://0.0.0.0:${PORT}`);
+      });
     });
-    app.use(vite.middlewares);
-  } else {
+  } else if (process.env.VERCEL !== '1') {
+    // Production build (not Vercel)
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req: Request, res: Response) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
+    });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-  });
-}
-
-startServer();
+export default app;

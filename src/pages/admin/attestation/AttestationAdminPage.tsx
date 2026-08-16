@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ScanLine, 
@@ -10,7 +10,9 @@ import {
   AlertCircle,
   Printer,
   Camera,
-  X
+  X,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { useStaffAuthorization } from '../../../hooks/useStaffAuthorization';
 import { QrScanner } from '../../../components/ui/QrScanner';
@@ -62,20 +64,44 @@ const ATTESTATION_STAGES: AttestationStage[] = [
 export const AttestationAdminPage: React.FC = () => {
   const { hasRole, staffUser } = useStaffAuthorization();
   
-  const [batchId, setBatchId] = useState<string>('COFFEE-BATCH-001');
+  const [batchId, setBatchId] = useState<string>('');
   const [origin, setOrigin] = useState<string>('Jimma Zone, Oromia');
   const [variety, setVariety] = useState<string>('Arabica - Heirloom');
+
+  // Auto-generate a unique batch ID
+  const generateNewBatchId = () => {
+    const year = new Date().getFullYear().toString().slice(-2);
+    const randomHex = Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0');
+    setBatchId(`OCFCU-${year}-${randomHex}`);
+    setInitStatusMessage(null);
+    setQrCodeUrl(null);
+  };
+
+  useEffect(() => {
+    generateNewBatchId();
+  }, []);
   const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [initStatusMessage, setInitStatusMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [stageStatuses, setStageStatuses] = useState<Record<string, {type: 'success' | 'error', text: string}>>({});
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [scanningStageId, setScanningStageId] = useState<string | null>(null);
+  const isSubmittingRef = useRef(false);
 
   const submitAttestation = async (stageId: string, targetBatchId: string) => {
+    if (isSubmittingRef.current) return; // Strict lock to prevent double-submissions
+    isSubmittingRef.current = true;
+    
     const stage = visibleStages.find(s => s.id === stageId);
-    if (!stage) return;
+    if (!stage) {
+      isSubmittingRef.current = false;
+      return;
+    }
     
     setIsSubmitting(stage.id);
-    setStatusMessage(null);
+    
+    // Clear previous status for this specific stage
+    setStageStatuses(prev => ({ ...prev, [stage.id]: null } as any));
+    
     try {
       const res = await fetch('/api/blockchain/attest', {
         method: 'POST',
@@ -91,14 +117,15 @@ export const AttestationAdminPage: React.FC = () => {
       });
       const data = await res.json();
       if (data.success) {
-        setStatusMessage({ type: 'success', text: `${stage.title} logged! TX: ${data.txHash}` });
+        setStageStatuses(prev => ({ ...prev, [stage.id]: { type: 'success', text: `${stage.title} logged successfully! TX: ${data.txHash}` } }));
       } else {
         throw new Error(data.error);
       }
     } catch (err: any) {
-      setStatusMessage({ type: 'error', text: err.message });
+      setStageStatuses(prev => ({ ...prev, [stage.id]: { type: 'error', text: err.message } }));
     } finally {
       setIsSubmitting(null);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -152,43 +179,68 @@ export const AttestationAdminPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Control Panel for Testing */}
+      {/* Batch Registration Panel */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
-        <h3 className="font-bold text-slate-900 dark:text-white">Testing Controls</h3>
+        <h3 className="font-bold text-slate-900 dark:text-white">Register New Coffee Batch</h3>
         <div className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="flex-1 space-y-4">
             <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Target Batch ID</label>
+              <label className="text-xs font-bold text-slate-500 uppercase">New Batch ID</label>
               <div className="flex items-center gap-2 mt-1">
                 <input 
                   type="text" 
-                  value={batchId}
-                  onChange={(e) => setBatchId(e.target.value)}
-                  className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  value={batchId} 
+                  readOnly
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 outline-none font-mono text-sm text-slate-500 cursor-not-allowed"
                 />
+                <button
+                  onClick={generateNewBatchId}
+                  className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors border border-slate-200 dark:border-slate-700"
+                  title="Generate a new Batch ID"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                </button>
               </div>
             </div>
             
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="text-xs font-bold text-slate-500 uppercase">Origin Region</label>
-                <input 
-                  type="text" 
-                  value={origin}
-                  onChange={(e) => setOrigin(e.target.value)}
-                  className="w-full mt-1 px-4 py-2 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  placeholder="e.g. Jimma Zone, Oromia"
-                />
+                <div className="flex items-center gap-2 mt-1">
+                  <select 
+                    value={origin} 
+                    onChange={(e) => setOrigin(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm appearance-none cursor-pointer"
+                  >
+                    <option value="Jimma Zone, Oromia">Jimma Zone, Oromia</option>
+                    <option value="Guji Zone, Oromia">Guji Zone, Oromia</option>
+                    <option value="West Guji Zone, Oromia">West Guji Zone, Oromia</option>
+                    <option value="East Hararghe Zone, Oromia">East Hararghe Zone, Oromia</option>
+                    <option value="West Hararghe Zone, Oromia">West Hararghe Zone, Oromia</option>
+                    <option value="Illubabor Zone, Oromia">Illubabor Zone, Oromia</option>
+                    <option value="Buno Bedele Zone, Oromia">Buno Bedele Zone, Oromia</option>
+                    <option value="Limmu, Oromia">Limmu, Oromia</option>
+                    <option value="Bale Zone, Oromia">Bale Zone, Oromia</option>
+                  </select>
+                </div>
               </div>
+
               <div className="flex-1">
                 <label className="text-xs font-bold text-slate-500 uppercase">Coffee Variety</label>
-                <input 
-                  type="text" 
-                  value={variety}
-                  onChange={(e) => setVariety(e.target.value)}
-                  className="w-full mt-1 px-4 py-2 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  placeholder="e.g. Arabica - Heirloom"
-                />
+                <div className="flex items-center gap-2 mt-1">
+                  <select 
+                    value={variety} 
+                    onChange={(e) => setVariety(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm appearance-none cursor-pointer"
+                  >
+                    <option value="Arabica - Heirloom">Arabica - Heirloom</option>
+                    <option value="Arabica - JARC Varieties">Arabica - JARC Varieties</option>
+                    <option value="Arabica - Geisha">Arabica - Geisha</option>
+                    <option value="Arabica - Kurume">Arabica - Kurume</option>
+                    <option value="Arabica - Dega">Arabica - Dega</option>
+                    <option value="Arabica - Wolisho">Arabica - Wolisho</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -196,7 +248,7 @@ export const AttestationAdminPage: React.FC = () => {
           <button 
             onClick={async () => {
               setIsSubmitting('init');
-              setStatusMessage(null);
+              setInitStatusMessage(null);
               setQrCodeUrl(null);
               try {
                 const res = await fetch('/api/blockchain/batch', {
@@ -206,7 +258,7 @@ export const AttestationAdminPage: React.FC = () => {
                 });
                 const data = await res.json();
                 if (data.success) {
-                  setStatusMessage({ type: 'success', text: `Batch initialized! TX: ${data.txHash}` });
+                  setInitStatusMessage({ type: 'success', text: `Batch initialized! TX: ${data.txHash}` });
                   
                   // Generate the QR Code URL
                   const protocol = window.location.protocol;
@@ -223,7 +275,7 @@ export const AttestationAdminPage: React.FC = () => {
                   throw new Error(data.error);
                 }
               } catch (err: any) {
-                setStatusMessage({ type: 'error', text: err.message });
+                setInitStatusMessage({ type: 'error', text: err.message });
               } finally {
                 setIsSubmitting(null);
               }
@@ -234,9 +286,9 @@ export const AttestationAdminPage: React.FC = () => {
             {isSubmitting === 'init' ? 'Initializing...' : 'Initialize New Batch'}
           </button>
         </div>
-        {statusMessage && (
-          <div className={`text-sm p-3 rounded-lg ${statusMessage.type === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
-            {statusMessage.text}
+        {initStatusMessage && (
+          <div className={`text-sm p-3 rounded-lg ${initStatusMessage.type === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+            {initStatusMessage.text}
           </div>
         )}
 
@@ -346,20 +398,63 @@ export const AttestationAdminPage: React.FC = () => {
                   <div className="absolute bottom-[-2px] right-[-2px] w-5 h-5 border-b-4 border-r-4 rounded-br-xl" style={{ borderColor: stage.themeColor }}></div>
                 </div>
 
-                <button 
-                  disabled={isSubmitting !== null}
-                  className="w-full py-3 px-4 rounded-xl text-white font-bold text-sm shadow-md hover:opacity-90 transition-opacity active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
-                  style={{ backgroundColor: stage.themeColor }}
-                  onClick={() => submitAttestation(stage.id, batchId)}
-                >
-                  <CheckCircle2 className="w-4 h-4" /> 
-                  {isSubmitting === stage.id ? 'Submitting to Blockchain...' : `Log ${stage.title}`}
-                </button>
+                <div className="text-center mt-2 w-full">
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                    {isSubmitting === stage.id ? (
+                      <span className="flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="w-4 h-4 animate-pulse" /> Submitting to Blockchain...
+                      </span>
+                    ) : (
+                      "Click the camera icon to scan a QR code"
+                    )}
+                  </p>
+                  
+                  {/* Stage-specific Status Message */}
+                  {stageStatuses[stage.id] && (
+                    <div className={`mt-4 text-xs p-3 rounded-lg text-left break-all shadow-sm ${stageStatuses[stage.id].type === 'success' ? 'bg-emerald-100/50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200/50'}`}>
+                      {stageStatuses[stage.id].text}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Transaction Progress Overlay */}
+      {isSubmitting && (
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-md p-4">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white dark:bg-slate-900 p-8 rounded-3xl max-w-sm w-full border border-emerald-500/30 shadow-2xl shadow-emerald-500/20 flex flex-col items-center text-center space-y-6"
+          >
+            <div className="relative">
+              <div className="absolute inset-0 bg-emerald-500 rounded-full blur-xl opacity-20 animate-pulse"></div>
+              <div className="bg-emerald-100 dark:bg-emerald-900/30 p-4 rounded-full relative">
+                <Loader2 className="w-10 h-10 text-emerald-600 dark:text-emerald-400 animate-spin" />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Processing Transaction</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Cryptographically signing and writing to the Sepolia blockchain. This usually takes 10-15 seconds.
+              </p>
+            </div>
+            
+            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <motion.div 
+                className="h-full bg-emerald-500"
+                initial={{ width: "0%" }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 12, ease: "linear" }}
+              />
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Full Screen Camera Modal for Admin */}
       {scanningStageId && (
