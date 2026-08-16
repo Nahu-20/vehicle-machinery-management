@@ -12,34 +12,34 @@ export const FooterLegal: React.FC = () => {
 
   return (
     <>
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs sm:text-sm text-[#637A6E] dark:text-[#A7F3D0]/80">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs sm:text-sm text-[#637A6E] dark:text-[#a5aba6]">
         {/* Left: Dynamic Copyright */}
         <div className="text-center md:text-left font-medium">
           <p>{copyrightText}</p>
         </div>
 
         {/* Center: Legal Links */}
-        <div className="flex items-center flex-wrap justify-center gap-x-3 gap-y-1 font-semibold text-[#4C6054] dark:text-[#A7F3D0]/90">
+        <div className="flex items-center flex-wrap justify-center gap-x-3 gap-y-1 font-semibold text-[#4C6054] dark:text-[#a5aba6]">
           <button
             type="button"
             onClick={() => setActiveModal('privacy')}
-            className="hover:text-[#075B36] dark:hover:text-[#A3E635] underline-offset-4 hover:underline transition-colors cursor-pointer"
+            className="hover:text-[#075B36] dark:hover:text-[#74d62c] underline-offset-4 hover:underline transition-colors cursor-pointer"
           >
             {t('footer_privacy')}
           </button>
-          <span className="text-[#A4B8AC] dark:text-[#254F3A]" aria-hidden="true">•</span>
+          <span className="text-[#A4B8AC] dark:text-white/[0.2]" aria-hidden="true">•</span>
           <button
             type="button"
             onClick={() => setActiveModal('accessibility')}
-            className="hover:text-[#075B36] dark:hover:text-[#A3E635] underline-offset-4 hover:underline transition-colors cursor-pointer"
+            className="hover:text-[#075B36] dark:hover:text-[#74d62c] underline-offset-4 hover:underline transition-colors cursor-pointer"
           >
             {t('footer_accessibility')}
           </button>
-          <span className="text-[#A4B8AC] dark:text-[#254F3A]" aria-hidden="true">•</span>
+          <span className="text-[#A4B8AC] dark:text-white/[0.2]" aria-hidden="true">•</span>
           <button
             type="button"
             onClick={() => setActiveModal('terms')}
-            className="hover:text-[#075B36] dark:hover:text-[#A3E635] underline-offset-4 hover:underline transition-colors cursor-pointer"
+            className="hover:text-[#075B36] dark:hover:text-[#74d62c] underline-offset-4 hover:underline transition-colors cursor-pointer"
           >
             {t('footer_terms')}
           </button>

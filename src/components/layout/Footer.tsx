@@ -16,7 +16,7 @@ export const Footer: React.FC = () => {
   return (
     <footer
       id="main-site-footer"
-      className="bg-[#F8FAF7] dark:bg-[#081710] py-8 sm:py-12 md:py-16 px-4 sm:px-6 lg:px-8 border-t border-[#E8EFE5] dark:border-[#142C20] transition-colors duration-200"
+      className="bg-[#F8FAF7] dark:bg-[#070908] py-8 sm:py-12 md:py-16 px-4 sm:px-6 lg:px-8 border-t border-[#E8EFE5] dark:border-white/[0.08] transition-colors duration-200"
     >
       <div className="max-w-[1380px] mx-auto">
         {/* Section 1: Farmer Assistance & Hotline CTA Banner */}
@@ -25,23 +25,23 @@ export const Footer: React.FC = () => {
         {/* Section 2: Main Bureau Footer Card */}
         <div
           id="bureau-main-footer-card"
-          className="relative overflow-hidden rounded-[28px] sm:rounded-[36px] bg-white dark:bg-[#0E241A] border border-[#E5EFE2] dark:border-[#1C3E2D] shadow-[0_15px_45px_rgba(0,0,0,0.04)] dark:shadow-[0_15px_45px_rgba(0,0,0,0.35)] transition-colors duration-200"
+          className="relative overflow-hidden rounded-[28px] sm:rounded-[36px] bg-white dark:bg-[#111613] border border-[#E5EFE2] dark:border-white/[0.09] shadow-[0_15px_45px_rgba(0,0,0,0.04)] dark:shadow-[0_15px_45px_rgba(0,0,0,0.6)] transition-colors duration-200"
         >
           {/* Subtle rolling hills cultivation landscape background */}
-          <div className="absolute inset-x-0 bottom-0 pointer-events-none opacity-35 dark:opacity-10 overflow-hidden">
+          <div className="absolute inset-x-0 bottom-0 pointer-events-none opacity-35 dark:opacity-5 overflow-hidden">
             <RollingHillsLandscape className="w-full h-24 sm:h-36" />
           </div>
 
           {/* Floating grain kernels */}
-          <FloatingGrainsScattered className="opacity-25 dark:opacity-10" />
+          <FloatingGrainsScattered className="opacity-25 dark:opacity-5" />
 
           {/* Decorative Wheat Stalks Bottom Left Corner */}
-          <div className="absolute -left-8 sm:-left-4 -bottom-8 sm:-bottom-4 pointer-events-none z-0 opacity-75 dark:opacity-30 hidden xs:block sm:block">
+          <div className="absolute -left-8 sm:-left-4 -bottom-8 sm:-bottom-4 pointer-events-none z-0 opacity-75 dark:opacity-20 hidden xs:block sm:block">
             <WheatLeftIllustration className="w-32 sm:w-44 md:w-56 h-auto" />
           </div>
 
           {/* Decorative Wheat Stalks Bottom Right Corner */}
-          <div className="absolute -right-8 sm:-right-4 -bottom-8 sm:-bottom-4 pointer-events-none z-0 opacity-75 dark:opacity-30 hidden sm:block">
+          <div className="absolute -right-8 sm:-right-4 -bottom-8 sm:-bottom-4 pointer-events-none z-0 opacity-75 dark:opacity-20 hidden sm:block">
             <WheatRightIllustration className="w-40 sm:w-52 md:w-68 h-auto" />
           </div>
 
@@ -61,7 +61,7 @@ export const Footer: React.FC = () => {
             </div>
 
             {/* Middle Divider */}
-            <div className="border-b border-[#E8EFE5] dark:border-[#1E3E2E]" />
+            <div className="border-b border-[#E8EFE5] dark:border-white/[0.08]" />
 
             {/* Middle Row: Social Media + Newsletter Subscription */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
@@ -77,7 +77,7 @@ export const Footer: React.FC = () => {
             </div>
 
             {/* Bottom Divider */}
-            <div className="border-b border-[#E8EFE5] dark:border-[#1E3E2E]" />
+            <div className="border-b border-[#E8EFE5] dark:border-white/[0.08]" />
 
             {/* Bottom Row: Legal Links, Copyright, and Language Selector */}
             <FooterLegal />

@@ -1,107 +1,281 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { useToast } from '../context/ToastContext';
-import { mockPublications } from '../data/mockData';
-import { Search, Download, FileText, Calendar, BookOpen, Shield, Video, FileCheck } from 'lucide-react';
+import { Publication } from '../types';
+import { comprehensivePublications } from '../data/resourcesData';
+import { ResourcesHero } from '../components/resources/ResourcesHero';
+import { ResourcesStatsBanner } from '../components/resources/ResourcesStatsBanner';
+import { FeaturedResourceSpotlight } from '../components/resources/FeaturedResourceSpotlight';
+import { ResourceCard } from '../components/resources/ResourceCard';
+import { ResourceDetailModal } from '../components/resources/ResourceDetailModal';
+import { ResourceVideoModal } from '../components/resources/ResourceVideoModal';
+import { ResourceRequestModal } from '../components/resources/ResourceRequestModal';
+import { FarmerToolkitDownloads } from '../components/resources/FarmerToolkitDownloads';
+import { ResourcesSMSKnowledgeHub } from '../components/resources/ResourcesSMSKnowledgeHub';
+import { ResourcesFAQ } from '../components/resources/ResourcesFAQ';
+import { ResourcesCTA } from '../components/resources/ResourcesCTA';
+import {
+  Search,
+  LayoutGrid,
+  List,
+  RotateCcw,
+  SlidersHorizontal,
+  ArrowUpDown,
+  BookOpen,
+  Sparkles,
+} from 'lucide-react';
 
 export const ResourcesPage: React.FC = () => {
   const { t } = useLanguage();
-  const { showToast } = useToast();
-  const [query, setQuery] = useState('');
+
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedFormat, setSelectedFormat] = useState<string>('all');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'downloads' | 'newest' | 'title'>('downloads');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const filtered = mockPublications.filter((pub) => {
-    const matchesQuery = t(pub.titleKey).toLowerCase().includes(query.toLowerCase()) || t(pub.descriptionKey).toLowerCase().includes(query.toLowerCase());
-    const matchesFormat = selectedFormat === 'all' || pub.format.toLowerCase() === selectedFormat.toLowerCase();
-    return matchesQuery && matchesFormat;
-  });
+  // Modals state
+  const [selectedDocModal, setSelectedDocModal] = useState<Publication | null>(null);
+  const [selectedVideoModal, setSelectedVideoModal] = useState<Publication | null>(null);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState<boolean>(false);
 
-  const getResourceIcon = (type: string) => {
-    switch (type) {
-      case 'calendar': return <Calendar className="h-6 w-6 text-[#075D3A]" />;
-      case 'guidance': return <BookOpen className="h-6 w-6 text-[#075D3A]" />;
-      case 'manual': return <FileText className="h-6 w-6 text-[#075D3A]" />;
-      case 'policy': return <Shield className="h-6 w-6 text-[#075D3A]" />;
-      case 'video': return <Video className="h-6 w-6 text-[#075D3A]" />;
-      case 'form': default: return <FileCheck className="h-6 w-6 text-[#075D3A]" />;
-    }
+  // Spotlit resource (first featured item)
+  const spotlightDoc = useMemo(() => {
+    return (
+      comprehensivePublications.find((p) => p.featured && p.format === 'PDF') ||
+      comprehensivePublications[0]
+    );
+  }, []);
+
+  // Filtered and sorted resources list
+  const filteredPublications = useMemo(() => {
+    return comprehensivePublications
+      .filter((pub) => {
+        const title = (t(pub.titleKey) || pub.defaultTitle || '').toLowerCase();
+        const desc = (t(pub.descriptionKey) || pub.defaultDescription || '').toLowerCase();
+        const query = searchQuery.toLowerCase().trim();
+
+        const matchesQuery =
+          !query ||
+          title.includes(query) ||
+          desc.includes(query) ||
+          (pub.category && pub.category.toLowerCase().includes(query)) ||
+          (pub.tags && pub.tags.some((tag) => tag.toLowerCase().includes(query))) ||
+          (pub.authorOrOffice && pub.authorOrOffice.toLowerCase().includes(query));
+
+        const matchesCategory =
+          selectedCategory === 'all' ||
+          (pub.category && pub.category.toLowerCase() === selectedCategory.toLowerCase());
+
+        const matchesFormat =
+          selectedFormat === 'all' ||
+          pub.format.toLowerCase() === selectedFormat.toLowerCase() ||
+          (selectedFormat === 'mp4' && pub.type === 'video');
+
+        const matchesLanguage =
+          selectedLanguage === 'all' ||
+          pub.language.toLowerCase().includes(selectedLanguage.toLowerCase());
+
+        return matchesQuery && matchesCategory && matchesFormat && matchesLanguage;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'downloads') {
+          return (b.downloadsCount || 0) - (a.downloadsCount || 0);
+        }
+        if (sortBy === 'newest') {
+          return (b.publishedDate || '').localeCompare(a.publishedDate || '');
+        }
+        if (sortBy === 'title') {
+          const titleA = t(a.titleKey) || a.defaultTitle || '';
+          const titleB = t(b.titleKey) || b.defaultTitle || '';
+          return titleA.localeCompare(titleB);
+        }
+        return 0;
+      });
+  }, [searchQuery, selectedCategory, selectedFormat, selectedLanguage, sortBy, t]);
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory('all');
+    setSelectedFormat('all');
+    setSelectedLanguage('all');
+    setSortBy('downloads');
   };
 
   return (
-    <div className="bg-[#F8F7F2] min-h-screen py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-10">
-        <div className="rounded-2xl bg-[#075D3A] text-white p-8 md:p-12 shadow-xl">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#D5A62E]">Open Access Knowledge</span>
-          <h1 className="text-3xl sm:text-4xl font-black mt-1">{t('nav_resources')}</h1>
-          <p className="text-xs sm:text-sm text-emerald-100 mt-2 max-w-2xl">{t('resources_subtitle')}</p>
-        </div>
+    <div className="bg-[#F6F7F3] dark:bg-[#0A110D] min-h-screen text-[#111310] dark:text-white transition-colors duration-200 overflow-x-hidden">
+      {/* 1. Master Emerald Hero with Live Filter Header */}
+      <ResourcesHero
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+        selectedFormat={selectedFormat}
+        onSelectFormat={setSelectedFormat}
+        selectedLanguage={selectedLanguage}
+        onSelectLanguage={setSelectedLanguage}
+        totalFiltered={filteredPublications.length}
+        totalAll={comprehensivePublications.length}
+        onRequestOpen={() => setIsRequestModalOpen(true)}
+      />
 
-        {/* Filter Bar */}
-        <div className="rounded-xl bg-white p-4 shadow-xs border flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter publications or documents..."
-              className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2 text-xs text-[#17211B] focus:border-[#075D3A] focus:outline-none"
-            />
+      {/* 2. Key Operational Proof & Capabilities Banner */}
+      <ResourcesStatsBanner />
+
+      {/* 3. Featured Season Spotlight (Visible when no specific query active) */}
+      {!searchQuery && selectedCategory === 'all' && (
+        <section className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 pt-12">
+          <FeaturedResourceSpotlight
+            publication={spotlightDoc}
+            onQuickPreview={(pub) => setSelectedDocModal(pub)}
+          />
+        </section>
+      )}
+
+      {/* 4. Main Publications & Library Grid */}
+      <section id="publications-grid" className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Results Header Bar with Sorting and View Mode toggles */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div className="space-y-1">
+            <h2 className="text-2xl sm:text-3xl font-black text-[#0A1912] dark:text-white tracking-tight">
+              Official Extension Documents & Manuals
+            </h2>
+            <p className="text-xs sm:text-sm text-[#56635B] dark:text-white/70">
+              Showing {filteredPublications.length} verified publications available for open download
+            </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-[#5E6B63]">Format:</span>
-            {['all', 'pdf', 'mp4', 'docx'].map((fmt) => (
-              <button
-                key={fmt}
-                onClick={() => setSelectedFormat(fmt)}
-                className={`rounded-lg px-3 py-1 text-xs font-bold uppercase transition-all min-h-[44px] sm:min-h-[auto] ${
-                  selectedFormat === fmt
-                    ? 'bg-[#075D3A] text-white'
-                    : 'bg-gray-100 text-[#5E6B63] hover:bg-gray-200'
-                }`}
+          <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+            {/* Sorting Dropdown */}
+            <div className="flex items-center gap-1.5 bg-white dark:bg-white/5 border border-[#D5E8D0] dark:border-white/10 px-3 py-2 rounded-xl text-xs shadow-2xs">
+              <ArrowUpDown className="h-3.5 w-3.5 text-[#075B36] dark:text-[#A3E635]" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-transparent font-extrabold text-[#0A1912] dark:text-white focus:outline-none cursor-pointer"
               >
-                {fmt}
+                <option value="downloads" className="bg-[#F6F7F3] dark:bg-[#111813] text-[#111310] dark:text-white">
+                  Most Downloaded
+                </option>
+                <option value="newest" className="bg-[#F6F7F3] dark:bg-[#111813] text-[#111310] dark:text-white">
+                  Recently Updated
+                </option>
+                <option value="title" className="bg-[#F6F7F3] dark:bg-[#111813] text-[#111310] dark:text-white">
+                  Alphabetical Order
+                </option>
+              </select>
+            </div>
+
+            {/* View Mode (Grid vs List) */}
+            <div className="hidden sm:flex items-center gap-1 bg-white dark:bg-white/5 border border-[#D5E8D0] dark:border-white/10 p-1 rounded-xl shadow-2xs">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-[#075B36] text-white dark:bg-[#A3E635] dark:text-[#053B23]'
+                    : 'text-gray-400 hover:text-gray-700 dark:hover:text-white'
+                }`}
+                title="Grid View"
+              >
+                <LayoutGrid className="h-4 w-4" />
               </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-[#075B36] text-white dark:bg-[#A3E635] dark:text-[#053B23]'
+                    : 'text-gray-400 hover:text-gray-700 dark:hover:text-white'
+                }`}
+                title="List View"
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
+
+            {(selectedCategory !== 'all' ||
+              searchQuery ||
+              selectedFormat !== 'all' ||
+              selectedLanguage !== 'all') && (
+              <button
+                onClick={handleResetFilters}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-white/10 text-xs font-bold text-[#075B36] dark:text-[#A3E635] border border-[#D5E8D0] dark:border-white/10 hover:bg-[#F0F7EE] transition-all shadow-2xs"
+              >
+                <RotateCcw className="h-3 w-3" />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Publications List / Grid */}
+        {filteredPublications.length === 0 ? (
+          <div className="rounded-3xl border border-[#E2EFE0] dark:border-white/10 bg-white dark:bg-[#111813] p-12 sm:p-16 text-center space-y-4 shadow-sm">
+            <div className="inline-flex p-4 rounded-2xl bg-[#F0F7EE] dark:bg-white/10 text-[#075B36] dark:text-[#A3E635]">
+              <Search className="h-8 w-8" />
+            </div>
+            <h3 className="text-lg font-black text-[#0A1912] dark:text-white">
+              No publications found matching your criteria
+            </h3>
+            <p className="text-xs sm:text-sm text-[#56635B] dark:text-white/60 max-w-md mx-auto">
+              Try adjusting your search terms, changing the format filter, or contact our extension hotline at <strong>8844</strong>.
+            </p>
+            <button
+              onClick={handleResetFilters}
+              className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#075B36] hover:bg-[#054829] px-5 py-2.5 text-xs font-black text-white shadow-md transition-all"
+            >
+              <RotateCcw className="h-4 w-4 text-[#A3E635]" />
+              <span>Reset All Filters</span>
+            </button>
+          </div>
+        ) : (
+          <div
+            className={
+              viewMode === 'grid'
+                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+                : 'space-y-4'
+            }
+          >
+            {filteredPublications.map((pub) => (
+              <ResourceCard
+                key={pub.id}
+                publication={pub}
+                viewMode={viewMode}
+                onPreview={(p) => setSelectedDocModal(p)}
+                onPlayVideo={(p) => setSelectedVideoModal(p)}
+              />
             ))}
           </div>
-        </div>
+        )}
+      </section>
 
-        {/* Resource Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((pub) => (
-            <div key={pub.id} className="rounded-xl border border-gray-200 bg-white p-6 shadow-xs flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#EAF5EE]">
-                    {getResourceIcon(pub.type)}
-                  </div>
-                  <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-[#075D3A] border border-emerald-100">
-                    {pub.format} • {pub.fileSize || 'PDF'}
-                  </span>
-                </div>
-                <h3 className="mt-4 text-sm font-bold text-[#17211B]">{t(pub.titleKey)}</h3>
-                <p className="mt-2 text-xs text-[#5E6B63] leading-relaxed">{t(pub.descriptionKey)}</p>
-              </div>
+      {/* 5. Bundled Farmer & Extension Toolkits (ZIP Archives) */}
+      <FarmerToolkitDownloads />
 
-              <div className="mt-6 pt-4 border-t flex items-center justify-between">
-                <span className="text-[10px] text-[#5E6B63]">{pub.language}</span>
-                <a
-                  href={pub.downloadUrl}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    showToast(t('demo_download_notice'), 'info', t(pub.titleKey));
-                  }}
-                  className="flex items-center gap-1.5 rounded-lg bg-[#075D3A] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#14804A] min-h-[44px]"
-                >
-                  <Download className="h-3.5 w-3.5 text-[#D5A62E]" />
-                  <span>{t('res_download')}</span>
-                </a>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* 6. 8844 Toll-Free SMS & Offline USSD Knowledge Dispatch */}
+      <ResourcesSMSKnowledgeHub />
+
+      {/* 7. Public Documentation FAQ Accordion */}
+      <ResourcesFAQ />
+
+      {/* 8. Call to Action Banner & Print Dispatch */}
+      <ResourcesCTA onRequestOpen={() => setIsRequestModalOpen(true)} />
+
+      {/* Interactive Modals */}
+      <ResourceDetailModal
+        publication={selectedDocModal}
+        onClose={() => setSelectedDocModal(null)}
+      />
+
+      <ResourceVideoModal
+        publication={selectedVideoModal}
+        onClose={() => setSelectedVideoModal(null)}
+      />
+
+      <ResourceRequestModal
+        isOpen={isRequestModalOpen}
+        onClose={() => setIsRequestModalOpen(false)}
+      />
     </div>
   );
 };

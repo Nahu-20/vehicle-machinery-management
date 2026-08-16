@@ -180,12 +180,12 @@ export const Header: React.FC = () => {
 
         {/* LAYER 2: ROUNDED MAIN BUREAU NAVIGATION PANEL */}
         <div className="px-2 sm:px-3.5 lg:px-5 py-2 sm:py-2.5 transition-all duration-300">
-          <div className="w-[calc(100%-0.5rem)] sm:w-[calc(100%-1rem)] max-w-[1860px] mx-auto rounded-[24px] sm:rounded-[30px] lg:rounded-[36px] bg-[linear-gradient(110deg,#ffffff_0%,#ffffff_48%,#f1f8ec_100%)] dark:bg-[linear-gradient(110deg,#0E241B_0%,#0E241B_48%,#081C14_100%)] border border-[#14502D]/10 dark:border-[#183327] shadow-xs relative p-3.5 sm:p-4 lg:p-4.5 transition-all duration-300">
+          <div className="w-[calc(100%-0.5rem)] sm:w-[calc(100%-1rem)] max-w-[1860px] mx-auto rounded-[24px] sm:rounded-[30px] lg:rounded-[36px] bg-[linear-gradient(110deg,#ffffff_0%,#ffffff_48%,#f1f8ec_100%)] dark:bg-[linear-gradient(110deg,#0d110f_0%,#0d110f_50%,#090d0b_100%)] border border-[#14502D]/10 dark:border-white/[0.09] shadow-xs dark:shadow-2xl relative p-3.5 sm:p-4 lg:p-4.5 transition-all duration-300">
             
             {/* SUBTLE BOTANICAL DECORATION ARTWORK (RIGHT SIDE ONLY) */}
             <div
               aria-hidden="true"
-              className="absolute right-0 top-0 bottom-0 w-72 sm:w-80 lg:w-[420px] pointer-events-none opacity-[0.07] dark:opacity-[0.05] text-[#14502D] dark:text-[#A3E635] z-0 overflow-hidden select-none"
+              className="absolute right-0 top-0 bottom-0 w-72 sm:w-80 lg:w-[420px] pointer-events-none opacity-[0.07] dark:opacity-[0.04] text-[#14502D] dark:text-[#74d62c] z-0 overflow-hidden select-none"
             >
               <svg
                 viewBox="0 0 400 300"
@@ -219,7 +219,7 @@ export const Header: React.FC = () => {
             <div className="relative z-10 flex flex-col gap-2.5 sm:gap-3">
               
               {/* ROW 1: BUREAU IDENTITY (LEFT) & CONTROLS/SEARCH/CTA (RIGHT) - HIGHER Z-INDEX FOR DROPDOWNS */}
-              <div className="relative z-30 flex flex-col min-[1180px]:flex-row items-start min-[1180px]:items-center justify-between gap-3 pb-2.5 border-b border-[#14502D]/10 dark:border-[#183327]/80">
+              <div className="relative z-30 flex flex-col min-[1180px]:flex-row items-start min-[1180px]:items-center justify-between gap-3 pb-2.5 border-b border-[#14502D]/10 dark:border-white/[0.08]">
                 
                 {/* LEFT: BUREAU IDENTITY LOGO & TITLE */}
                 <Link to="/" className="flex items-center gap-3 sm:gap-4 group focus:outline-none shrink-0 min-w-0">
@@ -230,10 +230,10 @@ export const Header: React.FC = () => {
                     style={{ maxHeight: '84px' }}
                   />
                   <div className="flex flex-col min-w-0">
-                    <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-extrabold text-[#0A1912] dark:text-white tracking-tight leading-tight min-[1180px]:whitespace-nowrap">
+                    <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-extrabold text-[#0A1912] dark:text-[#f5f6f3] tracking-tight leading-tight min-[1180px]:whitespace-nowrap">
                       {t('bureau_title')}
                     </h1>
-                    <p className="text-xs sm:text-sm lg:text-base font-semibold text-[#56635B] dark:text-[#A7F3D0]/80 mt-0.5 truncate">
+                    <p className="text-xs sm:text-sm lg:text-base font-semibold text-[#56635B] dark:text-[#a5aba6] mt-0.5 truncate">
                       {t('bureau_sub_title') || 'Regional Government of Oromia'}
                     </p>
                   </div>
@@ -271,13 +271,13 @@ export const Header: React.FC = () => {
                       setIsSearchModalOpen(true);
                     }}
                     aria-label={t('search_title')}
-                    className="flex items-center gap-2.5 rounded-full border border-gray-200 dark:border-[#183327] bg-white/90 dark:bg-[#0B1912]/90 px-3.5 py-1.5 text-xs font-semibold text-[#56635B] dark:text-[#94A39A] hover:border-[#087A4B] dark:hover:border-[#A3E635] hover:bg-white dark:hover:bg-[#122E22] transition-all h-10 w-44 lg:w-56 xl:w-72 shrink min-w-[150px] justify-between shadow-xs"
+                    className="flex items-center gap-2.5 rounded-full border border-gray-200 dark:border-white/[0.09] bg-white/90 dark:bg-[#111613] px-3.5 py-1.5 text-xs font-semibold text-[#56635B] dark:text-[#a5aba6] hover:border-[#087A4B] dark:hover:border-[#74d62c]/50 hover:bg-white dark:hover:bg-[#161d18] transition-all h-10 w-44 lg:w-56 xl:w-72 shrink min-w-[150px] justify-between shadow-xs"
                   >
                     <div className="flex items-center gap-2 truncate">
-                      <Search className="h-4 w-4 text-[#087A4B] dark:text-[#A3E635] shrink-0" />
+                      <Search className="h-4 w-4 text-[#087A4B] dark:text-[#74d62c] shrink-0" />
                       <span className="truncate">{t('search_placeholder')}</span>
                     </div>
-                    <kbd className="rounded-md bg-gray-100 dark:bg-[#0E241B] px-1.5 py-0.5 text-[10px] text-[#56635B] dark:text-[#94A39A] border border-gray-200 dark:border-[#183327] shrink-0 font-mono">
+                    <kbd className="rounded-md bg-gray-100 dark:bg-[#161d18] px-1.5 py-0.5 text-[10px] text-[#56635B] dark:text-[#a5aba6] border border-gray-200 dark:border-white/[0.08] shrink-0 font-mono">
                       ⌘K
                     </kbd>
                   </button>
@@ -288,10 +288,10 @@ export const Header: React.FC = () => {
                     whileHover={{ y: -2, scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
                     transition={{ duration: 0.15 }}
-                    className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(110deg,#003d27,#006338)] hover:bg-[linear-gradient(110deg,#002c1c,#004f2d)] text-white px-3.5 xl:px-4.5 py-2 text-xs font-extrabold transition-all duration-200 shadow-xs group h-10 shrink-0"
+                    className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(110deg,#003d27,#006338)] hover:bg-[linear-gradient(110deg,#002c1c,#004f2d)] dark:bg-[linear-gradient(110deg,#74d62c,#5ebd20)] dark:hover:bg-[linear-gradient(110deg,#8be63a,#74d62c)] text-white dark:text-[#070908] px-3.5 xl:px-4.5 py-2 text-xs font-extrabold transition-all duration-200 shadow-xs group h-10 shrink-0"
                   >
                     <span>{t('eservices_btn') || 'e-Services Portal'}</span>
-                    <ArrowUpRight className="h-4 w-4 text-[#A3E635] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 stroke-[2.5]" />
+                    <ArrowUpRight className="h-4 w-4 text-[#A3E635] dark:text-[#070908] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 stroke-[2.5]" />
                   </motion.a>
                 </div>
 
@@ -303,9 +303,9 @@ export const Header: React.FC = () => {
                     type="button"
                     onClick={() => setIsSearchModalOpen(true)}
                     aria-label={t('search_title')}
-                    className="flex items-center justify-center rounded-xl border border-gray-200 dark:border-[#183327] bg-white dark:bg-[#0B1912] text-[#0A1912] dark:text-white p-2 hover:bg-[#F6F7F3] dark:hover:bg-[#122E22] transition-colors h-10 w-10 min-h-[44px] min-w-[44px] focus:outline-none"
+                    className="flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/[0.09] bg-white dark:bg-[#111613] text-[#0A1912] dark:text-[#f5f6f3] p-2 hover:bg-[#F6F7F3] dark:hover:bg-[#161d18] transition-colors h-10 w-10 min-h-[44px] min-w-[44px] focus:outline-none"
                   >
-                    <Search className="h-5 w-5 text-[#087A4B] dark:text-[#A3E635]" />
+                    <Search className="h-5 w-5 text-[#087A4B] dark:text-[#74d62c]" />
                   </button>
 
                   <button
@@ -314,7 +314,7 @@ export const Header: React.FC = () => {
                     aria-expanded={mobileMenuOpen}
                     aria-controls="mobile-navigation-drawer"
                     aria-label="Open navigation menu"
-                    className="flex items-center justify-center rounded-xl bg-[#063d28] dark:bg-emerald-800 p-2 text-white hover:bg-[#0c5634] transition-colors h-10 w-10 min-h-[44px] min-w-[44px] focus:outline-none"
+                    className="flex items-center justify-center rounded-xl bg-[#063d28] dark:bg-[#161d18] border border-transparent dark:border-white/[0.09] p-2 text-white dark:text-[#74d62c] hover:bg-[#0c5634] dark:hover:bg-[#1c241f] transition-colors h-10 w-10 min-h-[44px] min-w-[44px] focus:outline-none"
                   >
                     <Menu className="h-6 w-6" />
                   </button>
@@ -339,8 +339,8 @@ export const Header: React.FC = () => {
                             to={item.href}
                             className={`px-2.5 py-1 text-sm xl:text-[15px] font-semibold transition-colors rounded-lg block relative ${
                               isActive
-                                ? 'text-[#063D2A] dark:text-[#A3E635] font-extrabold'
-                                : 'text-[#111310] dark:text-emerald-100/90 hover:text-[#063D2A] dark:hover:text-white'
+                                ? 'text-[#063D2A] dark:text-[#74d62c] font-extrabold'
+                                : 'text-[#111310] dark:text-[#a5aba6] hover:text-[#063D2A] dark:hover:text-[#f5f6f3]'
                             }`}
                           >
                             <span>{t(item.labelKey)}</span>
@@ -353,7 +353,7 @@ export const Header: React.FC = () => {
                                 animate={isReducedMotion ? undefined : { scaleX: 1 }}
                                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                                 style={{ transformOrigin: 'center' }}
-                                className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 sm:w-9 h-1 rounded-full bg-[#347622] dark:bg-[#A3E635]"
+                                className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 sm:w-9 h-1 rounded-full bg-[#347622] dark:bg-[#74d62c]"
                               />
                             )}
                           </NavLink>
@@ -384,12 +384,12 @@ export const Header: React.FC = () => {
                 animate={isReducedMotion ? undefined : { opacity: 1, x: 0 }}
                 exit={isReducedMotion ? undefined : { opacity: 0, x: '100%' }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="fixed inset-y-0 right-0 z-50 w-[88%] max-w-md bg-white dark:bg-[#0E241B] p-5 sm:p-6 shadow-2xl flex flex-col justify-between overflow-y-auto border-l border-[#E2E8E3] dark:border-[#183327]"
+                className="fixed inset-y-0 right-0 z-50 w-[88%] max-w-md bg-white dark:bg-[#0d110f] p-5 sm:p-6 shadow-2xl flex flex-col justify-between overflow-y-auto border-l border-[#E2E8E3] dark:border-white/[0.09]"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="space-y-5">
                   {/* Drawer Header with Official Logo */}
-                  <div className="flex items-center justify-between pb-4 border-b border-[#E2E8E3] dark:border-[#183327]">
+                  <div className="flex items-center justify-between pb-4 border-b border-[#E2E8E3] dark:border-white/[0.08]">
                     <div className="flex items-center gap-3 min-w-0">
                       <img
                         src={officialLogoUrl}
@@ -397,10 +397,10 @@ export const Header: React.FC = () => {
                         className="h-12 w-12 object-contain shrink-0"
                       />
                       <div className="min-w-0">
-                        <span className="font-extrabold text-sm text-[#0A1912] dark:text-white block leading-tight truncate">
+                        <span className="font-extrabold text-sm text-[#0A1912] dark:text-[#f5f6f3] block leading-tight truncate">
                           {t('bureau_title')}
                         </span>
-                        <span className="text-[11px] text-[#56635B] dark:text-[#A7F3D0]/80 font-medium truncate block">
+                        <span className="text-[11px] text-[#56635B] dark:text-[#a5aba6] font-medium truncate block">
                           {t('bureau_sub_title') || 'Regional Government of Oromia'}
                         </span>
                       </div>
@@ -409,7 +409,7 @@ export const Header: React.FC = () => {
                       type="button"
                       onClick={() => setMobileMenuOpen(false)}
                       aria-label="Close menu"
-                      className="p-2 text-slate-500 dark:text-emerald-300 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-[#122E22] min-h-[44px] min-w-[44px] flex items-center justify-center"
+                      className="p-2 text-slate-500 dark:text-[#a5aba6] hover:text-slate-900 dark:hover:text-[#f5f6f3] rounded-xl hover:bg-slate-100 dark:hover:bg-[#161d18] min-h-[44px] min-w-[44px] flex items-center justify-center"
                     >
                       <X className="h-6 w-6" />
                     </button>
@@ -417,15 +417,15 @@ export const Header: React.FC = () => {
 
                   {/* Theme & Language Controls inside Drawer */}
                   <div className="grid grid-cols-1 gap-3">
-                    <div className="rounded-2xl bg-[#F6F7F3] dark:bg-[#0B1912] p-3 border border-[#E2E8E3] dark:border-[#183327] flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#111310] dark:text-white">
+                    <div className="rounded-2xl bg-[#F6F7F3] dark:bg-[#111613] p-3 border border-[#E2E8E3] dark:border-white/[0.08] flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#111310] dark:text-[#f5f6f3]">
                         {t('theme_title')}
                       </span>
                       <ThemeToggle />
                     </div>
 
-                    <div className="rounded-2xl bg-[#F6F7F3] dark:bg-[#0B1912] p-3 border border-[#E2E8E3] dark:border-[#183327]">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#56635B] dark:text-[#94A39A] block mb-2">
+                    <div className="rounded-2xl bg-[#F6F7F3] dark:bg-[#111613] p-3 border border-[#E2E8E3] dark:border-white/[0.08]">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#56635B] dark:text-[#737b75] block mb-2">
                         Filannoo Afaanii / Select Language
                       </span>
                       <div className="grid grid-cols-3 gap-2">
@@ -436,8 +436,8 @@ export const Header: React.FC = () => {
                             onClick={() => setLanguage(lang.code)}
                             className={`flex flex-col items-center justify-center p-2 rounded-xl text-xs transition-all border min-h-[44px] ${
                               currentLang === lang.code
-                                ? 'bg-[#063d28] text-white font-extrabold border-[#063d28] shadow-xs'
-                                : 'bg-white dark:bg-[#0E241B] text-[#111310] dark:text-white font-bold border-[#E2E8E3] dark:border-[#183327] hover:bg-emerald-50'
+                                ? 'bg-[#063d28] dark:bg-[#74d62c] text-white dark:text-[#070908] font-extrabold border-[#063d28] dark:border-[#74d62c] shadow-xs'
+                                : 'bg-white dark:bg-[#161d18] text-[#111310] dark:text-[#f5f6f3] font-bold border-[#E2E8E3] dark:border-white/[0.08] hover:bg-emerald-50 dark:hover:bg-[#1c241f]'
                             }`}
                           >
                             <span className="text-base mb-0.5">{lang.flagEmoji}</span>
@@ -455,20 +455,20 @@ export const Header: React.FC = () => {
                       setMobileMenuOpen(false);
                       setIsSearchModalOpen(true);
                     }}
-                    className="flex w-full items-center justify-between gap-2.5 rounded-2xl border border-[#E2E8E3] dark:border-[#183327] bg-[#F6F7F3] dark:bg-[#0B1912] px-4 py-3 text-xs font-semibold text-[#56635B] dark:text-[#94A39A] hover:bg-white dark:hover:bg-[#122E22] transition-all min-h-[44px]"
+                    className="flex w-full items-center justify-between gap-2.5 rounded-2xl border border-[#E2E8E3] dark:border-white/[0.08] bg-[#F6F7F3] dark:bg-[#111613] px-4 py-3 text-xs font-semibold text-[#56635B] dark:text-[#a5aba6] hover:bg-white dark:hover:bg-[#161d18] transition-all min-h-[44px]"
                   >
                     <div className="flex items-center gap-2">
-                      <Search className="h-4 w-4 text-[#087A4B] dark:text-[#A3E635]" />
+                      <Search className="h-4 w-4 text-[#087A4B] dark:text-[#74d62c]" />
                       <span>{t('search_title')}...</span>
                     </div>
-                    <kbd className="rounded-md bg-white dark:bg-[#0E241B] px-2 py-0.5 text-[10px] text-[#56635B] dark:text-[#94A39A] border border-[#E2E8E3] dark:border-[#183327]">
+                    <kbd className="rounded-md bg-white dark:bg-[#161d18] px-2 py-0.5 text-[10px] text-[#56635B] dark:text-[#a5aba6] border border-[#E2E8E3] dark:border-white/[0.08]">
                       ⌘K
                     </kbd>
                   </button>
 
                   {/* Mobile Navigation Links */}
                   <nav className="space-y-1">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#56635B] dark:text-[#94A39A] px-2 block mb-1">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#56635B] dark:text-[#737b75] px-2 block mb-1">
                       Main Navigation
                     </span>
                     <ul className="space-y-1">
@@ -480,8 +480,8 @@ export const Header: React.FC = () => {
                             className={({ isActive }) =>
                               `flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
                                 isActive
-                                  ? 'bg-[#063d28] text-white shadow-xs'
-                                  : 'text-[#111310] dark:text-white hover:bg-[#F6F7F3] dark:hover:bg-[#0B1912] hover:text-[#087A4B]'
+                                  ? 'bg-[#063d28] dark:bg-[#74d62c] text-white dark:text-[#070908] shadow-xs'
+                                  : 'text-[#111310] dark:text-[#f5f6f3] hover:bg-[#F6F7F3] dark:hover:bg-[#111613] hover:text-[#087A4B] dark:hover:text-[#74d62c]'
                               }`
                             }
                           >
@@ -495,23 +495,23 @@ export const Header: React.FC = () => {
                 </div>
 
                 {/* Drawer Footer Actions */}
-                <div className="pt-4 border-t border-[#E2E8E3] dark:border-[#183327] space-y-3 mt-6">
+                <div className="pt-4 border-t border-[#E2E8E3] dark:border-white/[0.08] space-y-3 mt-6">
                   {/* e-Services CTA */}
                   <a
                     href="#services"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(110deg,#003d27,#006338)] px-4 py-3 text-xs font-extrabold text-white shadow-md hover:bg-[#063d28] min-h-[44px]"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(110deg,#003d27,#006338)] dark:bg-[linear-gradient(110deg,#74d62c,#5ebd20)] px-4 py-3 text-xs font-extrabold text-white dark:text-[#070908] shadow-md hover:bg-[#063d28] min-h-[44px]"
                   >
                     <span>{t('eservices_btn') || 'e-Services Portal'}</span>
-                    <ArrowUpRight className="h-4 w-4 text-[#A3E635] stroke-[2.5]" />
+                    <ArrowUpRight className="h-4 w-4 text-[#A3E635] dark:text-[#070908] stroke-[2.5]" />
                   </a>
 
                   {/* Hotline Banner */}
-                  <div className="rounded-2xl bg-[#F6F7F3] dark:bg-[#0B1912] p-3 border border-[#E2E8E3] dark:border-[#183327] text-center space-y-1">
-                    <div className="flex items-center justify-center gap-2 text-xs font-extrabold text-[#0A1912] dark:text-white">
-                      <PhoneCall className="h-4 w-4 text-[#087A4B] dark:text-[#A3E635]" />
+                  <div className="rounded-2xl bg-[#F6F7F3] dark:bg-[#111613] p-3 border border-[#E2E8E3] dark:border-white/[0.08] text-center space-y-1">
+                    <div className="flex items-center justify-center gap-2 text-xs font-extrabold text-[#0A1912] dark:text-[#f5f6f3]">
+                      <PhoneCall className="h-4 w-4 text-[#087A4B] dark:text-[#74d62c]" />
                       <span>
-                        Hotline: <strong className="text-[#087A4B] dark:text-[#A3E635]">{FARMER_HOTLINE}</strong>
+                        Hotline: <strong className="text-[#087A4B] dark:text-[#74d62c]">{FARMER_HOTLINE}</strong>
                       </span>
                     </div>
                   </div>

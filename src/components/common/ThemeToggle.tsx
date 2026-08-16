@@ -83,12 +83,12 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-label={`${t('theme_title')} (${t(`theme_${theme}`)})`}
-        className={`flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-emerald-800/60 bg-white dark:bg-[#12281D] px-2.5 py-1.5 text-xs font-bold text-[#14251D] dark:text-emerald-100 hover:bg-emerald-50 dark:hover:bg-[#1A382A] transition-colors focus:outline-none min-h-[44px] cursor-pointer ${
+        className={`flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-white/[0.09] bg-white dark:bg-[#111613] px-2.5 py-1.5 text-xs font-bold text-[#14251D] dark:text-[#f5f6f3] hover:bg-emerald-50 dark:hover:bg-[#161d18] transition-colors focus:outline-none min-h-[44px] cursor-pointer ${
           compact ? 'px-2 py-1' : ''
         }`}
       >
         {resolvedTheme === 'dark' ? (
-          <Moon className="h-4 w-4 text-emerald-400 shrink-0" aria-hidden="true" />
+          <Moon className="h-4 w-4 text-[#74d62c] shrink-0" aria-hidden="true" />
         ) : (
           <Sun className="h-4 w-4 text-[#D7A928] shrink-0" aria-hidden="true" />
         )}
@@ -96,7 +96,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           {t(`theme_${theme}`)}
         </span>
         <ChevronDown
-          className={`h-3.5 w-3.5 transition-transform duration-200 text-gray-500 dark:text-emerald-400 shrink-0 ${
+          className={`h-3.5 w-3.5 transition-transform duration-200 text-gray-500 dark:text-[#a5aba6] shrink-0 ${
             isOpen ? 'rotate-180' : ''
           }`}
           aria-hidden="true"
@@ -108,9 +108,9 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           role="menu"
           aria-orientation="vertical"
           aria-label={t('theme_title')}
-          className="absolute right-0 mt-2 min-w-[180px] sm:min-w-[190px] origin-top-right rounded-2xl border border-emerald-200/90 dark:border-emerald-800/80 bg-white dark:bg-[#12281D] p-2 shadow-2xl ring-1 ring-black/10 dark:ring-white/10 focus:outline-none z-[100] animate-in fade-in slide-in-from-top-2 duration-150"
+          className="absolute right-0 mt-2 min-w-[180px] sm:min-w-[190px] origin-top-right rounded-2xl border border-emerald-200/90 dark:border-white/[0.12] bg-white dark:bg-[#181c19] p-2 shadow-2xl ring-1 ring-black/10 dark:ring-white/5 focus:outline-none z-[100] animate-in fade-in slide-in-from-top-2 duration-150"
         >
-          <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-800/70 dark:text-emerald-300/70 border-b border-emerald-100 dark:border-emerald-800/60 mb-1">
+          <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-800/70 dark:text-[#737b75] border-b border-emerald-100 dark:border-white/[0.08] mb-1">
             HAALA HALLUU / THEME
           </div>
 
@@ -128,15 +128,15 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
                 }}
                 className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-xs font-extrabold transition-colors min-h-[44px] cursor-pointer ${
                   isSelected
-                    ? 'bg-[#087A4B] text-white shadow-xs'
-                    : 'text-[#14251D] dark:text-emerald-100 hover:bg-emerald-50 dark:hover:bg-[#1A382A]'
+                    ? 'bg-[#087A4B] dark:bg-[#74d62c] text-white dark:text-[#070908] shadow-xs'
+                    : 'text-[#14251D] dark:text-[#f5f6f3] hover:bg-emerald-50 dark:hover:bg-[#161d18]'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
                   {opt.icon}
                   <span>{t(opt.labelKey)}</span>
                 </div>
-                {isSelected && <Check className="h-4 w-4 text-white shrink-0" />}
+                {isSelected && <Check className="h-4 w-4 text-white dark:text-[#070908] shrink-0" />}
               </button>
             );
           })}

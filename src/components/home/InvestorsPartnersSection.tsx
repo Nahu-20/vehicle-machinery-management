@@ -65,7 +65,7 @@ export const InvestorsPartnersSection: React.FC = () => {
         </AgriPillBadge>
 
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#111310] dark:text-white tracking-tight">
-          {t('partners_title') || 'Investors & Development Partners'}
+          {t('Our Partners') || 'Investors & Development Partners'}
         </h2>
       </div>
 

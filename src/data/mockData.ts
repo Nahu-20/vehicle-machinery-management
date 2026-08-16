@@ -18,13 +18,13 @@ import type {
 
 export const navigationItems: NavigationItem[] = [
   { id: 'nav-home', labelKey: 'nav_home', href: '/' },
-  { id: 'nav-about', labelKey: 'nav_about', href: '/about' },
   { id: 'nav-services', labelKey: 'nav_services', href: '/services' },
   { id: 'nav-programs', labelKey: 'nav_programs', href: '/programs' },
   { id: 'nav-achievements', labelKey: 'nav_achievements', href: '/achievements' },
   { id: 'nav-alerts', labelKey: 'nav_alerts', href: '/alerts', badge: 'Active' },
   { id: 'nav-resources', labelKey: 'nav_resources', href: '/resources' },
   { id: 'nav-news', labelKey: 'nav_news', href: '/news' },
+  { id: 'nav-about', labelKey: 'nav_about', href: '/about' },
   { id: 'nav-contact', labelKey: 'nav_contact', href: '/contact' },
 ];
 
@@ -277,45 +277,229 @@ export const mockPrograms: Program[] = [
     titleKey: 'prog_crop_title',
     descriptionKey: 'prog_crop_desc',
     categoryKey: 'Crop Production',
-    targetArea: 'Arsii, Baalee, Shawaa',
-    beneficiaries: '1.4M Farmers',
+    targetArea: 'Arsii, Baalee, Shawaa, Wallagga',
+    beneficiaries: '1.4M+ Farmers',
     imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1000&q=80',
     status: 'active',
     badgeKey: 'Cluster Farming',
+    directorate: 'Crop Development & Agronomy Directorate',
+    keyObjectives: [
+      'Consolidate adjacent smallholder plots into commercial farming clusters (100–500 hectares per cluster).',
+      'Provide mechanized combine harvesting and precision tractor tillage services.',
+      'Deploy certified high-yielding rust-resistant wheat, hybrid maize, and malt barley seed varieties.',
+      'Double average grain yields from 28 quintals/ha to over 54 quintals/ha.'
+    ],
+    interventions: [
+      'Synchronized planting and crop care calendar',
+      'Direct distribution of blended NPSB & Urea fertilizer',
+      'Drone-guided aerial pest monitoring & selective spraying',
+      'Guaranteed purchase agreements through Primary Cooperative Unions'
+    ],
+    milestones: [
+      { year: '2024', target: '1.2M Hectares under Cluster', progress: 100 },
+      { year: '2025', target: '2.5M Hectares under Cluster', progress: 100 },
+      { year: '2026/27', target: '3.8M Hectares Target', progress: 78 }
+    ],
+    partners: ['IQQO Research', 'MoA Ethiopia', 'ATI', 'Cooperative Bank of Oromia'],
+    commodities: ['Wheat', 'Maize', 'Malt Barley', 'Teff', 'Soybean'],
+    zones: ['Arsi', 'West Arsi', 'Bale', 'East Bale', 'East Shewa', 'West Shewa', 'South West Shewa'],
+    impactMetric: { value: '+92%', label: 'Average Yield Increase in Clusters' },
+    enrollmentSteps: [
+      'Form or join a local cluster group with adjacent farmland neighbors (min 30 hectares total).',
+      'Register cluster boundaries with the local Kebele Agricultural Development Agent (DA).',
+      'Receive approved seed, fertilizer allocation, and scheduled tractor tillage vouchers.'
+    ]
   },
   {
     id: 'prog-yelemat',
     titleKey: 'prog_livestock_title',
     descriptionKey: 'prog_livestock_desc',
     categoryKey: 'Livestock Development',
-    targetArea: 'All 21 Oromia Zones',
-    beneficiaries: '850K Households',
+    targetArea: 'All 22 Oromia Administrative Zones',
+    beneficiaries: '850K+ Households',
     imageUrl: 'https://images.unsplash.com/photo-1546445317-29f4545f9d52?auto=format&fit=crop&w=1000&q=80',
     status: 'active',
     badgeKey: 'Yelemat Tirufat',
+    directorate: 'Livestock & Veterinary Health Directorate',
+    keyObjectives: [
+      'Accelerate artificial insemination (AI) and cross-breeding with high-yielding dairy heifers (Boran x Holstein).',
+      'Expand decentralized milk collection hubs and cold storage in dairy shed corridors.',
+      'Promote urban & peri-urban poultry, honey bee apiculture, and small ruminant fattening packages.',
+      'Eradicate priority livestock diseases through free mass vaccination campaigns.'
+    ],
+    interventions: [
+      'Mobile artificial insemination technician kits across 330 woredas',
+      'Distribution of modern transitional beehives and extractor equipment',
+      'Hydroponic fodder & silage preparation training for dry seasons',
+      'Veterinary clinic modernization and cold-chain vaccine deployment'
+    ],
+    milestones: [
+      { year: '2024', target: '1.2M Dairy Inseminations', progress: 100 },
+      { year: '2025', target: '3.5B Liters Regional Milk Output', progress: 100 },
+      { year: '2026/27', target: '5.2B Liters Milk & 400K Apiculture Kits', progress: 72 }
+    ],
+    partners: ['ILRI', 'MoA Ethiopia', 'FAO Ethiopia', 'Oromia Pastoralist Commission'],
+    commodities: ['Dairy Cattle', 'Poultry (Layers & Broilers)', 'Pure Honey & Wax', 'Fattened Sheep & Goats'],
+    zones: ['East Shewa', 'Special Zone Surrounding Finfinne', 'Borena', 'Guji', 'Jimma', 'West Guji'],
+    impactMetric: { value: '4.8M', label: 'Livestock Vaccinated in 2026' },
+    enrollmentSteps: [
+      'Apply at Woreda Livestock Desk or local FTC for dairy, poultry, or bee starter packages.',
+      'Participate in a 3-day practical husbandry & feed management FTC workshop.',
+      'Receive certified livestock starter animals and linkage to milk/honey collection unions.'
+    ]
   },
   {
     id: 'prog-irrigation',
     titleKey: 'prog_irrigation_title',
     descriptionKey: 'prog_irrigation_desc',
     categoryKey: 'Irrigation Development',
-    targetArea: 'Lowland & Rift Valley',
-    beneficiaries: '600K Hectares',
+    targetArea: 'Lowlands, Rift Valley & River Basins',
+    beneficiaries: '600K+ Hectares Irrigated',
     imageUrl: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&w=1000&q=80',
     status: 'ongoing',
     badgeKey: 'Bona Irrigation',
+    directorate: 'Irrigation Schemes & Drainage Engineering Directorate',
+    keyObjectives: [
+      'Transition Oromia agriculture from rain-dependent to resilient triple-harvest year-round production.',
+      'Harness Awash, Gibe-Omo, Genale-Dawa, and Rift Valley water resources with solar pumping & river diversions.',
+      'Scale lowland summer/winter (Bona) irrigated wheat to supply domestic and regional bakeries.',
+      'Construct small-scale community check dams, night storage reservoirs, and drip irrigation kits.'
+    ],
+    interventions: [
+      'Subsidized distribution of solar water pumping units (zero fuel cost)',
+      'Rehabilitation of primary and secondary canals across micro-irrigation schemes',
+      'Water User Associations (WUAs) legal registration and dispute management',
+      'Soil moisture sensor pilots and precision water scheduling'
+    ],
+    milestones: [
+      { year: '2024', target: '450K Hectares Lowland Wheat', progress: 100 },
+      { year: '2025', target: '780K Hectares Irrigated Land', progress: 100 },
+      { year: '2026/27', target: '1.2M Hectares Basin Coverage', progress: 65 }
+    ],
+    partners: ['World Bank AGP', 'Ministry of Water & Energy', 'Oromia Irrigation Dev. Authority', 'FAO'],
+    commodities: ['Lowland Irrigated Wheat', 'Tomatoes & Onions', 'Horticulture & Fruits', 'Sugar Cane'],
+    zones: ['East Shewa', 'Arsi', 'Bale', 'Hararghe', 'Borena', 'West Arsi'],
+    impactMetric: { value: '3x', label: 'Annual Harvest Cycles Achieved' },
+    enrollmentSteps: [
+      'Register as a member of a local Kebele Water Users Association (WUA).',
+      'Request irrigation pump credit subsidy or gravity canal tie-in at the Woreda Water & Agri office.',
+      'Adopt scheduled rotational water rationing and cluster planting.'
+    ]
   },
   {
     id: 'prog-nrm',
     titleKey: 'prog_nrm_title',
     descriptionKey: 'prog_nrm_desc',
     categoryKey: 'Natural Resource Mgt',
-    targetArea: 'Highlands & River Basins',
-    beneficiaries: 'Community Wide',
+    targetArea: 'Highlands, Slopes & Critical Watersheds',
+    beneficiaries: 'Community Wide (All Zones)',
     imageUrl: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=1000&q=80',
     status: 'active',
     badgeKey: 'Green Legacy',
+    directorate: 'Natural Resources & Watershed Conservation Directorate',
+    keyObjectives: [
+      'Rehabilitate degraded hillsides, steep slopes, and riverbanks through mass community watershed campaigns.',
+      'Plant multi-purpose agroforestry seedlings (avocado, moringa, bamboo, indigenous acacia).',
+      'Construct deep stone-faced soil bunds, terracing, and percolation micro-trenches.',
+      'Sequester regional carbon and secure freshwater aquifers for downstream farming communities.'
+    ],
+    interventions: [
+      'Community mobilized 40-day annual soil and water conservation campaigns (January–March)',
+      'Over 2,500 government and private seedling nurseries producing native & fruit trees',
+      'Biological stabilization using vetiver grass and desho fodder along terrace contours',
+      'Free distribution of grafted Hass avocado and fruit tree seedlings to farmers'
+    ],
+    milestones: [
+      { year: '2024', target: '2.5B Seedlings Planted in Oromia', progress: 100 },
+      { year: '2025', target: '3.8B Seedlings & 85% Survival Rate', progress: 100 },
+      { year: '2026/27', target: '5.0B Cumulative Target', progress: 84 }
+    ],
+    partners: ['Green Legacy Initiative', 'MoA Ethiopia', 'CIFOR-ICRAF', 'UNDP Climate Resilience'],
+    commodities: ['Grafted Avocado', 'Bamboo', 'Vetiver & Desho Grass', 'Indigenous Timber & Coffee Shade'],
+    zones: ['All 22 Oromia Zones (Highland & Mid-altitude Focus)'],
+    impactMetric: { value: '88.4%', label: 'Seedling Survival Rate in Protected Watersheds' },
+    enrollmentSteps: [
+      'Participate in annual community watershed conservation days organized by Kebele leaders.',
+      'Obtain free certified avocado or multi-purpose tree seedlings from local Woreda nurseries.',
+      'Enclose steep slope areas to restore natural vegetation and topsoil.'
+    ]
   },
+  {
+    id: 'prog-coffee',
+    titleKey: 'prog_coffee_title',
+    descriptionKey: 'prog_coffee_desc',
+    categoryKey: 'High-Value Commercial Crops',
+    targetArea: 'Jimma, Illu Abbaa Boor, Guji, Hararghe, Bunno Bedele',
+    beneficiaries: '2.1M+ Coffee Farming Families',
+    imageUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1000&q=80',
+    status: 'active',
+    badgeKey: 'Specialty Coffee Export',
+    directorate: 'Commercial Crops & Agro-Processing Directorate',
+    keyObjectives: [
+      'Preserve and map heirloom Arabica coffee genetic diversity across Oromia origins (Jimma, Limmu, Guji, Harar).',
+      'Distribute disease-resistant (CBD/CLR-free) aged coffee rejuvenation seedlings to replace old trees.',
+      'Modernize wet-washing stations and eco-pulpers to conserve water and eliminate fermentation defects.',
+      'Direct linkage of certified cooperative unions with global specialty coffee roasters and buyers.'
+    ],
+    interventions: [
+      'Coffee stump rejuvenation campaign (pruning old trees to triple cherry yield)',
+      'Solar drying raised bed modernization and moisture meters for farmers',
+      'Traceability and digital geo-tagging for single-origin export lots',
+      'Direct farmer payment accounts via Cooperative Bank of Oromia'
+    ],
+    milestones: [
+      { year: '2024', target: '320K Metric Tons Coffee Output', progress: 100 },
+      { year: '2025', target: '450K Metric Tons with $1.4B Export Value', progress: 100 },
+      { year: '2026/27', target: '600K Metric Tons Export Target', progress: 70 }
+    ],
+    partners: ['Ethiopian Coffee & Tea Authority', 'IQQO Jimma Center', 'Oromia Coffee Farmers Coop Union'],
+    commodities: ['Specialty Arabica Coffee', 'Spices (Ginger, Turmeric, Cardamom)', 'Tea'],
+    zones: ['Jimma', 'Illubabor', 'Bunno Bedele', 'Guji', 'West Guji', 'East Hararghe', 'West Hararghe'],
+    impactMetric: { value: '$1.6B+', label: 'Annual Regional Coffee Export Value' },
+    enrollmentSteps: [
+      'Register your coffee garden with the local primary coffee cooperative union.',
+      'Participate in the seasonal stumping and organic agronomy training at the FTC.',
+      'Deliver ripe red cherries to certified eco-washing stations for premium payment.'
+    ]
+  },
+  {
+    id: 'prog-mechanization',
+    titleKey: 'prog_mechanization_title',
+    descriptionKey: 'prog_mechanization_desc',
+    categoryKey: 'Agricultural Technology & Inputs',
+    targetArea: 'Regional Mechanization Centers & All 330 Woredas',
+    beneficiaries: '3.5M+ Farm Enterprises',
+    imageUrl: 'https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&w=1000&q=80',
+    status: 'ongoing',
+    badgeKey: 'Smart Mechanization',
+    directorate: 'Agricultural Mechanization & Extension Directorate',
+    keyObjectives: [
+      'Expand custom hiring mechanization service centers with subsidized lease-to-own tractors and combine harvesters.',
+      'Provide duty-free agricultural machinery financing and spare-parts hubs in major agricultural corridors.',
+      'Introduce two-wheel walking tractors and multi-crop threshers designed for smallholder topography.',
+      'Digitize fertilizer and seed voucher redemption via National ID and mobile wallets.'
+    ],
+    interventions: [
+      'Zero-tariff import policy enforcement on all farm equipment & spare parts',
+      'Training youth mechanization service enterprise operators in machinery maintenance',
+      'Digital soil health mapping with targeted micro-nutrient fertilizer formulas',
+      'Post-harvest hermetic storage bags and grain silo distribution to eliminate storage loss'
+    ],
+    milestones: [
+      { year: '2024', target: '3,200 New Tractors & Combines Deployed', progress: 100 },
+      { year: '2025', target: '5,500 Machinery Units in Operation', progress: 100 },
+      { year: '2026/27', target: '8,000 Machinery Target & 500 Youth Centers', progress: 68 }
+    ],
+    partners: ['Commercial Bank of Ethiopia', 'Cooperative Bank of Oromia', 'MoA Ethiopia', 'ATI'],
+    commodities: ['Farm Tractors', 'Combine Harvesters', 'Threshers', 'Hermetic Storage Bags', 'Smart Drones'],
+    zones: ['Arsi', 'Bale', 'East Shewa', 'West Shewa', 'Jimma', 'Horo Guduru Wallagga'],
+    impactMetric: { value: '-65%', label: 'Reduction in Smallholder Post-Harvest Loss' },
+    enrollmentSteps: [
+      'Organize a registered youth or farmer mechanization cooperative (minimum 5 members).',
+      'Apply for lease-to-own tractor/combine financing through CoopBank with Bureau endorsement.',
+      'Offer scheduled tilling, planting, and harvesting services to local cluster farmers.'
+    ]
+  }
 ];
 
 export const mockMarketPrices: MarketPrice[] = [
@@ -478,6 +662,197 @@ export const mockWeather: WeatherInfo = {
 };
 
 export const mockNews: NewsArticle[] = [
+  {
+    id: 'news-coffee-growth',
+    slug: 'oromia-coffee-production-shows-strong-growth',
+    category: 'news',
+    publishedAt: 'May 14, 2024',
+    updatedAt: 'May 14, 2024',
+    featured: true,
+    status: 'published',
+    readingTime: '4 min read',
+    tags: ['Coffee', 'Export', 'Jimma', 'Guji', 'Productivity'],
+    relatedArticleIds: ['news-irrigation-forum', 'news-digital-tools', 'news-1'],
+    author: {
+      om: 'Biiroo Qonnaa Oromiyaa - Daayrektoreetii Bunaa',
+      am: 'የኦሮሚያ ግብርና ቢሮ - የቡና ልማት ዳይሬክቶሬት',
+      en: 'Oromia Bureau of Agriculture - Coffee Directorate',
+    },
+    responsibleOffice: {
+      om: 'Kutaa Misooma Bunaa fi Qunnamtii Gabaa',
+      am: 'የቡና ልማትና ገበያ ትስስር ክፍል',
+      en: 'Coffee Development & Market Linkage Directorate',
+    },
+    featuredImage: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: {
+      om: 'Ija bunaa diimaa damee irratti',
+      am: 'በዛፍ ላይ የበሰሉ የቡና ፍሬዎች',
+      en: 'Ripe red coffee cherries growing on branches in Oromia',
+    },
+    title: {
+      om: 'Oomishni Buna Oromiyaa Guddina Ol\'aanaa Agarsiise',
+      am: 'የኦሮሚያ የቡና ምርት ከፍተኛ እድገት አሳይቷል',
+      en: 'Oromia Coffee Production Shows Strong Growth',
+    },
+    excerpt: {
+      om: 'Ragaan haaraan oomishtummaan bunaa kutaalee oomishaa gurguddoo Oromiyaa keessatti dabaluu isaa agarsiisa.',
+      am: 'አዳዲስ መረጃዎች እንደሚያሳዩት በኦሮሚያ ዋና ዋና የቡና አብቃይ ዞኖች የምርታማነት ጭማሪ ታይቷል።',
+      en: 'New data shows increased coffee productivity across major producing zones in Oromia.',
+    },
+    translations: {
+      om: true,
+      am: true,
+      en: true,
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Biiroon Qonnaa Oromiyaa gabaasa haaraa oomisha bunaa bara kanaa ilaalchisee baaseen, oomishtummaan buna dhalootaa fi filatamaa kutaalee Jimmaa, Gujii, Buno Baddallee fi Harargee keessatti dhibbeentaa 28n dabaluu beeksiseera.',
+          am: 'የኦሮሚያ ግብርና ቢሮ ይፋ ባደረገው የቅርብ ጊዜ መረጃ መሠረት በጅማ፣ ጉጂ፣ ቡኖ በደሌ እና ሐረርጌ ዞኖች የቡና ምርታማነት በ28 በመቶ እድገት አሳይቷል።',
+          en: 'According to latest official data released by the Oromia Agricultural Bureau, coffee productivity across major coffee growing belts including Jimma, Guji, Bunno Bedele, and Hararghe has surged by 28% year-on-year.',
+        },
+      },
+      {
+        type: 'heading',
+        level: 2,
+        content: {
+          om: 'Mootummaa fi Qonnaan Bultoota Qindoominaan Hojjetan',
+          am: 'የአርሶ አደሮችና የባለሙያዎች ቅንጅታዊ ጥረት',
+          en: 'Agronomic Modernization & Rejuvenation',
+        },
+      },
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Guddinni kun kan dhufe hojii haaromsa mukeen bunaa moofaa, sanyii dhibee dandamatu raabsuu fi meeshaalee qulqullina bunaa fooyyessan qonnaan bultootaaf dhiheessuudhaani.',
+          am: 'ይህ እድገት የተመዘገበው የቆዩ የቡና ዛፎችን በማደስ፣ በሽታን የሚቋቋሙ ዝርያዎችን በማሰራጨት እና የጥራት መቆጣጠሪያ መሳሪያዎችን ለአርሶ አደሮች በማቅረብ ነው።',
+          en: 'The unprecedented harvest output is driven by widespread coffee tree stumping, free distribution of high-yielding disease-resistant seedlings, and modern eco-pulper processing washing stations.',
+        },
+      },
+    ],
+    titleKey: 'news_coffee_title',
+    summaryKey: 'news_coffee_desc',
+    imageUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1200&q=80',
+    date: 'May 14, 2024',
+    readTime: '4 min read',
+  },
+  {
+    id: 'news-irrigation-forum',
+    slug: 'irrigation-innovation-forum',
+    category: 'event',
+    publishedAt: 'May 20, 2024',
+    updatedAt: 'May 20, 2024',
+    featured: false,
+    status: 'published',
+    readingTime: '5 min read',
+    tags: ['Irrigation', 'Water Management', 'Innovation', 'Forum', 'Event'],
+    relatedArticleIds: ['news-coffee-growth', 'news-digital-tools', 'news-1'],
+    author: {
+      om: 'Qindeessitoota Walgahii Jallisii Oromiyaa',
+      am: 'የኦሮሚያ መስኖ ፎረም አስተባባሪ ኮሚቴ',
+      en: 'Oromia Irrigation Forum Secretariat',
+    },
+    responsibleOffice: {
+      om: 'Biiroo Misooma Jallisii fi Qabeenya Bishaan Oromiyaa',
+      am: 'የኦሮሚያ መስኖና ውኃ ሀብት ቢሮ',
+      en: 'Oromia Irrigation & Water Resources Bureau',
+    },
+    featuredImage: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: {
+      om: 'Sirna jallisii dhangala\'aa dirree qonnaa keessatti',
+      am: 'የዘመናዊ የመስኖ ውኃ መርጫ ማሳ ላይ',
+      en: 'High-efficiency center pivot and sprinkler irrigation operating in green field',
+    },
+    title: {
+      om: 'Walgahii Innooveeshinii Jallisii Oromiyaa',
+      am: 'የመስኖ ፈጠራና ቴክኖሎጂ ጉባዔ',
+      en: 'Irrigation Innovation Forum',
+    },
+    excerpt: {
+      om: 'Ogeessonni fi qonnaan bultoonni tooftaalee gaggaarii bishaan qusachuu irratti muuxannoo wal jijjiiru.',
+      am: 'ባለሙያዎችና አርሶ አደሮች ዘላቂ የውኃ አጠቃቀም ላይ ምርጥ ተሞክሮዎችን ይለዋወጣሉ።',
+      en: 'Experts and farmers to share best practices for sustainable water management.',
+    },
+    translations: {
+      om: true,
+      am: true,
+      en: true,
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Walgahiin Innooveeshinii Jallisii Oromiyaa ogeessota saayinsii bishaanii, qonnaan bultoota fi oomishtoota paampii soolaaraa walitti fiduudhaan marii bal\'aa geggeessa.',
+          am: 'የመስኖ ፈጠራ ጉባዔው የውኃ ሳይንስ ባለሙያዎችን፣ አርሶ አደሮችን እና የፀሐይ ኃይል ቴክኖሎጂ አቅራቢዎችን በአንድ ላይ በማሰባሰብ የልምድ ልውውጥ ያካሂዳል።',
+          en: 'The Oromia Irrigation Innovation Forum convenes hydrologists, extension specialists, agronomists, and commercial farmers to accelerate climate-resilient water harvesting and precision drip irrigation across the region.',
+        },
+      },
+    ],
+    titleKey: 'news_irrigation_title',
+    summaryKey: 'news_irrigation_desc',
+    imageUrl: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=1200&q=80',
+    date: 'May 20, 2024',
+    readTime: '5 min read',
+  },
+  {
+    id: 'news-digital-tools',
+    slug: 'digital-tools-empower-oromia-farmers',
+    category: 'news',
+    publishedAt: 'May 10, 2024',
+    updatedAt: 'May 10, 2024',
+    featured: false,
+    status: 'published',
+    readingTime: '4 min read',
+    tags: ['Digital Agri', 'Mobile App', 'Technology', 'Market Access'],
+    relatedArticleIds: ['news-coffee-growth', 'news-irrigation-forum', 'news-3'],
+    author: {
+      om: 'Kutaa Teeknooloojii Odeeffannoo Qonnaa',
+      am: 'የግብርና ኢንፎርሜሽን ቴክኖሎጂ ክፍል',
+      en: 'Bureau Agricultural IT & Digital Directorate',
+    },
+    responsibleOffice: {
+      om: 'Biiroo Qonnaa Oromiyaa - ICT Directorate',
+      am: 'የኦሮሚያ ግብርና ቢሮ - የመረጃ ቴክኖሎጂ ዳይሬክቶሬት',
+      en: 'Oromia Agricultural Bureau - ICT Directorate',
+    },
+    featuredImage: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: {
+      om: 'Qonnaan bulaan koflaa taableetii dijitaalaa fayyadamu',
+      am: 'አርሶ አደር ዲጂታል ታብሌት ሲጠቀም',
+      en: 'Smiling farmer using digital tablet device in agricultural crop field',
+    },
+    title: {
+      om: 'Meeshaaleen Dijitaalaa Qonnaan Bultoota Oromiyaa Humneessaa Jiru',
+      am: 'ዲጂታል ቴክኖሎጂዎች የኦሮሚያ አርሶ አደሮችን እያበረከቱ ነው',
+      en: 'Digital Tools Empower Oromia Farmers',
+    },
+    excerpt: {
+      om: 'Teeknooloojiiwwan qonnaa haaraan oomishtummaa fi carraa gabaa fooyyessaa jiru.',
+      am: 'አዳዲስ የግብርና ቴክኖሎጂዎች ምርታማነትንና የገበያ ተደራሽነትን እያሻሻሉ ነው።',
+      en: 'New agricultural technologies are improving productivity and market access.',
+    },
+    translations: {
+      om: true,
+      am: true,
+      en: true,
+    },
+    fullContent: [
+      {
+        type: 'paragraph',
+        content: {
+          om: 'Appilikeeshiniiwwan mobaayilaa fi sirnoonni ergaa gabaabaa (SMS) qonnaan bultoonni odeeffannoo qilleensaa, gatii gabaa guyyaa guyyaa fi qoricha arsiisaa hatattamaan akka argatan taasiseera.',
+          am: 'የሞባይል አፕሊኬሽኖችና የአጭር የጽሑፍ መልዕክቶች (SMS) አርሶ አደሮች የአየር ሁኔታ ትንበያን፣ የገበያ ዋጋንና የበሽታ መከላከያ መረጃዎችን በቀላሉ እንዲያገኙ እያስቻሉ ነው።',
+          en: 'Mobile-based advisory tools and SMS early warning portals are delivering real-time weather forecasts, daily market commodity rates, and pest diagnostic guidance to millions of smallholders throughout Oromia.',
+        },
+      },
+    ],
+    titleKey: 'news_digital_title',
+    summaryKey: 'news_digital_desc',
+    imageUrl: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=1200&q=80',
+    date: 'May 10, 2024',
+    readTime: '4 min read',
+  },
   {
     id: 'news-1',
     slug: 'irrigation-program-launched-in-arsi',

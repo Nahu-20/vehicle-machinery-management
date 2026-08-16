@@ -1,23 +1,24 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { mockAlerts } from '../data/mockData';
 import { AgriculturalAlert, AlertSeverity, AlertCategory, AlertStatus } from '../types';
+import { AlertsHero } from '../components/alerts/AlertsHero';
+import { AlertsEmergencyTicker } from '../components/alerts/AlertsEmergencyTicker';
+import { AlertsRiskRadar } from '../components/alerts/AlertsRiskRadar';
+import { AlertCard } from '../components/alerts/AlertCard';
+import { AlertDetailModal } from '../components/alerts/AlertDetailModal';
+import { FarmerHazardReportModal } from '../components/alerts/FarmerHazardReportModal';
+import { AlertsSMSHub } from '../components/alerts/AlertsSMSHub';
+import { AlertsPreventionGuides } from '../components/alerts/AlertsPreventionGuides';
+import { AlertsCTA } from '../components/alerts/AlertsCTA';
 import {
-  Bell,
+  RotateCcw,
   Search,
-  Filter,
-  X,
-  ShieldAlert,
-  AlertTriangle,
-  Info,
-  Calendar,
+  SlidersHorizontal,
+  Bell,
   MapPin,
-  ChevronRight,
   Sparkles,
-  CheckCircle2,
-  Clock,
-  Layers,
+  ShieldAlert,
 } from 'lucide-react';
 
 export const AlertsPage: React.FC = () => {
@@ -29,7 +30,10 @@ export const AlertsPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedZone, setSelectedZone] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('active');
-  const [selectedDateFilter, setSelectedDateFilter] = useState<string>('all');
+
+  // Modals state
+  const [activeAlertModal, setActiveAlertModal] = useState<AgriculturalAlert | null>(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Extract unique zones for filter dropdown
   const allZones = useMemo(() => {
@@ -46,16 +50,18 @@ export const AlertsPage: React.FC = () => {
       // 1. Search term match
       if (searchTerm.trim() !== '') {
         const query = searchTerm.toLowerCase();
-        const titleText = t(alert.titleKey).toLowerCase();
-        const summaryText = t(alert.summaryKey).toLowerCase();
+        const titleText = (t(alert.titleKey) || alert.slug).toLowerCase();
+        const summaryText = (t(alert.summaryKey) || '').toLowerCase();
         const areaText = alert.affectedArea.toLowerCase();
         const woredasText = alert.affectedWoredas?.join(' ').toLowerCase() || '';
+        const actionsText = alert.recommendedActions?.join(' ').toLowerCase() || '';
 
         const matchesQuery =
           titleText.includes(query) ||
           summaryText.includes(query) ||
           areaText.includes(query) ||
-          woredasText.includes(query);
+          woredasText.includes(query) ||
+          actionsText.includes(query);
 
         if (!matchesQuery) return false;
       }
@@ -73,7 +79,7 @@ export const AlertsPage: React.FC = () => {
       // 4. Zone filter
       if (
         selectedZone !== 'all' &&
-        !alert.affectedZones?.some((z) => z.toLowerCase() === selectedZone.toLowerCase())
+        !alert.affectedZones?.some((z) => z.toLowerCase().includes(selectedZone.toLowerCase()))
       ) {
         return false;
       }
@@ -83,193 +89,139 @@ export const AlertsPage: React.FC = () => {
         return false;
       }
 
-      // 6. Date filter (sample demo filter logic)
-      if (selectedDateFilter === 'last7') {
-        if (!alert.date.includes('August')) return false;
-      } else if (selectedDateFilter === 'last30') {
-        if (!alert.date.includes('August') && !alert.date.includes('July')) return false;
-      }
-
       return true;
     });
-  }, [searchTerm, selectedSeverity, selectedCategory, selectedZone, selectedStatus, selectedDateFilter, t]);
+  }, [searchTerm, selectedSeverity, selectedCategory, selectedZone, selectedStatus, t]);
 
   const activeAlertsCount = mockAlerts.filter((a) => a.status === 'active').length;
+  const criticalCount = mockAlerts.filter((a) => a.status === 'active' && a.severity === 'critical').length;
+  const warningCount = mockAlerts.filter((a) => a.status === 'active' && a.severity === 'warning').length;
 
   const handleClearFilters = () => {
     setSearchTerm('');
     setSelectedSeverity('all');
     setSelectedCategory('all');
     setSelectedZone('all');
-    setSelectedStatus('active');
-    setSelectedDateFilter('all');
+    setSelectedStatus('all');
   };
 
-  const getSeverityBadge = (severity: AlertSeverity) => {
-    switch (severity) {
-      case 'critical':
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-800 border border-red-200">
-            <ShieldAlert className="h-4 w-4 text-red-600 shrink-0" />
-            <span>{t('alert_severity_critical')}</span>
-          </span>
-        );
-      case 'warning':
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-900 border border-amber-200">
-            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-            <span>{t('alert_severity_warning')}</span>
-          </span>
-        );
-      case 'advisory':
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-[#087A4B] border border-emerald-200">
-            <Info className="h-4 w-4 text-[#087A4B] shrink-0" />
-            <span>{t('alert_severity_advisory')}</span>
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-black text-blue-900 border border-blue-200">
-            <Info className="h-4 w-4 text-blue-600 shrink-0" />
-            <span>{t('alert_severity_info')}</span>
-          </span>
-        );
-    }
-  };
-
-  const getCategoryLabel = (category: AlertCategory) => {
-    switch (category) {
-      case 'weather':
-        return t('alert_category_weather');
-      case 'crop':
-        return t('alert_category_crop');
-      case 'pest':
-        return t('alert_category_pest');
-      case 'livestock':
-        return t('alert_category_livestock');
-      case 'irrigation':
-        return t('alert_category_irrigation');
-      case 'general':
-      default:
-        return t('alert_category_general');
+  const handleFilterByZone = (zoneName: string) => {
+    setSelectedZone(zoneName);
+    const gridSection = document.getElementById('alerts-catalog-grid');
+    if (gridSection) {
+      gridSection.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
   return (
-    <div className="bg-[#FAF9F5] min-h-screen py-8">
-      <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="bg-[#F6F7F3] dark:bg-[#0A110D] min-h-screen text-[#111310] dark:text-white transition-colors duration-200 overflow-x-hidden">
+      
+      {/* 1. Real-Time Emergency Broadcast Ticker */}
+      <AlertsEmergencyTicker
+        alerts={mockAlerts}
+        onOpenAlertModal={setActiveAlertModal}
+      />
+
+      {/* 2. Hero Section with Live Stats, Search & Responsive Category Wraps */}
+      <AlertsHero
+        searchQuery={searchTerm}
+        onSearchChange={setSearchTerm}
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+        selectedSeverity={selectedSeverity}
+        onSelectSeverity={setSelectedSeverity}
+        activeCount={activeAlertsCount}
+        criticalCount={criticalCount}
+        warningCount={warningCount}
+        totalFiltered={filteredAlerts.length}
+        onOpenReportModal={() => setIsReportModalOpen(true)}
+      />
+
+      {/* 3. Agro-Ecological Risk Radar & Corridor Stress Indices */}
+      <AlertsRiskRadar onFilterByZone={handleFilterByZone} />
+
+      {/* 4. Main Alerts & Advisories Catalog */}
+      <section id="alerts-catalog-grid" className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
         
-        {/* Page Header Banner */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#063D2A] via-[#087A4B] to-[#063D2A] p-6 sm:p-10 text-white shadow-xl">
-          <div className="relative z-10 max-w-3xl space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#D7A928]/20 px-3.5 py-1 text-xs font-black text-[#D7A928] border border-[#D7A928]/40">
-              <Bell className="h-4 w-4" />
-              <span>{t('alert_bell_title')}</span>
+        {/* Catalog Subheader & Filter Bar */}
+        <div className="bg-white dark:bg-[#111613] p-6 sm:p-8 rounded-3xl border border-[#E2EFE0] dark:border-white/10 shadow-sm space-y-6 mb-8">
+          
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#EDF4EC] dark:border-white/10 pb-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F0F7EE] dark:bg-white/10 text-[#075B36] dark:text-[#A3E635] text-xs font-black uppercase tracking-wider">
+                <Bell className="h-3.5 w-3.5" />
+                <span>Regional Advisory Bulletins</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-[#0A1912] dark:text-white tracking-tight">
+                Active Notices & Historical Advisories
+              </h2>
+              <p className="text-xs sm:text-sm text-[#56635B] dark:text-white/70">
+                Displaying <strong>{filteredAlerts.length}</strong> of <strong>{mockAlerts.length}</strong> broadcasts across Oromia
+              </p>
             </div>
 
-            <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
-              {t('alerts_page_title')}
-            </h1>
-
-            <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed">
-              {t('alerts_page_subtitle')}
-            </p>
-
-            {/* Active Counter & Demo Tag */}
-            <div className="pt-2 flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2 rounded-2xl bg-white/10 backdrop-blur-md px-4 py-2 text-xs font-extrabold text-white border border-white/20">
-                <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-ping" />
-                <span>
-                  {activeAlertsCount} {t('alert_active_count')}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-200 bg-emerald-950/40 px-3.5 py-2 rounded-2xl border border-emerald-800">
-                <Sparkles className="h-4 w-4 text-[#D7A928]" />
-                <span>{t('alert_demo_notice')}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Search & Filters Controls Section */}
-        <div className="rounded-2xl bg-white p-5 sm:p-6 shadow-sm border border-[#DDE8E1] space-y-5">
-          {/* Top Row: Search Input */}
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#637069]" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t('search_placeholder')}
-              className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] pl-12 pr-4 py-3 text-sm font-semibold text-[#14251D] placeholder-[#637069] focus:bg-white focus:border-[#087A4B] focus:outline-none focus:ring-2 focus:ring-[#087A4B]/20 transition-all"
-            />
-            {searchTerm && (
+            {(searchTerm || selectedSeverity !== 'all' || selectedCategory !== 'all' || selectedZone !== 'all' || selectedStatus !== 'active') && (
               <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                onClick={handleClearFilters}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-white/10 text-xs font-bold text-[#075B36] dark:text-[#A3E635] border border-[#D5E8D0] dark:border-white/10 hover:bg-[#F0F7EE] transition-all shrink-0 self-start sm:self-auto shadow-2xs"
               >
-                <X className="h-4 w-4" />
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Reset All Filters</span>
               </button>
             )}
           </div>
 
-          {/* Filters Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+          {/* Detailed Filters Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
             {/* Severity Filter */}
-            <div>
-              <label htmlFor="severity-filter" className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
-                Severity
+            <div className="space-y-1">
+              <label className="font-extrabold text-[#56635B] dark:text-white/70 uppercase tracking-wider text-[11px]">
+                Severity Level
               </label>
               <select
-                id="severity-filter"
                 value={selectedSeverity}
                 onChange={(e) => setSelectedSeverity(e.target.value)}
-                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none min-h-[44px]"
+                className="w-full px-3 py-2.5 rounded-xl border border-[#D5E8D0] dark:border-white/10 bg-[#FAFAF7] dark:bg-[#181F1B] text-[#0A1912] dark:text-white font-bold focus:outline-none focus:border-[#075B36] min-h-[44px]"
               >
-                <option value="all">Severity: All</option>
-                <option value="critical">{t('alert_severity_critical')}</option>
-                <option value="warning">{t('alert_severity_warning')}</option>
-                <option value="advisory">{t('alert_severity_advisory')}</option>
-                <option value="info">{t('alert_severity_info')}</option>
+                <option value="all">Severity: All Levels</option>
+                <option value="critical">🚨 Critical Alert (Red)</option>
+                <option value="warning">⚠️ Warning Advisory (Amber)</option>
+                <option value="advisory">🌿 Technical Advisory (Green)</option>
+                <option value="info">ℹ️ General Notice (Blue)</option>
               </select>
             </div>
 
             {/* Category Filter */}
-            <div>
-              <label htmlFor="category-filter" className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
-                Category
+            <div className="space-y-1">
+              <label className="font-extrabold text-[#56635B] dark:text-white/70 uppercase tracking-wider text-[11px]">
+                Advisory Category
               </label>
               <select
-                id="category-filter"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none min-h-[44px]"
+                className="w-full px-3 py-2.5 rounded-xl border border-[#D5E8D0] dark:border-white/10 bg-[#FAFAF7] dark:bg-[#181F1B] text-[#0A1912] dark:text-white font-bold focus:outline-none focus:border-[#075B36] min-h-[44px]"
               >
-                <option value="all">{t('alert_category_all')}</option>
-                <option value="weather">{t('alert_category_weather')}</option>
-                <option value="crop">{t('alert_category_crop')}</option>
-                <option value="pest">{t('alert_category_pest')}</option>
-                <option value="livestock">{t('alert_category_livestock')}</option>
-                <option value="irrigation">{t('alert_category_irrigation')}</option>
-                <option value="general">{t('alert_category_general')}</option>
+                <option value="all">Category: All Portfolios</option>
+                <option value="weather">Weather & Climate Anomalies</option>
+                <option value="pest">Pests & Invasive Species</option>
+                <option value="crop">Crop Diseases & Rusts</option>
+                <option value="livestock">Livestock & Animal Health</option>
+                <option value="irrigation">Irrigation & River Watersheds</option>
+                <option value="general">Input Logistics & General</option>
               </select>
             </div>
 
             {/* Zone Filter */}
-            <div>
-              <label htmlFor="zone-filter" className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
-                Zonal Region
+            <div className="space-y-1">
+              <label className="font-extrabold text-[#56635B] dark:text-white/70 uppercase tracking-wider text-[11px]">
+                Administrative Zone
               </label>
               <select
-                id="zone-filter"
                 value={selectedZone}
                 onChange={(e) => setSelectedZone(e.target.value)}
-                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none min-h-[44px]"
+                className="w-full px-3 py-2.5 rounded-xl border border-[#D5E8D0] dark:border-white/10 bg-[#FAFAF7] dark:bg-[#181F1B] text-[#0A1912] dark:text-white font-bold focus:outline-none focus:border-[#075B36] min-h-[44px]"
               >
-                <option value="all">Zone: All Oromia</option>
+                <option value="all">Zone: All 22 Oromia Zones</option>
                 {allZones.map((z) => (
                   <option key={z} value={z}>
                     {z}
@@ -279,182 +231,79 @@ export const AlertsPage: React.FC = () => {
             </div>
 
             {/* Status Filter */}
-            <div>
-              <label htmlFor="status-filter" className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
-                Status
+            <div className="space-y-1">
+              <label className="font-extrabold text-[#56635B] dark:text-white/70 uppercase tracking-wider text-[11px]">
+                Advisory Status
               </label>
               <select
-                id="status-filter"
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none min-h-[44px]"
+                className="w-full px-3 py-2.5 rounded-xl border border-[#D5E8D0] dark:border-white/10 bg-[#FAFAF7] dark:bg-[#181F1B] text-[#0A1912] dark:text-white font-bold focus:outline-none focus:border-[#075B36] min-h-[44px]"
               >
-                <option value="all">{t('alert_status_all')}</option>
-                <option value="active">{t('alert_status_active')}</option>
-                <option value="expired">{t('alert_status_expired')}</option>
+                <option value="all">Status: All (Active & Resolved)</option>
+                <option value="active">🟢 Active Bulletins Only</option>
+                <option value="expired">⚪ Historical / Resolved</option>
               </select>
-            </div>
-
-            {/* Date Filter */}
-            <div>
-              <label htmlFor="date-filter" className="block text-[11px] font-black uppercase tracking-wider text-[#637069] mb-1">
-                Date Range
-              </label>
-              <select
-                id="date-filter"
-                value={selectedDateFilter}
-                onChange={(e) => setSelectedDateFilter(e.target.value)}
-                className="w-full rounded-xl border border-[#DDE8E1] bg-[#FAFAF7] px-3 py-2 text-xs font-bold text-[#14251D] focus:bg-white focus:border-[#087A4B] focus:outline-none min-h-[44px]"
-              >
-                <option value="all">Date: All Time</option>
-                <option value="last7">Recent Alerts</option>
-                <option value="last30">Past 30 Days</option>
-              </select>
-            </div>
-
-            {/* Clear Filters Button */}
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={handleClearFilters}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[#DDE8E1] bg-[#EFF8F2] px-3 py-2 text-xs font-bold text-[#087A4B] hover:bg-[#087A4B] hover:text-white transition-all min-h-[44px]"
-              >
-                <X className="h-4 w-4" />
-                <span>{t('alert_filter_clear')}</span>
-              </button>
             </div>
           </div>
         </div>
 
-        {/* Results Info & Demonstration Disclaimer */}
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-[#637069]">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-[#063D2A] text-sm">
-              Showing {filteredAlerts.length} alert(s)
-            </span>
-            {(searchTerm || selectedSeverity !== 'all' || selectedCategory !== 'all' || selectedZone !== 'all' || selectedStatus !== 'active') && (
-              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-extrabold text-[#087A4B]">
-                Filtered
-              </span>
-            )}
-          </div>
-          <div className="rounded-xl bg-amber-50 px-3 py-1 text-amber-900 border border-amber-200">
-            📌 Demonstration content for Oromia Agricultural Bureau Prototype
-          </div>
-        </div>
-
-        {/* Alerts Cards Grid */}
+        {/* Alerts Grid */}
         {filteredAlerts.length === 0 ? (
-          <div className="rounded-2xl bg-white p-12 text-center border border-[#DDE8E1] shadow-xs space-y-4">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 text-gray-400">
-              <Bell className="h-8 w-8" />
+          <div className="rounded-3xl border border-[#E2EFE0] dark:border-white/10 bg-white dark:bg-[#111613] p-12 sm:p-16 text-center space-y-4 shadow-sm">
+            <div className="inline-flex p-4 rounded-2xl bg-[#F0F7EE] dark:bg-white/10 text-[#075B36] dark:text-[#A3E635]">
+              <Search className="h-8 w-8" />
             </div>
-            <h3 className="text-base font-bold text-[#14251D]">No alerts match your search filters</h3>
-            <p className="text-xs text-[#637069]">Try clearing search inputs or adjusting zone & category filters.</p>
+            <h3 className="text-lg font-black text-[#0A1912] dark:text-white">
+              No agricultural alerts match your filters
+            </h3>
+            <p className="text-xs sm:text-sm text-[#56635B] dark:text-white/60 max-w-md mx-auto">
+              Try modifying search keywords, selecting a different zone, or clear filters to view all regional bulletins.
+            </p>
             <button
               onClick={handleClearFilters}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#087A4B] px-4 py-2 text-xs font-bold text-white hover:bg-[#063D2A]"
+              className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#075B36] hover:bg-[#054629] px-5 py-2.5 text-xs font-black text-white shadow-md transition-all"
             >
-              Reset Filters
+              <RotateCcw className="h-4 w-4 text-[#A3E635]" />
+              <span>Reset Search Filters</span>
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredAlerts.map((alert) => (
-              <div
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {filteredAlerts.map((alert, index) => (
+              <AlertCard
                 key={alert.id}
-                className="group relative flex flex-col justify-between rounded-2xl bg-white p-6 shadow-xs border border-[#DDE8E1] transition-all hover:shadow-md hover:border-[#087A4B]"
-              >
-                <div className="space-y-4">
-                  {/* Top Header Row */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#DDE8E1] pb-3">
-                    <div className="flex items-center gap-2">
-                      {getSeverityBadge(alert.severity)}
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#EFF8F2] px-2.5 py-0.5 text-[11px] font-extrabold text-[#087A4B] border border-[#DDE8E1]">
-                        <Layers className="h-3 w-3" />
-                        {getCategoryLabel(alert.category)}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-500">
-                      {alert.status === 'expired' ? (
-                        <span className="rounded-full bg-gray-100 px-2 py-0.5 font-bold text-gray-600 border border-gray-200">
-                          {t('alert_status_expired')}
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3 text-emerald-600" />
-                          <span>Expires: {alert.expirationDate}</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Title & Summary */}
-                  <div>
-                    <h2 className="text-base sm:text-lg font-bold text-[#14251D] group-hover:text-[#087A4B] transition-colors leading-snug">
-                      {t(alert.titleKey)}
-                    </h2>
-                    <p className="mt-2 text-xs sm:text-sm text-[#637069] leading-relaxed line-clamp-3">
-                      {t(alert.summaryKey)}
-                    </p>
-                  </div>
-
-                  {/* Recommended Action Snippet if available */}
-                  {alert.recommendedActions && alert.recommendedActions.length > 0 && (
-                    <div className="rounded-xl bg-[#EFF8F2] p-3 text-xs border border-[#DDE8E1] space-y-1">
-                      <span className="font-extrabold text-[#063D2A] block flex items-center gap-1.5">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-[#087A4B]" />
-                        {t('alert_recommended_actions')}
-                      </span>
-                      <p className="text-[#637069] line-clamp-1 italic">
-                        "{alert.recommendedActions[0]}"
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Zones & Woredas Pills */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#063D2A]">
-                      <MapPin className="h-3.5 w-3.5 text-[#087A4B]" />
-                      <span>{t('alert_affected_area')} {alert.affectedArea}</span>
-                    </div>
-
-                    {alert.affectedWoredas && alert.affectedWoredas.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {alert.affectedWoredas.map((woreda) => (
-                          <span
-                            key={woreda}
-                            className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-700"
-                          >
-                            Woreda: {woreda}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Card Footer Actions */}
-                <div className="mt-6 pt-4 border-t border-[#DDE8E1] flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5 text-[#637069]">
-                    <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                    <span>{t('alert_issued_date')} {alert.date}</span>
-                  </div>
-
-                  <Link
-                    to={`/alerts/${alert.slug}`}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#063D2A] px-4 py-2 font-bold text-white shadow-xs hover:bg-[#087A4B] transition-colors"
-                  >
-                    <span>{t('alert_view_details')}</span>
-                    <ChevronRight className="h-3.5 w-3.5 text-[#D7A928]" />
-                  </Link>
-                </div>
-              </div>
+                alert={alert}
+                onOpenModal={setActiveAlertModal}
+                index={index}
+              />
             ))}
           </div>
         )}
-      </div>
+
+      </section>
+
+      {/* 5. Standard Operating Procedures & First 48-Hour Guides */}
+      <AlertsPreventionGuides />
+
+      {/* 6. Farmer Mobile SMS / Voice Alert Subscription Hub */}
+      <AlertsSMSHub />
+
+      {/* 7. Closing Emergency 8888 Banner & Hotline */}
+      <AlertsCTA onOpenReportModal={() => setIsReportModalOpen(true)} />
+
+      {/* 8. Full Alert Dossier Detail Modal */}
+      <AlertDetailModal
+        alert={activeAlertModal}
+        onClose={() => setActiveAlertModal(null)}
+      />
+
+      {/* 9. Farmer Incident Sighting Report Modal */}
+      <FarmerHazardReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+      />
+
     </div>
   );
 };
