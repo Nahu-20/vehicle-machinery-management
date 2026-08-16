@@ -19,7 +19,12 @@ import {
   listAssignmentsForAsset,
   isOverdue,
 } from '../../../features/fleet/services/fleetAssignmentService';
-import type { FleetAsset, FleetAssignment } from '../../../features/fleet/types/fleet';
+import type {
+  FleetAsset,
+  FleetAssignment,
+  FleetFaultSeverity,
+  FleetWorkOrder,
+} from '../../../features/fleet/types/fleet';
 import {
   formatMeter,
   isServiceDue,
@@ -29,10 +34,16 @@ import {
 } from '../../../features/fleet/constants/fleetVocabulary';
 import {
   StatusPill,
+  SeverityPill,
+  WorkOrderPill,
   FleetPanel,
   FleetButton,
   FleetEmptyState,
 } from '../../../features/fleet/components/FleetUI';
+import {
+  reportFault,
+  listWorkOrdersForAsset,
+} from '../../../features/fleet/services/fleetWorkOrderService';
 import { CANONICAL_ZONE_METADATA } from '../../../features/investment-map/constants/canonicalZones';
 
 const INPUT =
@@ -75,14 +86,20 @@ export function AdminFleetAssetDetailPage() {
   const [meterIn, setMeterIn] = useState('');
   const [returnFaulty, setReturnFaulty] = useState(false);
 
+  const [workOrders, setWorkOrders] = useState<FleetWorkOrder[]>([]);
+  const [showFault, setShowFault] = useState(false);
+  const [faultText, setFaultText] = useState('');
+  const [severity, setSeverity] = useState<FleetFaultSeverity>('medium');
+
   const load = useCallback(async () => {
     if (!assetId) return;
     setLoading(true);
     setError(null);
     try {
-      const [a, history] = await Promise.all([
+      const [a, history, faults] = await Promise.all([
         getAssetById(assetId),
         listAssignmentsForAsset(assetId).catch(() => [] as FleetAssignment[]),
+        listWorkOrdersForAsset(assetId).catch(() => [] as FleetWorkOrder[]),
       ]);
       if (!a) {
         setError(`Asset ${assetId} was not found.`);
@@ -92,6 +109,7 @@ export function AdminFleetAssetDetailPage() {
         setMeterIn(String(a.currentMeter));
       }
       setAssignments(history);
+      setWorkOrders(faults);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load the asset.');
     } finally {
@@ -168,6 +186,28 @@ export function AdminFleetAssetDetailPage() {
     }
   };
 
+  const handleReportFault = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!asset || !staffUser || busy) return;
+    if (!faultText.trim()) return setError('Describe the fault.');
+
+    setBusy(true);
+    setError(null);
+    try {
+      await reportFault(
+        { assetId: asset.assetId, faultDescription: faultText.trim(), severity },
+        staffUser
+      );
+      setShowFault(false);
+      setFaultText('');
+      setSeverity('medium');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not report the fault.');
+    } finally {
+      setBusy(false);
+    }
+  };
   if (loading) {
     return (
       <FleetPanel title="Loading…">
@@ -216,6 +256,11 @@ export function AdminFleetAssetDetailPage() {
           {canAssign && asset.status === 'assigned' && activeAssignment && (
             <FleetButton icon={LogIn} onClick={() => setShowReturn((v) => !v)}>
               Receive back
+            </FleetButton>
+          )}
+          {asset.status !== 'disposed' && (
+            <FleetButton variant="secondary" icon={Wrench} onClick={() => setShowFault((v) => !v)}>
+              Report fault
             </FleetButton>
           )}
           {canManage && (
@@ -418,6 +463,90 @@ export function AdminFleetAssetDetailPage() {
           </form>
         </FleetPanel>
       )}
+
+      {showFault && (
+        <FleetPanel
+          title="Report a fault"
+          description="Anyone may report; only the garage moves the job along. A grounded fault takes the machine out of service immediately."
+        >
+          <form onSubmit={handleReportFault} className="p-6 space-y-5">
+            <div>
+              <label className={LABEL}>What is wrong? *</label>
+              <textarea
+                value={faultText}
+                onChange={(e) => setFaultText(e.target.value)}
+                rows={3}
+                placeholder="Hydraulic leak on the left ram; loses pressure under load."
+                className={`${INPUT} resize-none`}
+              />
+            </div>
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="w-full sm:w-64">
+                <label className={LABEL}>Severity</label>
+                <select
+                  value={severity}
+                  onChange={(e) => setSeverity(e.target.value as FleetFaultSeverity)}
+                  className={INPUT}
+                >
+                  <option value="low">Low — cosmetic or minor</option>
+                  <option value="medium">Medium — usable, needs attention</option>
+                  <option value="high">High — degraded, use with care</option>
+                  <option value="grounded">Grounded — cannot work</option>
+                </select>
+                {severity === 'grounded' && (
+                  <p className="mt-1 text-[11px] font-semibold text-red-600 dark:text-red-400">
+                    This will withdraw the machine from service straight away.
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <FleetButton type="button" variant="secondary" onClick={() => setShowFault(false)}>
+                  Cancel
+                </FleetButton>
+                <FleetButton type="submit" icon={Wrench} disabled={busy}>
+                  {busy ? 'Reporting…' : 'Report fault'}
+                </FleetButton>
+              </div>
+            </div>
+          </form>
+        </FleetPanel>
+      )}
+
+      <FleetPanel
+        title="Repair history"
+        description="Every fault reported against this machine, and what it cost to put right."
+      >
+        {workOrders.length === 0 ? (
+          <FleetEmptyState
+            icon={Wrench}
+            title="No faults recorded"
+            message="Nothing has been reported against this asset."
+          />
+        ) : (
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {workOrders.map((wo) => (
+              <div key={wo.workOrderId} className="px-6 py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <SeverityPill severity={wo.severity} />
+                  <WorkOrderPill status={wo.status} />
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {fmtDate(wo.reportedAt)}
+                    {wo.meterAtReport != null
+                      ? ` · at ${formatMeter(wo.meterAtReport, asset.meterType)}`
+                      : ''}
+                    {wo.totalCost ? ` · ${wo.totalCost.toLocaleString()} ETB` : ''}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs text-slate-700 dark:text-slate-200">
+                  {typeof wo.faultDescription === 'string'
+                    ? wo.faultDescription
+                    : wo.faultDescription?.en ?? '—'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </FleetPanel>
 
       {/* History */}
       <FleetPanel
