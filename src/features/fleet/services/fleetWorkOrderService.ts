@@ -14,6 +14,7 @@ import { logAuditEvent } from '../../../services/auditService';
 import type { StaffUser } from '../../../types/auth';
 import type {
   FleetAsset,
+  FleetAssetStatus,
   FleetFaultSeverity,
   FleetWorkOrder,
   FleetWorkOrderPart,
@@ -21,7 +22,13 @@ import type {
 } from '../types/fleet';
 import { canTransitionWorkOrder, OPEN_WORK_ORDER_STATUSES } from '../constants/fleetVocabulary';
 import { FLEET_ASSETS_COLLECTION, FleetNotFoundError, isDemoFleet } from './fleetService';
-import { DEMO_WORK_ORDERS } from '../data/demoFleet';
+import {
+  demoListWorkOrders,
+  demoReportFault,
+  demoAdvanceWorkOrder,
+  demoGetAsset,
+} from '../data/demoStore';
+import { Timestamp } from 'firebase/firestore';
 
 /**
  * Fault reports and garage work.
@@ -68,6 +75,23 @@ export async function reportFault(
   input: ReportFaultInput,
   actor: StaffUser
 ): Promise<string> {
+  if (isDemoFleet()) {
+    const asset = demoGetAsset(input.assetId);
+    if (!asset) throw new FleetNotFoundError(input.assetId);
+    return demoReportFault({
+      assetId: input.assetId,
+      zoneId: asset.zoneId,
+      reportedByUid: actor.uid,
+      reportedByName: actor.displayName,
+      reportedAt: Timestamp.now(),
+      faultDescription: { en: input.faultDescription },
+      severity: input.severity,
+      status: 'reported',
+      meterAtReport: asset.currentMeter,
+      version: 1,
+    });
+  }
+
   const database = requireDb();
   const assetRef = doc(database, FLEET_ASSETS_COLLECTION, input.assetId);
   const woRef = doc(collection(database, FLEET_WORK_ORDERS_COLLECTION));
@@ -150,6 +174,52 @@ export async function advanceWorkOrder(
   input: AdvanceWorkOrderInput,
   actor: StaffUser
 ): Promise<void> {
+  if (isDemoFleet()) {
+    const wo = demoListWorkOrders().find((w) => w.workOrderId === input.workOrderId);
+    if (!wo) throw new Error('That work order no longer exists.');
+    if (!canTransitionWorkOrder(wo.status, input.next)) {
+      throw new Error(
+        `A ${wo.status.replace('_', ' ')} job cannot move to ${input.next.replace('_', ' ')}.`
+      );
+    }
+
+    // Same release rules as the live path: only verification returns a machine,
+    // and only from the garage.
+    const asset = demoGetAsset(wo.assetId);
+    let assetStatus: FleetAssetStatus | null = null;
+    if (asset) {
+      if (input.next === 'verified' && asset.status === 'in_maintenance') {
+        assetStatus = 'available';
+      } else if (input.next === 'awaiting_parts' && asset.status === 'in_maintenance') {
+        assetStatus = 'awaiting_parts';
+      } else if (input.next === 'in_progress' && asset.status === 'awaiting_parts') {
+        assetStatus = 'in_maintenance';
+      }
+    }
+
+    const parts = input.partsUsed ?? wo.partsUsed;
+    const partsTotal = (parts ?? []).reduce((sum, p) => sum + p.cost * p.quantity, 0);
+    const labour = input.labourCost ?? wo.labourCost ?? 0;
+
+    demoAdvanceWorkOrder(
+      input.workOrderId,
+      {
+        status: input.next,
+        partsUsed: parts,
+        labourCost: labour,
+        totalCost: partsTotal + labour,
+        startedAt: input.next === 'in_progress' && !wo.startedAt ? Timestamp.now() : wo.startedAt,
+        completedAt: input.next === 'completed' ? Timestamp.now() : wo.completedAt,
+        verifiedAt: input.next === 'verified' ? Timestamp.now() : wo.verifiedAt,
+        verifiedByUid: input.next === 'verified' ? actor.uid : wo.verifiedByUid,
+      },
+      assetStatus,
+      actor.uid,
+      actor.displayName
+    );
+    return;
+  }
+
   const database = requireDb();
   const woRef = doc(database, FLEET_WORK_ORDERS_COLLECTION, input.workOrderId);
 
@@ -245,7 +315,7 @@ export async function advanceWorkOrder(
 
 export async function listWorkOrders(openOnly = false): Promise<FleetWorkOrder[]> {
   if (isDemoFleet()) {
-    const sorted = [...DEMO_WORK_ORDERS].sort(
+    const sorted = demoListWorkOrders().sort(
       (a, b) => b.reportedAt.toMillis() - a.reportedAt.toMillis()
     );
     return openOnly ? sorted.filter((w) => OPEN_WORK_ORDER_STATUSES.includes(w.status)) : sorted;
@@ -264,7 +334,7 @@ export async function listWorkOrders(openOnly = false): Promise<FleetWorkOrder[]
 
 export async function listWorkOrdersForAsset(assetId: string): Promise<FleetWorkOrder[]> {
   if (isDemoFleet()) {
-    return DEMO_WORK_ORDERS.filter((w) => w.assetId === assetId).sort(
+    return demoListWorkOrders().filter((w) => w.assetId === assetId).sort(
       (a, b) => b.reportedAt.toMillis() - a.reportedAt.toMillis()
     );
   }

@@ -248,6 +248,45 @@ export interface FleetMeterReading {
   source: 'issue' | 'return' | 'service' | 'manual';
 }
 
+/**
+ * A recorded change of operational status.
+ *
+ * Status alone says where a machine is now; this says how it got there. Without
+ * it a register cannot answer the questions that actually matter about a
+ * vehicle - how long it sat in the garage, how often it goes back, whether it
+ * was working at all last season.
+ *
+ * Written for every transition regardless of cause, so issuing, returning,
+ * grounding and a manual correction all appear on one timeline rather than
+ * being scattered across three collections a reader has to join by hand.
+ */
+export interface FleetStatusEvent {
+  eventId: string;
+  assetId: string;
+  from: FleetAssetStatus;
+  to: FleetAssetStatus;
+  at: Timestamp;
+  actorUid: string;
+  actorName: string;
+  /** Why, in the actor's words. Free text because the reasons do not enumerate. */
+  reason?: string;
+}
+
+/** One entry on a vehicle's combined history. */
+export type FleetTimelineKind = 'status' | 'assignment' | 'work_order';
+
+export interface FleetTimelineEntry {
+  id: string;
+  kind: FleetTimelineKind;
+  at: Timestamp;
+  title: string;
+  detail?: string;
+  actorName?: string;
+  statusTo?: FleetAssetStatus;
+  severity?: FleetFaultSeverity;
+  meter?: number;
+}
+
 /** Filters backing the register list page. */
 export interface FleetAssetFilters {
   zoneId?: CanonicalZoneId | 'all';

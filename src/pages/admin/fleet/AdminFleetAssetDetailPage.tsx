@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
+  ArrowRightLeft,
   Pencil,
   LogOut,
   LogIn,
@@ -12,7 +13,11 @@ import {
 } from 'lucide-react';
 import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
 import { hasPermission } from '../../../lib/permissions';
-import { getAssetById } from '../../../features/fleet/services/fleetService';
+import {
+  getAssetById,
+  setAssetStatus,
+  listStatusEvents,
+} from '../../../features/fleet/services/fleetService';
 import {
   issueAsset,
   returnAsset,
@@ -24,6 +29,8 @@ import type {
   FleetAssignment,
   FleetFaultSeverity,
   FleetWorkOrder,
+  FleetStatusEvent,
+  FleetAssetStatus,
 } from '../../../features/fleet/types/fleet';
 import {
   formatMeter,
@@ -31,6 +38,7 @@ import {
   isIssuable,
   meterUntilService,
   METER_UNIT_LABEL,
+  FLEET_ASSET_STATUSES,
 } from '../../../features/fleet/constants/fleetVocabulary';
 import {
   StatusPill,
@@ -41,6 +49,7 @@ import {
   FleetEmptyState,
 } from '../../../features/fleet/components/FleetUI';
 import { AssetImage } from '../../../features/fleet/components/AssetImage';
+import { AssetTimeline } from '../../../features/fleet/components/AssetTimeline';
 import {
   reportFault,
   listWorkOrdersForAsset,
@@ -92,15 +101,21 @@ export function AdminFleetAssetDetailPage() {
   const [faultText, setFaultText] = useState('');
   const [severity, setSeverity] = useState<FleetFaultSeverity>('medium');
 
+  const [statusEvents, setStatusEvents] = useState<FleetStatusEvent[]>([]);
+  const [showStatus, setShowStatus] = useState(false);
+  const [nextStatus, setNextStatus] = useState<FleetAssetStatus>('available');
+  const [statusReason, setStatusReason] = useState('');
+
   const load = useCallback(async () => {
     if (!assetId) return;
     setLoading(true);
     setError(null);
     try {
-      const [a, history, faults] = await Promise.all([
+      const [a, history, faults, events] = await Promise.all([
         getAssetById(assetId),
         listAssignmentsForAsset(assetId).catch(() => [] as FleetAssignment[]),
         listWorkOrdersForAsset(assetId).catch(() => [] as FleetWorkOrder[]),
+        listStatusEvents(assetId).catch(() => [] as FleetStatusEvent[]),
       ]);
       if (!a) {
         setError(`Asset ${assetId} was not found.`);
@@ -111,6 +126,8 @@ export function AdminFleetAssetDetailPage() {
       }
       setAssignments(history);
       setWorkOrders(faults);
+      setStatusEvents(events);
+      if (a) setNextStatus(a.status);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load the asset.');
     } finally {
@@ -182,6 +199,29 @@ export function AdminFleetAssetDetailPage() {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not receive the asset.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleStatusChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!asset || !staffUser || busy) return;
+    if (nextStatus === asset.status) {
+      return setError('That is already the current status.');
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      await setAssetStatus(asset.assetId, nextStatus, asset.version, staffUser, {
+        reason: statusReason.trim() || undefined,
+      });
+      setShowStatus(false);
+      setStatusReason('');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not change the status.');
     } finally {
       setBusy(false);
     }
@@ -262,6 +302,15 @@ export function AdminFleetAssetDetailPage() {
           {asset.status !== 'disposed' && (
             <FleetButton variant="secondary" icon={Wrench} onClick={() => setShowFault((v) => !v)}>
               Report fault
+            </FleetButton>
+          )}
+          {canManage && asset.status !== 'disposed' && (
+            <FleetButton
+              variant="secondary"
+              icon={ArrowRightLeft}
+              onClick={() => setShowStatus((v) => !v)}
+            >
+              Change status
             </FleetButton>
           )}
           {canManage && (
@@ -472,6 +521,66 @@ export function AdminFleetAssetDetailPage() {
           </form>
         </FleetPanel>
       )}
+
+      {showStatus && (
+        <FleetPanel
+          title="Change status"
+          description="Direct override. Issuing, returning and garage work already move the status on their own, so use this for corrections and for anything the workflow does not cover."
+        >
+          <form onSubmit={handleStatusChange} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className={LABEL}>New status</label>
+              <select
+                value={nextStatus}
+                onChange={(e) => setNextStatus(e.target.value as FleetAssetStatus)}
+                className={INPUT}
+              >
+                {FLEET_ASSET_STATUSES.filter((st) => st !== 'disposed').map((st) => (
+                  <option key={st} value={st}>
+                    {st.replace('_', ' ')}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                Retiring an asset is deliberately not here — it is irreversible and sits with a
+                super admin.
+              </p>
+            </div>
+            <div>
+              <label className={LABEL}>Reason</label>
+              <input
+                value={statusReason}
+                onChange={(e) => setStatusReason(e.target.value)}
+                placeholder="Withdrawn for the season / correction after stocktake"
+                className={INPUT}
+              />
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                Recorded on the timeline. A change with no reason is hard to interpret later.
+              </p>
+            </div>
+            <div className="md:col-span-2 flex justify-end gap-3">
+              <FleetButton type="button" variant="secondary" onClick={() => setShowStatus(false)}>
+                Cancel
+              </FleetButton>
+              <FleetButton type="submit" icon={ArrowRightLeft} disabled={busy}>
+                {busy ? 'Saving…' : 'Apply status'}
+              </FleetButton>
+            </div>
+          </form>
+        </FleetPanel>
+      )}
+
+      <FleetPanel
+        title="Working history"
+        description="Everything this machine has done, newest first — issues, returns, faults, repairs and status changes on one timeline."
+      >
+        <AssetTimeline
+          asset={asset}
+          statusEvents={statusEvents}
+          assignments={assignments}
+          workOrders={workOrders}
+        />
+      </FleetPanel>
 
       {showFault && (
         <FleetPanel

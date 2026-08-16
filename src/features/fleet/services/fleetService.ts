@@ -8,6 +8,7 @@ import {
   where,
   limit as fsLimit,
   runTransaction,
+  setDoc,
   serverTimestamp,
   Timestamp,
   type QueryConstraint,
@@ -20,10 +21,19 @@ import type {
   FleetAssetFilters,
   FleetAssetStatus,
   FleetDashboardSummary,
+  FleetStatusEvent,
   FleetZoneAvailability,
 } from '../types/fleet';
 import { isIssuable, isServiceDue } from '../constants/fleetVocabulary';
-import { DEMO_ASSETS } from '../data/demoFleet';
+import {
+  demoListAssets,
+  demoGetAsset,
+  demoCreateAsset,
+  demoUpdateAsset,
+  demoSetStatus,
+  demoRecordStatusEvent,
+  demoListStatusEvents,
+} from '../data/demoStore';
 import {
   CANONICAL_ZONE_IDS,
   isCanonicalZoneId,
@@ -95,7 +105,7 @@ function mapAsset(id: string, data: any): FleetAsset {
 
 export async function getAssetById(assetId: string): Promise<FleetAsset | null> {
   if (isDemoFleet()) {
-    return DEMO_ASSETS.find((a) => a.assetId === assetId) ?? null;
+    return demoGetAsset(assetId);
   }
   const database = requireDb();
   const snap = await getDoc(doc(database, FLEET_ASSETS_COLLECTION, assetId));
@@ -115,7 +125,7 @@ export async function getAssetById(assetId: string): Promise<FleetAsset | null> 
 export async function listAssets(filters: FleetAssetFilters = {}): Promise<FleetAsset[]> {
   if (isDemoFleet()) {
     return applyClientFilters(
-      DEMO_ASSETS.filter(
+      demoListAssets().filter(
         (a) =>
           (!filters.zoneId || filters.zoneId === 'all' || a.zoneId === filters.zoneId) &&
           (!filters.status || filters.status === 'all' || a.status === filters.status) &&
@@ -191,14 +201,27 @@ export async function createAsset(
   input: CreateAssetInput,
   actor: StaffUser
 ): Promise<FleetAsset> {
-  const database = requireDb();
-
   const assetId = input.assetId.trim().toUpperCase();
   if (!assetId) throw new Error('An asset identifier is required.');
   if (!isCanonicalZoneId(input.zoneId)) {
     throw new Error(`Unknown zone '${input.zoneId}'.`);
   }
   if (input.currentMeter < 0) throw new Error('Meter reading cannot be negative.');
+
+  // Validation above runs in both modes, so the demo rejects the same input the
+  // live register would rather than being quietly more permissive.
+  if (isDemoFleet()) {
+    return demoCreateAsset({
+      ...(input as unknown as FleetAsset),
+      assetId,
+      status: 'available',
+      version: 1,
+      createdByUid: actor.uid,
+      updatedByUid: actor.uid,
+    });
+  }
+
+  const database = requireDb();
 
   const ref = doc(database, FLEET_ASSETS_COLLECTION, assetId);
 
@@ -247,6 +270,11 @@ export async function updateAsset(
   expectedVersion: number,
   actor: StaffUser
 ): Promise<void> {
+  if (isDemoFleet()) {
+    demoUpdateAsset(assetId, changes as Partial<FleetAsset>);
+    return;
+  }
+
   const database = requireDb();
   const ref = doc(database, FLEET_ASSETS_COLLECTION, assetId);
 
@@ -295,8 +323,13 @@ export async function setAssetStatus(
   next: FleetAssetStatus,
   expectedVersion: number,
   actor: StaffUser,
-  extra: Partial<Pick<FleetAsset, 'custodianUid' | 'custodianName'>> = {}
+  extra: Partial<Pick<FleetAsset, 'custodianUid' | 'custodianName'>> & { reason?: string } = {}
 ): Promise<void> {
+  if (isDemoFleet()) {
+    demoSetStatus(assetId, next, actor.uid, actor.displayName, extra.reason);
+    return;
+  }
+
   const database = requireDb();
   const ref = doc(database, FLEET_ASSETS_COLLECTION, assetId);
 
@@ -334,6 +367,21 @@ export async function setAssetStatus(
     );
   });
 
+  // The audit log answers 'who changed what'; the status event answers 'what has
+  // this machine been doing'. Both are written, because the timeline should not
+  // depend on parsing audit records.
+  if (previous) {
+    await appendStatusEvent({
+      assetId,
+      from: previous,
+      to: next,
+      at: Timestamp.now(),
+      actorUid: actor.uid,
+      actorName: actor.displayName,
+      reason: extra.reason,
+    });
+  }
+
   await logAuditEvent({
     actorUid: actor.uid,
     actorEmail: actor.email,
@@ -361,7 +409,40 @@ export async function retireAsset(
   expectedVersion: number,
   actor: StaffUser
 ): Promise<void> {
-  await setAssetStatus(assetId, 'disposed', expectedVersion, actor);
+  await setAssetStatus(assetId, 'disposed', expectedVersion, actor, {
+    reason: 'Retired from the register',
+  });
+}
+
+export const FLEET_STATUS_EVENTS_COLLECTION = 'fleetStatusEvents';
+
+async function appendStatusEvent(event: Omit<FleetStatusEvent, 'eventId'>): Promise<void> {
+  if (isDemoFleet()) {
+    demoRecordStatusEvent(event);
+    return;
+  }
+  const database = requireDb();
+  const ref = doc(collection(database, FLEET_STATUS_EVENTS_COLLECTION));
+  await setDoc(ref, stripUndefined({ ...event, eventId: ref.id }));
+}
+
+/** Status history for one vehicle, oldest first so it reads as a timeline. */
+export async function listStatusEvents(assetId: string): Promise<FleetStatusEvent[]> {
+  if (isDemoFleet()) {
+    return demoListStatusEvents()
+      .filter((e) => e.assetId === assetId)
+      .sort((a, b) => a.at.toMillis() - b.at.toMillis());
+  }
+  const database = requireDb();
+  const snap = await getDocs(
+    query(
+      collection(database, FLEET_STATUS_EVENTS_COLLECTION),
+      where('assetId', '==', assetId),
+      orderBy('at', 'asc'),
+      fsLimit(200)
+    )
+  );
+  return snap.docs.map((d) => d.data() as FleetStatusEvent);
 }
 
 /* ------------------------------------------------------------- dashboard */

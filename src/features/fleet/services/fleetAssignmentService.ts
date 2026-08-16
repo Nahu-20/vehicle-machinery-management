@@ -21,7 +21,12 @@ import {
   FleetVersionConflictError,
   isDemoFleet,
 } from './fleetService';
-import { DEMO_ASSIGNMENTS } from '../data/demoFleet';
+import {
+  demoListAssignments,
+  demoIssueAsset,
+  demoReturnAsset,
+  demoGetAsset,
+} from '../data/demoStore';
 
 /**
  * Issuing and returning assets — the sign-out book.
@@ -71,6 +76,37 @@ export async function issueAsset(
   input: IssueAssetInput,
   actor: StaffUser
 ): Promise<string> {
+  if (isDemoFleet()) {
+    const asset = demoGetAsset(input.assetId);
+    if (!asset) throw new FleetNotFoundError(input.assetId);
+    // The same guards as the live path, so the demo cannot do what the real
+    // register would refuse.
+    if (!isIssuable(asset)) {
+      throw new Error(
+        `${input.assetId} is currently ${asset.status.replace('_', ' ')} and cannot be issued.`
+      );
+    }
+    if (asset.meterType !== 'none' && input.meterOut < asset.currentMeter) {
+      throw new Error(
+        `Reading ${input.meterOut} is below the recorded ${asset.currentMeter}. Check the meter.`
+      );
+    }
+    return demoIssueAsset({
+      assetId: input.assetId,
+      zoneId: asset.zoneId,
+      assignedToUid: input.assignedToUid,
+      assignedToName: input.assignedToName,
+      purpose: { en: input.purpose },
+      issuedAt: Timestamp.now(),
+      dueAt: input.dueAt ? Timestamp.fromDate(input.dueAt) : null,
+      returnedAt: null,
+      meterOut: input.meterOut,
+      meterIn: null,
+      status: 'active',
+      issuedByUid: actor.uid,
+    });
+  }
+
   const database = requireDb();
   const assetRef = doc(database, FLEET_ASSETS_COLLECTION, input.assetId);
   const assignmentRef = doc(collection(database, FLEET_ASSIGNMENTS_COLLECTION));
@@ -164,6 +200,26 @@ export async function returnAsset(
   input: ReturnAssetInput,
   actor: StaffUser
 ): Promise<void> {
+  if (isDemoFleet()) {
+    const asset = demoGetAsset(input.assetId);
+    const open = demoListAssignments().find((a) => a.assignmentId === input.assignmentId);
+    if (!asset) throw new FleetNotFoundError(input.assetId);
+    if (!open) throw new Error('That assignment no longer exists.');
+    if (open.status === 'returned') throw new Error('This assignment has already been closed.');
+    if (asset.meterType !== 'none' && input.meterIn < open.meterOut) {
+      throw new Error(
+        `Return reading ${input.meterIn} is below the issue reading ${open.meterOut}. Check the meter.`
+      );
+    }
+    demoReturnAsset(
+      input.assignmentId,
+      input.meterIn,
+      Boolean(input.returnToMaintenance),
+      actor.uid
+    );
+    return;
+  }
+
   const database = requireDb();
   const assetRef = doc(database, FLEET_ASSETS_COLLECTION, input.assetId);
   const assignmentRef = doc(database, FLEET_ASSIGNMENTS_COLLECTION, input.assignmentId);
@@ -227,7 +283,7 @@ export async function returnAsset(
 /** Assignment history for one asset, newest first. */
 export async function listAssignmentsForAsset(assetId: string): Promise<FleetAssignment[]> {
   if (isDemoFleet()) {
-    return DEMO_ASSIGNMENTS.filter((a) => a.assetId === assetId).sort(
+    return demoListAssignments().filter((a) => a.assetId === assetId).sort(
       (x, y) => y.issuedAt.toMillis() - x.issuedAt.toMillis()
     );
   }
@@ -246,7 +302,7 @@ export async function listAssignmentsForAsset(assetId: string): Promise<FleetAss
 /** Every assignment still open, used for the overdue count on the dashboard. */
 export async function listActiveAssignments(): Promise<FleetAssignment[]> {
   if (isDemoFleet()) {
-    return DEMO_ASSIGNMENTS.filter((a) => a.status === 'active');
+    return demoListAssignments().filter((a) => a.status === 'active');
   }
   const database = requireDb();
   const snap = await getDocs(
