@@ -76,6 +76,7 @@ export function AdminFleetMapPage() {
             height="520px"
             selectedZoneId={selectedZone}
             onSelectZone={setSelectedZone}
+            variant="admin"
           />
         </div>
       </FleetPanel>

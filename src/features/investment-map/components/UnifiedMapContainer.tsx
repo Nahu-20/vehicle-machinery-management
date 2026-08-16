@@ -13,6 +13,17 @@ interface UnifiedMapContainerProps {
   selectedMetric?: ThematicMetric;
   onSelectZone?: (zoneId: string | null) => void;
   onGisVerified?: (result: GisValidationResult) => void;
+  /**
+   * Which palette the engine toggle wears.
+   *
+   * The public site and the admin area deliberately use different colours -
+   * forest and lime out front, slate and emerald behind the login. This is one
+   * component rendered in both, so the chrome has to follow the page it sits on
+   * or it reads as pasted in from somewhere else.
+   *
+   * Only the toggle and banners change. The map itself is identical.
+   */
+  variant?: 'public' | 'admin';
   className?: string;
 }
 
@@ -23,11 +34,39 @@ export const UnifiedMapContainer: React.FC<UnifiedMapContainerProps> = ({
   selectedMetric = 'production',
   onSelectZone,
   onGisVerified,
+  variant = 'public',
   className = '',
 }) => {
   // Primary GIS Renderer: 'openlayers' | Compatibility Fallback: 'svg'
   // Basemap Renderer: 'mapbox' — requires VITE_MAPBOX_TOKEN
   type MapEngine = 'openlayers' | 'svg' | 'mapbox';
+
+  const isAdmin = variant === 'admin';
+
+  const ui = isAdmin
+    ? {
+        bar: 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700',
+        heading: 'text-slate-700 dark:text-slate-200',
+        headingIcon: 'text-emerald-600 dark:text-emerald-400',
+        active: 'bg-emerald-700 text-white shadow-xs',
+        idle:
+          'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700',
+        disabled:
+          'bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700 cursor-not-allowed',
+        badge:
+          'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30',
+      }
+    : {
+        bar: 'bg-[#F0F7EE] dark:bg-[#111613] border-[#E2EFE0] dark:border-white/10',
+        heading: 'text-[#0A1912] dark:text-[#f5f6f3]',
+        headingIcon: 'text-[#075B36] dark:text-[#A3E635]',
+        active: 'bg-[#075B36] text-white shadow-xs',
+        idle:
+          'bg-white dark:bg-[#161d18] text-[#56635B] dark:text-[#a5aba6] hover:text-[#0A1912] dark:hover:text-white border border-[#E2EFE0] dark:border-white/10',
+        disabled:
+          'bg-[#F0F7EE] dark:bg-[#0D110F] text-[#9CA3AF] dark:text-gray-600 border border-[#E2EFE0] dark:border-white/5 cursor-not-allowed',
+        badge: 'bg-[#A3E635]/25 text-[#0A1912] dark:bg-[#A3E635]/15 dark:text-[#A3E635]',
+      };
 
   // Mapbox leads because it carries terrain and place-name context the other two
   // cannot, but it depends on an external token, so a failure hands back to
@@ -50,9 +89,9 @@ export const UnifiedMapContainer: React.FC<UnifiedMapContainerProps> = ({
   return (
     <div className={`space-y-3 ${className}`}>
       {/* Map Engine Selector Header Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-[#F0F7EE] dark:bg-[#111613] p-2 rounded-2xl border border-[#E2EFE0] dark:border-white/10">
-        <div className="flex items-center gap-2 text-xs font-extrabold text-[#0A1912] dark:text-[#f5f6f3]">
-          <Layers className="w-4 h-4 text-[#075B36] dark:text-[#A3E635] shrink-0" />
+      <div className={`flex flex-wrap items-center justify-between gap-2 p-2 rounded-2xl border ${ui.bar}`}>
+        <div className={`flex items-center gap-2 text-xs font-extrabold ${ui.heading}`}>
+          <Layers className={`w-4 h-4 shrink-0 ${ui.headingIcon}`} />
           <span>GIS Map Rendering Engine:</span>
         </div>
 
@@ -67,10 +106,10 @@ export const UnifiedMapContainer: React.FC<UnifiedMapContainerProps> = ({
             }
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
               !mapboxAvailable
-                ? 'bg-[#F0F7EE] dark:bg-[#0D110F] text-[#9CA3AF] dark:text-gray-600 border border-[#E2EFE0] dark:border-white/5 cursor-not-allowed'
+                ? ui.disabled
                 : engine === 'mapbox'
-                ? 'bg-[#075B36] text-white shadow-xs cursor-pointer'
-                : 'bg-white dark:bg-[#161d18] text-[#56635B] dark:text-[#a5aba6] hover:text-[#0A1912] dark:hover:text-white border border-[#E2EFE0] dark:border-white/10 cursor-pointer'
+                ? `${ui.active} cursor-pointer`
+                : `${ui.idle} cursor-pointer`
             }`}
           >
             <Globe2 className="w-3.5 h-3.5" />
@@ -81,13 +120,13 @@ export const UnifiedMapContainer: React.FC<UnifiedMapContainerProps> = ({
             onClick={() => setEngine('openlayers')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
               engine === 'openlayers'
-                ? 'bg-[#075B36] text-white shadow-xs'
-                : 'bg-white dark:bg-[#161d18] text-[#56635B] dark:text-[#a5aba6] hover:text-[#0A1912] dark:hover:text-white border border-[#E2EFE0] dark:border-white/10'
+                ? ui.active
+                : ui.idle
             }`}
           >
             <MapPin className="w-3.5 h-3.5" />
             <span>OpenLayers (Primary GIS Engine)</span>
-            <span className="bg-[#A3E635]/25 text-[#0A1912] dark:bg-[#A3E635]/15 dark:text-[#A3E635] text-[10px] px-1.5 py-0.2 rounded font-mono font-bold">
+            <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-bold ${ui.badge}`}>
               Primary
             </span>
           </button>
@@ -96,8 +135,8 @@ export const UnifiedMapContainer: React.FC<UnifiedMapContainerProps> = ({
             onClick={() => setEngine('svg')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
               engine === 'svg'
-                ? 'bg-[#075B36] text-white shadow-xs'
-                : 'bg-white dark:bg-[#161d18] text-[#56635B] dark:text-[#a5aba6] hover:text-[#0A1912] dark:hover:text-white border border-[#E2EFE0] dark:border-white/10'
+                ? ui.active
+                : ui.idle
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
