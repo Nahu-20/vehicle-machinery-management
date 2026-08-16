@@ -485,5 +485,55 @@ service cloud.firestore {
       // HARD REQUIREMENT: Browser/client code must NOT directly create, update, or delete audit records.
       allow create, update, delete: if false;
     }
+
+    // ---------------------------------------------------------------- FLEET
+    // Vehicle and machinery register.
+    //
+    // Unlike news, alerts and investment content, NOTHING here is public. This
+    // is an internal operational record: which machines the Bureau owns, where
+    // they are and who holds them. There is no published state and no anonymous
+    // read — every rule below requires active staff.
+
+    function hasFleetPermission(perm) {
+      return isCurrentActiveStaff()
+        && 'permissions' in get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data
+        && get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.permissions.hasAny([perm]);
+    }
+
+    match /fleetAssets/{assetId} {
+      allow get, list: if isCurrentActiveStaff();
+      allow create, update: if hasFleetPermission('fleet.asset.manage')
+                            || hasFleetPermission('fleet.assign')
+                            || hasFleetPermission('fleet.maintenance.manage');
+      // Assets are retired by setting status to 'disposed', never deleted: the
+      // register's value is its history, and the audit trail points at these ids.
+      allow delete: if false;
+    }
+
+    match /fleetAssignments/{assignmentId} {
+      allow get, list: if isCurrentActiveStaff();
+      allow create, update: if hasFleetPermission('fleet.assign');
+      // The sign-out book is append-only. A returned row is closed, not removed.
+      allow delete: if false;
+    }
+
+    match /fleetWorkOrders/{workOrderId} {
+      allow get, list: if isCurrentActiveStaff();
+      allow create: if isCurrentActiveStaff();
+      // Anyone may report a fault — the driver who finds it is rarely the
+      // mechanic — but only the garage may move the job through its lifecycle.
+      allow update: if hasFleetPermission('fleet.maintenance.manage');
+      allow delete: if false;
+    }
+
+    match /fleetMeterReadings/{readingId} {
+      allow get, list: if isCurrentActiveStaff();
+      allow create: if hasFleetPermission('fleet.assign')
+                    || hasFleetPermission('fleet.maintenance.manage')
+                    || hasFleetPermission('fleet.asset.manage');
+      // Readings accumulate. Correcting one means appending, not rewriting, so a
+      // mistyped figure stays visible in context instead of becoming the truth.
+      allow update, delete: if false;
+    }
   }
 }
