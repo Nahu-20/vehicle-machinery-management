@@ -9,7 +9,13 @@ import {
   isServiceDue,
   meterUntilService,
 } from '../../../features/fleet/constants/fleetVocabulary';
-import { FleetPanel, FleetEmptyState, StatusPill } from '../../../features/fleet/components/FleetUI';
+import {
+  FleetPanel,
+  FleetEmptyState,
+  StatusPill,
+  FleetLoading,
+  FleetBanner,
+} from '../../../features/fleet/components/FleetUI';
 import { AssetImage } from '../../../features/fleet/components/AssetImage';
 import { FleetZoneMap } from '../../../features/fleet/components/FleetZoneMap';
 import {
@@ -207,7 +213,7 @@ export function AdminFleetMapPage() {
         }
       >
         {loading ? (
-          <div className="p-12 text-center text-xs text-slate-500 dark:text-slate-400">Loading…</div>
+          <FleetLoading />
         ) : !selectedZone ? (
           <FleetEmptyState
             icon={MapPin}
@@ -291,9 +297,7 @@ export function AdminFleetMapPage() {
       </FleetPanel>
 
       {error && (
-        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs text-amber-800 dark:text-amber-300">
-          {error}
-        </div>
+        <FleetBanner tone="warn">{error}</FleetBanner>
       )}
     </div>
   );

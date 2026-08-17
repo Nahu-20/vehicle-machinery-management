@@ -34,6 +34,9 @@ import {
   FleetButton,
   DriverStatusPill,
   LicencePill,
+  SELECT_CLASSES,
+  FleetLoading,
+  FleetBanner,
 } from '../../../features/fleet/components/FleetUI';
 import {
   CANONICAL_ZONE_IDS,
@@ -41,8 +44,6 @@ import {
   type CanonicalZoneId,
 } from '../../../features/investment-map/constants/canonicalZones';
 
-const SELECT_CLASSES =
-  'px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500';
 
 const DRIVER_STATUSES: FleetDriverStatus[] = ['active', 'suspended', 'inactive'];
 
@@ -207,9 +208,7 @@ export function AdminFleetDriversPage() {
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs text-amber-800 dark:text-amber-300">
-          {error}
-        </div>
+        <FleetBanner tone="warn">{error}</FleetBanner>
       )}
 
       <FleetPanel
@@ -217,7 +216,7 @@ export function AdminFleetDriversPage() {
         description="Operators and drivers who may be issued a machine. Records, not portal accounts."
       >
         {loading ? (
-          <div className="p-12 text-center text-xs text-slate-500 dark:text-slate-400">Loading…</div>
+          <FleetLoading />
         ) : drivers.length === 0 ? (
           <FleetEmptyState
             icon={Users}

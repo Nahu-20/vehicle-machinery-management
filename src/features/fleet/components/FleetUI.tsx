@@ -1,5 +1,13 @@
 import React from 'react';
-import type { LucideIcon } from 'lucide-react';
+import {
+  CheckCircle2,
+  UserCheck,
+  Wrench,
+  PackageSearch,
+  Ban,
+  Archive,
+  type LucideIcon,
+} from 'lucide-react';
 import type {
   FleetAssetStatus,
   FleetDriverStatus,
@@ -31,7 +39,7 @@ import {
  * public site's forest/lime, because that is where this module lives.
  */
 
-const STATUS_LABELS: Record<FleetAssetStatus, string> = {
+export const STATUS_LABELS: Record<FleetAssetStatus, string> = {
   available: 'Available',
   assigned: 'In use',
   in_maintenance: 'In garage',
@@ -57,20 +65,38 @@ const WORK_ORDER_LABELS: Record<FleetWorkOrderStatus, string> = {
   cancelled: 'Cancelled',
 };
 
-const PILL_BASE =
+export const PILL_BASE =
   'inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider whitespace-nowrap';
+
+/**
+ * A glyph per status, alongside the colour.
+ *
+ * The dot underneath was already there so the pill survived greyscale, but a dot
+ * only says "this is a status", not which one. The glyph is the part someone
+ * scanning a column of thirty rows actually reads — the colour tells them where
+ * to look and the shape tells them what they are looking at.
+ */
+const STATUS_ICON: Record<FleetAssetStatus, LucideIcon> = {
+  available: CheckCircle2,
+  assigned: UserCheck,
+  in_maintenance: Wrench,
+  awaiting_parts: PackageSearch,
+  out_of_service: Ban,
+  disposed: Archive,
+};
 
 export const StatusPill: React.FC<{ status: FleetAssetStatus; className?: string }> = ({
   status,
   className = '',
-}) => (
-  <span className={`${PILL_BASE} ${STATUS_PILL_CLASSES[status]} ${className}`}>
-    {/* A shape as well as a hue, so the status survives being printed in
-        greyscale or read by someone who cannot distinguish the colours. */}
-    <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" aria-hidden="true" />
-    {STATUS_LABELS[status]}
-  </span>
-);
+}) => {
+  const Icon = STATUS_ICON[status];
+  return (
+    <span className={`${PILL_BASE} ${STATUS_PILL_CLASSES[status]} ${className}`}>
+      <Icon className="w-3 h-3 shrink-0" aria-hidden="true" />
+      {STATUS_LABELS[status]}
+    </span>
+  );
+};
 
 export const SeverityPill: React.FC<{ severity: FleetFaultSeverity }> = ({ severity }) => (
   <span className={`${PILL_BASE} ${SEVERITY_PILL_CLASSES[severity]}`}>
@@ -425,4 +451,153 @@ export const FleetSparkline: React.FC<{
     </svg>
   );
 };
+
+/* ------------------------------------------------------ form vocabulary */
+
+/*
+ * These two strings were written out in six page files, identical every time,
+ * and SELECT_CLASSES in two more. That is not a style choice repeated; it is one
+ * style choice that six files would have to agree to change. Hoisted so the next
+ * person adjusting a focus ring adjusts it once.
+ */
+
+export const INPUT =
+  'w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-emerald-500';
+
+export const LABEL =
+  'block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5';
+
+export const SELECT_CLASSES =
+  'px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500';
+
+/* ------------------------------------------------------------- formatters */
+
+/**
+ * A date, written the way the Bureau writes one.
+ *
+ * Five near-identical copies of this existed across the fleet pages, two of them
+ * called fmtDate and three fmtDay, differing only in whether they returned '—'
+ * or ''. Same function, three names, two behaviours.
+ */
+export function fmtDay(ts?: { toDate?: () => Date } | null, fallback = '—'): string {
+  if (!ts?.toDate) return fallback;
+  return ts.toDate().toLocaleDateString(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+export function fmtDateTime(ts?: { toDate?: () => Date } | null, fallback = '—'): string {
+  if (!ts?.toDate) return fallback;
+  return ts.toDate().toLocaleString(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/** Money, always with its unit. There is no currency formatter in this repo. */
+export function etb(value: number): string {
+  return `${Math.round(value).toLocaleString()} ETB`;
+}
+
+/* --------------------------------------------------------- page furniture */
+
+/**
+ * Loading, and the two banner tones.
+ *
+ * Every page hand-wrote these — twelve loading divs and two flavours of error
+ * box, drifting in padding and wording. They say nothing a component cannot.
+ */
+export const FleetLoading: React.FC<{ label?: string }> = ({ label = 'Loading…' }) => (
+  <div
+    className="p-12 text-center text-xs text-slate-500 dark:text-slate-400"
+    role="status"
+    aria-live="polite"
+  >
+    {label}
+  </div>
+);
+
+export const FleetBanner: React.FC<{
+  tone: 'error' | 'warn' | 'info' | 'success';
+  children: React.ReactNode;
+  icon?: LucideIcon;
+}> = ({ tone, children, icon: Icon }) => {
+  const skin = {
+    error: 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300',
+    warn: 'border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300',
+    info: 'border-slate-300 dark:border-slate-700 bg-slate-100/60 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300',
+    success: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300',
+  }[tone];
+
+  return (
+    <div className={`rounded-2xl border p-4 text-xs flex items-start gap-2 ${skin}`} role="alert">
+      {Icon && <Icon className="w-4 h-4 shrink-0 mt-0.5" />}
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+};
+
+/**
+ * A segmented filter strip.
+ *
+ * Answers "what is out right now" in one click, where the register previously
+ * needed a dropdown hunted through five options. Counts sit in the tab because a
+ * filter that turns out to be empty should say so before it is chosen, not
+ * after.
+ */
+export interface FleetTab<T extends string> {
+  id: T;
+  label: string;
+  count?: number;
+}
+
+export function FleetTabs<T extends string>({
+  tabs,
+  active,
+  onChange,
+  ariaLabel,
+}: {
+  tabs: FleetTab<T>[];
+  active: T;
+  onChange: (id: T) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label={ariaLabel}
+      className="flex items-center gap-1 overflow-x-auto scrollbar-none"
+    >
+      {tabs.map((t) => {
+        const on = t.id === active;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => onChange(t.id)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-colors border ${
+              on
+                ? 'bg-emerald-600 text-white border-transparent'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            {t.label}
+            {t.count !== undefined && (
+              <span className={`ml-2 ${on ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>
+                {t.count}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 

@@ -1,5 +1,5 @@
 import React, { useState, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 
 // Lazy-loaded GIS Lab Page
 const InvestmentMapLabPage = lazy(() => import('./pages/InvestmentMapLabPage'));
@@ -450,7 +450,13 @@ export default function App() {
                       <Route path="fuel" element={<AdminFleetFuelPage />} />
                       <Route path="compliance" element={<AdminFleetCompliancePage />} />
                       <Route path="reports" element={<AdminFleetReportsPage />} />
-                      <Route path="map" element={<AdminFleetMapPage />} />
+                      {/* The map is a view of the register now, not a
+                          destination. Kept so existing links still land
+                          somewhere sensible rather than on a 404. */}
+                      <Route
+                        path="map"
+                        element={<Navigate to="/admin/fleet/register?view=map" replace />}
+                      />
                     </Route>
                     <Route
                       path="settings"

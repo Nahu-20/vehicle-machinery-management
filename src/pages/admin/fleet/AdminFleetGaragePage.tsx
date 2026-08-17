@@ -26,6 +26,9 @@ import {
   FleetEmptyState,
   FleetButton,
   StatCard,
+  fmtDay as fmtDate,
+  FleetLoading,
+  FleetBanner,
 } from '../../../features/fleet/components/FleetUI';
 import { CANONICAL_ZONE_METADATA } from '../../../features/investment-map/constants/canonicalZones';
 
@@ -39,14 +42,6 @@ const NEXT_LABELS: Record<FleetWorkOrderStatus, string> = {
   cancelled: 'Cancel',
 };
 
-function fmtDate(ts?: { toDate?: () => Date } | null): string {
-  if (!ts?.toDate) return '—';
-  return ts.toDate().toLocaleDateString(undefined, {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 /**
  * The garage queue.
@@ -247,10 +242,7 @@ export function AdminFleetGaragePage() {
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-xs text-red-700 dark:text-red-300 flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{error}</span>
-        </div>
+        <FleetBanner tone="error" icon={AlertTriangle}><span>{error}</span></FleetBanner>
       )}
 
       {!loading && mismatched.length > 0 && (
@@ -304,7 +296,7 @@ export function AdminFleetGaragePage() {
         }
       >
         {loading ? (
-          <div className="p-12 text-center text-xs text-slate-500 dark:text-slate-400">Loading…</div>
+          <FleetLoading />
         ) : rows.length === 0 ? (
           <FleetEmptyState
             icon={showClosed ? Wrench : CheckCircle2}

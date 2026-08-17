@@ -37,18 +37,13 @@ import {
   FleetPanel,
   FleetEmptyState,
   StatusPill,
+  fmtDay,
+  FleetLoading,
+  FleetBanner,
 } from '../../../features/fleet/components/FleetUI';
 import { CANONICAL_ZONE_METADATA } from '../../../features/investment-map/constants/canonicalZones';
 
 /** Short date for expiry and service rows. */
-function fmtDay(ts?: { toDate?: () => Date } | null): string {
-  if (!ts?.toDate) return '—';
-  return ts.toDate().toLocaleDateString(undefined, {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 /**
  * Operational reports.
@@ -162,7 +157,7 @@ export function AdminFleetReportsPage() {
   if (loading) {
     return (
       <FleetPanel title="Building reports…">
-        <div className="p-12 text-center text-xs text-slate-500 dark:text-slate-400">Loading…</div>
+        <FleetLoading />
       </FleetPanel>
     );
   }
@@ -170,9 +165,7 @@ export function AdminFleetReportsPage() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs text-amber-800 dark:text-amber-300">
-          {error}
-        </div>
+        <FleetBanner tone="warn">{error}</FleetBanner>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

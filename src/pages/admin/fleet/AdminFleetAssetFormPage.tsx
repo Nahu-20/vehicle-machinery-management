@@ -17,7 +17,14 @@ import {
   METER_UNIT_LABEL,
   isRoadVehicle,
 } from '../../../features/fleet/constants/fleetVocabulary';
-import { FleetPanel, FleetButton } from '../../../features/fleet/components/FleetUI';
+import {
+  FleetPanel,
+  FleetButton,
+  INPUT,
+  LABEL,
+  FleetLoading,
+  FleetBanner,
+} from '../../../features/fleet/components/FleetUI';
 import { AssetImage } from '../../../features/fleet/components/AssetImage';
 import {
   CANONICAL_ZONE_IDS,
@@ -38,10 +45,6 @@ const TYPE_LABELS: Record<FleetAssetType, string> = {
   other: 'Other',
 };
 
-const INPUT =
-  'w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-emerald-500';
-const LABEL =
-  'block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5';
 
 function toDateInput(ts?: Timestamp | null): string {
   if (!ts?.toDate) return '';
@@ -224,7 +227,7 @@ export function AdminFleetAssetFormPage() {
   if (loading) {
     return (
       <FleetPanel title="Loading asset…">
-        <div className="p-12 text-center text-xs text-slate-500 dark:text-slate-400">Loading…</div>
+        <FleetLoading />
       </FleetPanel>
     );
   }
@@ -243,10 +246,7 @@ export function AdminFleetAssetFormPage() {
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-xs text-red-700 dark:text-red-300 flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{error}</span>
-        </div>
+        <FleetBanner tone="error" icon={AlertTriangle}><span>{error}</span></FleetBanner>
       )}
 
       <FleetPanel

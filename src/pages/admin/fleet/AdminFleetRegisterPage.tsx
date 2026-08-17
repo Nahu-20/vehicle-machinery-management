@@ -1,6 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Truck, Search, Plus, AlertTriangle, RefreshCw, Wrench } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import {
+  Truck,
+  Search,
+  Plus,
+  AlertTriangle,
+  RefreshCw,
+  Wrench,
+  X,
+  Rows3,
+  Map as MapIcon,
+} from 'lucide-react';
 import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
 import { hasPermission } from '../../../lib/permissions';
 import { listAssets } from '../../../features/fleet/services/fleetService';
@@ -22,16 +32,21 @@ import {
   FleetPanel,
   FleetEmptyState,
   FleetButton,
+  FleetLoading,
+  FleetBanner,
+  INPUT,
+  SELECT_CLASSES,
+  STATUS_LABELS,
+  FleetTabs,
+  type FleetTab,
 } from '../../../features/fleet/components/FleetUI';
 import { AssetImage } from '../../../features/fleet/components/AssetImage';
+import { AdminFleetMapPage } from './AdminFleetMapPage';
 import {
   CANONICAL_ZONE_IDS,
   CANONICAL_ZONE_METADATA,
   type CanonicalZoneId,
 } from '../../../features/investment-map/constants/canonicalZones';
-
-const SELECT_CLASSES =
-  'px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500';
 
 const TYPE_LABELS: Record<FleetAssetType, string> = {
   tractor: 'Tractor',
@@ -46,18 +61,28 @@ const TYPE_LABELS: Record<FleetAssetType, string> = {
   other: 'Other',
 };
 
-const STATUS_LABELS: Record<FleetAssetStatus, string> = {
-  available: 'Available',
-  assigned: 'In use',
-  in_maintenance: 'In garage',
-  awaiting_parts: 'Awaiting parts',
-  out_of_service: 'Out of service',
-  disposed: 'Disposed',
-};
-
 export function AdminFleetRegisterPage() {
   const { staffUser } = useStaffAuthorizationContext();
   const canManage = hasPermission(staffUser, 'fleet.asset.manage');
+
+  /**
+   * Table or map, held in the URL.
+   *
+   * The map used to be its own tab, which made it a destination — somewhere you
+   * went instead of the register. It is not: it is the same list of machines
+   * drawn by zone rather than in rows, and the questions it answers ("what has
+   * Arsi got") are register questions. Keeping the choice in the query string
+   * means a map view can still be linked to and bookmarked, which a tab you have
+   * to click your way back to could not offer either.
+   */
+  const [params, setParams] = useSearchParams();
+  const mapView = params.get('view') === 'map';
+  const setMapView = (on: boolean) => {
+    const next = new URLSearchParams(params);
+    if (on) next.set('view', 'map');
+    else next.delete('view');
+    setParams(next, { replace: true });
+  };
 
   const [assets, setAssets] = useState<FleetAsset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,10 +94,45 @@ export function AdminFleetRegisterPage() {
   const [serviceDueOnly, setServiceDueOnly] = useState(false);
   const [search, setSearch] = useState('');
 
+  /**
+   * The typed value and the value the query actually uses.
+   *
+   * These were one thing, which meant the register refetched on every
+   * keystroke: eight requests to type a plate number, each one racing the last.
+   * The input stays instant and the query follows a beat behind.
+   */
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search), 250);
+    return () => clearTimeout(id);
+  }, [search]);
+
+  /**
+   * The tab strip answers "what is out right now" in one click.
+   *
+   * It writes through to the same status filter the dropdown uses rather than
+   * being a second, parallel notion of state — two filters that can disagree
+   * about the same list is how a register starts showing one thing and counting
+   * another.
+   */
+  const view = status;
+  const setView = (next: FleetAssetStatus | 'all') => setStatus(next);
+
   const filters: FleetAssetFilters = useMemo(
-    () => ({ zoneId, assetType, status, serviceDueOnly, search }),
-    [zoneId, assetType, status, serviceDueOnly, search]
+    () => ({ zoneId, assetType, status, serviceDueOnly, search: debouncedSearch }),
+    [zoneId, assetType, status, serviceDueOnly, debouncedSearch]
   );
+
+  const filtersActive =
+    zoneId !== 'all' || assetType !== 'all' || status !== 'all' || serviceDueOnly || search.trim() !== '';
+
+  const clearFilters = () => {
+    setZoneId('all');
+    setAssetType('all');
+    setStatus('all');
+    setServiceDueOnly(false);
+    setSearch('');
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -93,8 +153,50 @@ export function AdminFleetRegisterPage() {
 
   const dueCount = useMemo(() => assets.filter(isServiceDue).length, [assets]);
 
+  const VIEWS: FleetTab<FleetAssetStatus | 'all'>[] = [
+    { id: 'all', label: 'All' },
+    { id: 'assigned', label: 'In use' },
+    { id: 'available', label: 'Available' },
+    { id: 'in_maintenance', label: 'In garage' },
+    { id: 'out_of_service', label: 'Off the road' },
+    { id: 'disposed', label: 'Retired' },
+  ];
+
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <FleetTabs
+          tabs={VIEWS}
+          active={view}
+          onChange={setView}
+          ariaLabel="Filter the register by what each machine is doing"
+        />
+        <div className="flex items-center gap-1 shrink-0">
+          <FleetButton
+            variant={mapView ? 'secondary' : 'primary'}
+            icon={Rows3}
+            onClick={() => setMapView(false)}
+          >
+            Table
+          </FleetButton>
+          <FleetButton
+            variant={mapView ? 'primary' : 'secondary'}
+            icon={MapIcon}
+            onClick={() => setMapView(true)}
+          >
+            Map
+          </FleetButton>
+        </div>
+      </div>
+
+      {/* The map draws the whole register by zone. The filters above do not
+          apply to it: a map with half its pins hidden reads as a map of an
+          emptier fleet, which is worse than no map. */}
+      {mapView && <AdminFleetMapPage />}
+
+      {!mapView && (
+        <>
+
       {/* Filters */}
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
@@ -104,7 +206,7 @@ export function AdminFleetRegisterPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by ID, make, model, plate or station…"
-              className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-emerald-500"
+              className={`${INPUT} pl-9`}
             />
           </div>
 
@@ -157,6 +259,12 @@ export function AdminFleetRegisterPage() {
             Service due only
           </label>
 
+          {filtersActive && (
+            <FleetButton variant="secondary" icon={X} onClick={clearFilters}>
+              Clear filters
+            </FleetButton>
+          )}
+
           <FleetButton variant="secondary" icon={RefreshCw} onClick={() => void load()}>
             Refresh
           </FleetButton>
@@ -170,10 +278,7 @@ export function AdminFleetRegisterPage() {
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{error}</span>
-        </div>
+        <FleetBanner tone="warn" icon={AlertTriangle}><span>{error}</span></FleetBanner>
       )}
 
       <FleetPanel
@@ -185,16 +290,14 @@ export function AdminFleetRegisterPage() {
         }
       >
         {loading ? (
-          <div className="p-12 text-center text-xs text-slate-500 dark:text-slate-400">
-            Loading register…
-          </div>
+          <FleetLoading label="Loading register…" />
         ) : assets.length === 0 ? (
           <FleetEmptyState
             icon={Truck}
             title="No assets match"
             message={
               search || zoneId !== 'all' || status !== 'all' || assetType !== 'all' || serviceDueOnly
-                ? 'Nothing matches these filters. Clear them to see the whole register.'
+                ? 'Nothing matches these filters. Use Clear filters to see the whole register.'
                 : 'The register is empty. Add the first vehicle or machine to begin.'
             }
             action={
@@ -300,6 +403,8 @@ export function AdminFleetRegisterPage() {
           </div>
         )}
       </FleetPanel>
+        </>
+      )}
     </div>
   );
 }

@@ -8,6 +8,8 @@ import {
   MapPin,
   ArrowRight,
   Clock,
+  Fuel,
+  ShieldAlert,
 } from 'lucide-react';
 import { listAssets, summariseFleet } from '../../../features/fleet/services/fleetService';
 import { listWorkOrders, countGrounded } from '../../../features/fleet/services/fleetWorkOrderService';
@@ -20,7 +22,23 @@ import type {
   FleetAssignment,
   FleetWorkOrder,
 } from '../../../features/fleet/types/fleet';
-import { StatCard, FleetPanel, FleetEmptyState } from '../../../features/fleet/components/FleetUI';
+import {
+  StatCard,
+  FleetPanel,
+  FleetEmptyState,
+  FleetLoading,
+  FleetBanner,
+  etb,
+} from '../../../features/fleet/components/FleetUI';
+import { listFuelLogs } from '../../../features/fleet/services/fleetFuelService';
+import { listDrivers } from '../../../features/fleet/services/fleetDriverService';
+import type { FleetDriver, FleetFuelLog } from '../../../features/fleet/types/fleet';
+import {
+  assessAssetCompliance,
+  assessDriverCompliance,
+  totalFuelSpend,
+  worstSeverity,
+} from '../../../features/fleet/constants/fleetVocabulary';
 import { CANONICAL_ZONE_METADATA } from '../../../features/investment-map/constants/canonicalZones';
 
 /**
@@ -35,6 +53,8 @@ export function AdminFleetDashboardPage() {
   const [assets, setAssets] = useState<FleetAsset[]>([]);
   const [workOrders, setWorkOrders] = useState<FleetWorkOrder[]>([]);
   const [activeAssignments, setActiveAssignments] = useState<FleetAssignment[]>([]);
+  const [fuelLogs, setFuelLogs] = useState<FleetFuelLog[]>([]);
+  const [drivers, setDrivers] = useState<FleetDriver[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,15 +64,21 @@ export function AdminFleetDashboardPage() {
       try {
         // Faults and open assignments load alongside the register so the headline
         // counts come from records rather than sitting at zero.
-        const [all, faults, act] = await Promise.all([
+        const [all, faults, act, fuel, driverRows] = await Promise.all([
           listAssets(),
           listWorkOrders().catch(() => [] as FleetWorkOrder[]),
           listActiveAssignments().catch(() => [] as FleetAssignment[]),
+          // Both non-critical: the overview still answers its original question
+          // if either fails, it just cannot add the newer two tiles.
+          listFuelLogs().catch(() => [] as FleetFuelLog[]),
+          listDrivers().catch(() => [] as FleetDriver[]),
         ]);
         if (!cancelled) {
           setAssets(all);
           setWorkOrders(faults);
           setActiveAssignments(act);
+          setFuelLogs(fuel);
+          setDrivers(driverRows);
         }
       } catch (err) {
         if (!cancelled) {
@@ -71,6 +97,30 @@ export function AdminFleetDashboardPage() {
     () => summariseFleet(assets, countOverdue(activeAssignments), countGrounded(workOrders)),
     [assets, activeAssignments, workOrders]
   );
+
+  /** Fuel bought since the first of this month. */
+  const fuelThisMonth = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    return totalFuelSpend(fuelLogs.filter((l) => l.filledAt.toMillis() >= start));
+  }, [fuelLogs]);
+
+  /**
+   * Vehicles and drivers with a document that needs attention.
+   *
+   * Counted together, because whoever opens this page in the morning is going to
+   * chase both from the same desk — and counted at all, because until the
+   * compliance work landed a vehicle nobody had insured was indistinguishable
+   * from one that was covered.
+   */
+  const complianceRisk = useMemo(() => {
+    const bad = (items: ReturnType<typeof assessAssetCompliance>) =>
+      items.length > 0 && worstSeverity(items) !== 'ok';
+    return (
+      assets.filter((a) => bad(assessAssetCompliance(a))).length +
+      drivers.filter((d) => bad(assessDriverCompliance(d))).length
+    );
+  }, [assets, drivers]);
 
   const inService = summary.byStatus.available + summary.byStatus.assigned;
   const down =
@@ -99,9 +149,7 @@ export function AdminFleetDashboardPage() {
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs text-amber-800 dark:text-amber-300">
-          {error}
-        </div>
+        <FleetBanner tone="warn">{error}</FleetBanner>
       )}
 
       {!loading && (summary.groundedCount > 0 || summary.overdueReturnCount > 0) && (
@@ -157,6 +205,24 @@ export function AdminFleetDashboardPage() {
         />
       </div>
 
+      {/* What the module learned to track after the first round: what the fleet
+          costs to run, and whether its paperwork is in order. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <StatCard
+          label="Fuel this month"
+          value={etb(fuelThisMonth)}
+          icon={Fuel}
+          hint="Recorded from slips — repairs are counted apart"
+        />
+        <StatCard
+          label="Compliance risk"
+          value={complianceRisk}
+          icon={ShieldAlert}
+          tone={complianceRisk > 0 ? 'warn' : 'good'}
+          hint="Vehicles and drivers: lapsed, expiring or never recorded"
+        />
+      </div>
+
       <FleetPanel
         title="Availability by zone"
         description="Where the machines are. Disposed assets are excluded so a zone is not made to look better resourced than it is."
@@ -170,9 +236,7 @@ export function AdminFleetDashboardPage() {
         }
       >
         {loading ? (
-          <div className="p-12 text-center text-xs text-slate-500 dark:text-slate-400">
-            Loading…
-          </div>
+          <FleetLoading />
         ) : summary.byZone.length === 0 ? (
           <FleetEmptyState
             icon={MapPin}

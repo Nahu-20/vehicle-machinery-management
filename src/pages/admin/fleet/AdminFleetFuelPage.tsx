@@ -43,20 +43,17 @@ import {
   FleetBar,
   FleetColumnChart,
   FleetSparkline,
+  INPUT,
+  LABEL,
+  fmtDay,
+  etb,
+  FleetLoading,
+  FleetBanner,
 } from '../../../features/fleet/components/FleetUI';
 import { CANONICAL_ZONE_METADATA } from '../../../features/investment-map/constants/canonicalZones';
 
-const INPUT =
-  'w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-emerald-500';
-const LABEL =
-  'block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5';
 
-const fmtDay = (ts?: { toDate?: () => Date } | null): string =>
-  ts?.toDate
-    ? ts.toDate().toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-    : '—';
 
-const etb = (n: number) => `${Math.round(n).toLocaleString()} ETB`;
 
 /** The last twelve months, oldest first. */
 function lastTwelveMonths(): { key: string; label: string; short: string; start: Date; end: Date }[] {
@@ -402,17 +399,11 @@ export function AdminFleetFuelPage() {
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-xs text-red-700 dark:text-red-300 flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{error}</span>
-        </div>
+        <FleetBanner tone="error" icon={AlertTriangle}><span>{error}</span></FleetBanner>
       )}
 
       {notice && (
-        <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2">
-          <Info className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{notice}</span>
-        </div>
+        <FleetBanner tone="success" icon={Info}><span>{notice}</span></FleetBanner>
       )}
 
       {/* ---- record a fill */}
@@ -597,7 +588,7 @@ export function AdminFleetFuelPage() {
 
       {loading ? (
         <FleetPanel title="Loading fuel records…">
-          <div className="p-12 text-center text-xs text-slate-500 dark:text-slate-400">Loading…</div>
+          <FleetLoading />
         </FleetPanel>
       ) : (
         <>

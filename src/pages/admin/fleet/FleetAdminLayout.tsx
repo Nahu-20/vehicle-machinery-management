@@ -8,7 +8,6 @@ import {
   Fuel,
   ShieldCheck,
   BarChart3,
-  Map as MapIcon,
   Info,
 } from 'lucide-react';
 import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
@@ -90,14 +89,6 @@ export function FleetAdminLayout() {
       end: false,
       icon: BarChart3,
       visible: canReport,
-    },
-    {
-      id: 'map',
-      label: 'Zone Map',
-      to: '/admin/fleet/map',
-      end: false,
-      icon: MapIcon,
-      visible: canView,
     },
   ];
 
