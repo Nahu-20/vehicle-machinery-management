@@ -199,6 +199,11 @@ export interface Office {
   email: string;
   address: string;
   operatingHours: string;
+  region?: 'central' | 'east' | 'west' | 'south';
+  extensionLead?: string;
+  hotline?: string;
+  city?: string;
+  gpsCoords?: string;
 }
 
 export interface Publication {
