@@ -491,3 +491,144 @@ export function assessDriverForAsset(
   return { allowed: true };
 }
 
+/* ---------------------------------------------------------- compliance */
+
+/**
+ * Where a document stands.
+ *
+ * `unknown` is the value this whole section exists for. isExpired and
+ * isExpiringSoon both return false for a missing date, which is correct for
+ * each of them on its own and disastrous when they are the only two questions
+ * asked: a pickup with no insurance date ever typed in passes both and reads
+ * exactly like a pickup insured until next year. The register was reporting
+ * "nothing lapsing" over vehicles nobody had checked.
+ *
+ * So absent is a state, not a silence. `unknown` says the Bureau does not know,
+ * which is a different problem from `lapsed` and needs a different person to
+ * fix it — a clerk with a filing cabinet rather than a broker with an invoice.
+ */
+export type ComplianceSeverity = 'ok' | 'due_soon' | 'lapsed' | 'unknown';
+
+export type ComplianceKind = 'insurance' | 'inspection' | 'licence';
+
+export interface ComplianceItem {
+  kind: ComplianceKind;
+  label: string;
+  expiry: Timestampish | null;
+  severity: ComplianceSeverity;
+  /** Days until expiry; negative is overdue, null when no date is held. */
+  days: number | null;
+}
+
+/** The shape both Firestore Timestamps and the test fixtures satisfy. */
+type Timestampish = { toDate?: () => Date };
+
+export const COMPLIANCE_LABELS: Record<ComplianceSeverity, string> = {
+  ok: 'Valid',
+  due_soon: 'Expiring',
+  lapsed: 'Lapsed',
+  unknown: 'Not recorded',
+};
+
+export const COMPLIANCE_PILL_CLASSES: Record<ComplianceSeverity, string> = {
+  ok: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+  due_soon: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30',
+  lapsed: 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30',
+  unknown: 'bg-slate-500/20 text-slate-600 dark:text-slate-400 border-slate-500/30',
+};
+
+/** Worst first, so a list can be sorted by how much it matters. */
+export const COMPLIANCE_ORDER: Record<ComplianceSeverity, number> = {
+  lapsed: 0,
+  unknown: 1,
+  due_soon: 2,
+  ok: 3,
+};
+
+function gradeExpiry(expiry: Timestampish | null | undefined, days: number): ComplianceSeverity {
+  if (!expiry?.toDate) return 'unknown';
+  if (isExpired(expiry)) return 'lapsed';
+  if (isExpiringSoon(expiry, days)) return 'due_soon';
+  return 'ok';
+}
+
+/**
+ * The documents this machine is expected to carry, and where each one stands.
+ *
+ * Farm machinery returns an empty list rather than a row of `unknown`. A plough
+ * has no insurance to lapse, and reporting one as missing paperwork would bury
+ * the pickups that genuinely are missing it — which is how a warning list stops
+ * being read at all.
+ */
+export function assessAssetCompliance(
+  asset: Pick<FleetAsset, 'assetType' | 'status' | 'insuranceExpiry' | 'inspectionExpiry'>,
+  days = 30
+): ComplianceItem[] {
+  // A retired machine is out of the register and needs no cover.
+  if (asset.status === 'disposed') return [];
+  if (!isRoadVehicle(asset.assetType)) return [];
+
+  return [
+    {
+      kind: 'insurance' as const,
+      label: 'Insurance',
+      expiry: asset.insuranceExpiry ?? null,
+      severity: gradeExpiry(asset.insuranceExpiry, days),
+      days: daysUntil(asset.insuranceExpiry),
+    },
+    {
+      kind: 'inspection' as const,
+      label: 'Roadworthiness',
+      expiry: asset.inspectionExpiry ?? null,
+      severity: gradeExpiry(asset.inspectionExpiry, days),
+      days: daysUntil(asset.inspectionExpiry),
+    },
+  ];
+}
+
+/**
+ * A driver's licence, in the same shape as a vehicle's documents.
+ *
+ * Same shape on purpose: an office chasing renewals is doing one job, and
+ * splitting it across two screens because one document happens to belong to a
+ * person is an accident of the data model rather than anything the work needs.
+ */
+export function assessDriverCompliance(
+  driver: Pick<FleetDriver, 'status' | 'licenceNumber' | 'licenceExpiry'>,
+  days = 30
+): ComplianceItem[] {
+  // Someone who has left holds nothing and drives nothing.
+  if (driver.status === 'inactive') return [];
+
+  const state = licenceState(driver, days);
+  return [
+    {
+      kind: 'licence',
+      label: 'Driving licence',
+      expiry: driver.licenceExpiry ?? null,
+      severity:
+        state === 'none'
+          ? 'unknown'
+          : state === 'lapsed'
+          ? 'lapsed'
+          : state === 'expiring'
+          ? 'due_soon'
+          : 'ok',
+      days: daysUntil(driver.licenceExpiry),
+    },
+  ];
+}
+
+/** The worst of a set, for a single badge on a row. Nothing at all reads as ok. */
+export function worstSeverity(items: ComplianceItem[]): ComplianceSeverity {
+  return items.reduce<ComplianceSeverity>(
+    (worst, item) => (COMPLIANCE_ORDER[item.severity] < COMPLIANCE_ORDER[worst] ? item.severity : worst),
+    'ok'
+  );
+}
+
+/** Whether this needs somebody to do something about it. */
+export function needsAttention(severity: ComplianceSeverity): boolean {
+  return severity !== 'ok';
+}
+

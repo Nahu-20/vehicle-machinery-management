@@ -5,6 +5,7 @@ import {
   Truck,
   Users,
   Wrench,
+  ShieldCheck,
   BarChart3,
   Map as MapIcon,
   Info,
@@ -61,6 +62,16 @@ export function FleetAdminLayout() {
       end: false,
       icon: Wrench,
       visible: canMaintain,
+    },
+    {
+      // Between the garage and the reports: it is work to be done, like the
+      // garage queue, rather than a figure to be read at month end.
+      id: 'compliance',
+      label: 'Compliance',
+      to: '/admin/fleet/compliance',
+      end: false,
+      icon: ShieldCheck,
+      visible: canView,
     },
     {
       id: 'reports',

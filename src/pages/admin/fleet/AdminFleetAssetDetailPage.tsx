@@ -47,6 +47,7 @@ import {
   MANUAL_ASSET_STATUSES,
   humanise,
   assessDriverForAsset,
+  assessAssetCompliance,
   licenceState,
 } from '../../../features/fleet/constants/fleetVocabulary';
 import {
@@ -57,6 +58,7 @@ import {
   FleetButton,
   FleetEmptyState,
   LicencePill,
+  CompliancePill,
 } from '../../../features/fleet/components/FleetUI';
 import {
   changeAssetStatus,
@@ -222,6 +224,11 @@ export function AdminFleetAssetDetailPage() {
     const elsewhere = drivers.filter((d) => d.zoneId !== asset.zoneId);
     return [...here, ...elsewhere];
   }, [drivers, asset]);
+
+  const complianceItems = useMemo(
+    () => (asset ? assessAssetCompliance(asset) : []),
+    [asset]
+  );
 
   const chosenDriver = useMemo(
     () => drivers.find((d) => d.driverId === driverId) ?? null,
@@ -586,8 +593,43 @@ export function AdminFleetAssetDetailPage() {
             <div className="text-slate-700 dark:text-slate-200 font-semibold mt-0.5">
               {fmtDate(asset.insuranceExpiry)}
             </div>
+            {asset.insurancePolicyNumber && (
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                {asset.insurancePolicyNumber}
+                {asset.insurer ? ` · ${asset.insurer}` : ''}
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Documents, said out loud rather than left to a blank date field.
+            An empty date is not the same as a valid one, and this is the page
+            somebody opens when they are standing next to the vehicle. */}
+        {complianceItems.length > 0 && (
+          <div className="mt-5 pt-5 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-x-6 gap-y-2">
+            {complianceItems.map((item) => (
+              <span key={item.kind} className="inline-flex items-center gap-2">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">{item.label}</span>
+                <CompliancePill
+                  severity={item.severity}
+                  detail={
+                    item.severity === 'lapsed' && item.days !== null
+                      ? `${Math.abs(item.days)}d ago`
+                      : item.severity === 'due_soon' && item.days !== null
+                      ? `${item.days}d`
+                      : undefined
+                  }
+                />
+              </span>
+            ))}
+            <Link
+              to="/admin/fleet/compliance"
+              className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
+            >
+              Compliance →
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Issue */}

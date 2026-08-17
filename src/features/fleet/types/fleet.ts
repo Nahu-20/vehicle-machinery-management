@@ -115,9 +115,33 @@ export interface FleetAsset {
   serviceIntervalMeter?: number;
   lastServiceMeter?: number;
 
-  /** Road vehicles only; drive the compliance warnings. */
+  /**
+   * Road vehicles only; drive the compliance warnings.
+   *
+   * An expiry on its own answers "is it still valid" and nothing else. When a
+   * vehicle is stopped, or a claim is made, the question is which policy and
+   * with whom — so the number and the insurer are held beside the date rather
+   * than living in somebody's filing cabinet.
+   *
+   * Note that absent is NOT the same as valid. See assessAssetCompliance.
+   */
   insuranceExpiry?: Timestamp | null;
+  insurancePolicyNumber?: string;
+  insurer?: string;
+  /** What the last renewal cost. Annual, so it is the figure a budget needs. */
+  insuranceCost?: number;
+
   inspectionExpiry?: Timestamp | null;
+  inspectionCertificateNumber?: string;
+
+  /**
+   * The ownership booklet — the libre.
+   *
+   * Never expires, so it takes no part in the compliance checks, but it is the
+   * document asked for when a vehicle is transferred or disposed of, and the
+   * register is where anyone would look for it.
+   */
+  libreNumber?: string;
 
   /**
    * Photograph of this machine.

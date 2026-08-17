@@ -7,12 +7,15 @@ import type {
   FleetWorkOrderStatus,
 } from '../types/fleet';
 import {
+  COMPLIANCE_LABELS,
+  COMPLIANCE_PILL_CLASSES,
   DRIVER_STATUS_LABELS,
   DRIVER_STATUS_PILL_CLASSES,
   LICENCE_LABELS,
   LICENCE_PILL_CLASSES,
   SEVERITY_PILL_CLASSES,
   STATUS_PILL_CLASSES,
+  type ComplianceSeverity,
   type LicenceState,
 } from '../constants/fleetVocabulary';
 
@@ -108,6 +111,23 @@ export const LicencePill: React.FC<{ state: LicenceState; detail?: string }> = (
   <span className={`${PILL_BASE} ${LICENCE_PILL_CLASSES[state]}`}>
     <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" aria-hidden="true" />
     {detail ? `${LICENCE_LABELS[state]} · ${detail}` : LICENCE_LABELS[state]}
+  </span>
+);
+
+/**
+ * Where one document stands.
+ *
+ * 'Not recorded' gets a pill of its own rather than an empty cell, because an
+ * empty cell reads as nothing to worry about and that is the exact mistake this
+ * vocabulary exists to stop.
+ */
+export const CompliancePill: React.FC<{ severity: ComplianceSeverity; detail?: string }> = ({
+  severity,
+  detail,
+}) => (
+  <span className={`${PILL_BASE} ${COMPLIANCE_PILL_CLASSES[severity]}`}>
+    <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" aria-hidden="true" />
+    {detail ? `${COMPLIANCE_LABELS[severity]} · ${detail}` : COMPLIANCE_LABELS[severity]}
   </span>
 );
 

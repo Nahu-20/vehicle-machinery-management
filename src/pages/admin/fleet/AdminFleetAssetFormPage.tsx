@@ -91,7 +91,12 @@ export function AdminFleetAssetFormPage() {
   const [serviceIntervalMeter, setServiceIntervalMeter] = useState('');
   const [lastServiceMeter, setLastServiceMeter] = useState('');
   const [insuranceExpiry, setInsuranceExpiry] = useState('');
+  const [insurancePolicyNumber, setInsurancePolicyNumber] = useState('');
+  const [insurer, setInsurer] = useState('');
+  const [insuranceCost, setInsuranceCost] = useState('');
   const [inspectionExpiry, setInspectionExpiry] = useState('');
+  const [inspectionCertificateNumber, setInspectionCertificateNumber] = useState('');
+  const [libreNumber, setLibreNumber] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -125,7 +130,12 @@ export function AdminFleetAssetFormPage() {
         );
         setLastServiceMeter(asset.lastServiceMeter ? String(asset.lastServiceMeter) : '');
         setInsuranceExpiry(toDateInput(asset.insuranceExpiry));
+        setInsurancePolicyNumber(asset.insurancePolicyNumber ?? '');
+        setInsurer(asset.insurer ?? '');
+        setInsuranceCost(asset.insuranceCost ? String(asset.insuranceCost) : '');
         setInspectionExpiry(toDateInput(asset.inspectionExpiry));
+        setInspectionCertificateNumber(asset.inspectionCertificateNumber ?? '');
+        setLibreNumber(asset.libreNumber ?? '');
         setImageUrl(asset.imageUrl ?? '');
         setNotes(typeof asset.notes === 'string' ? asset.notes : asset.notes?.en ?? '');
         setVersion(asset.version ?? 1);
@@ -174,7 +184,14 @@ export function AdminFleetAssetFormPage() {
       serviceIntervalMeter: serviceIntervalMeter ? Number(serviceIntervalMeter) : undefined,
       lastServiceMeter: lastServiceMeter ? Number(lastServiceMeter) : undefined,
       insuranceExpiry: roadVehicle ? fromDateInput(insuranceExpiry) : null,
+      insurancePolicyNumber: roadVehicle ? insurancePolicyNumber.trim() || undefined : undefined,
+      insurer: roadVehicle ? insurer.trim() || undefined : undefined,
+      insuranceCost: roadVehicle && insuranceCost.trim() ? Number(insuranceCost) : undefined,
       inspectionExpiry: roadVehicle ? fromDateInput(inspectionExpiry) : null,
+      inspectionCertificateNumber: roadVehicle
+        ? inspectionCertificateNumber.trim() || undefined
+        : undefined,
+      libreNumber: roadVehicle ? libreNumber.trim() || undefined : undefined,
       imageUrl: imageUrl.trim() || undefined,
       notes: notes.trim() ? { en: notes.trim() } : undefined,
     };
@@ -392,7 +409,7 @@ export function AdminFleetAssetFormPage() {
       {roadVehicle && (
         <FleetPanel
           title="Road documents"
-          description="Shown for road vehicles only — tractors and machinery carry neither."
+          description="Shown for road vehicles only — tractors and machinery carry neither. Leaving a date blank does not mean the vehicle is covered; it is reported as not recorded."
         >
           <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
@@ -405,6 +422,20 @@ export function AdminFleetAssetFormPage() {
               />
             </div>
             <div>
+              <label className={LABEL}>Libre number</label>
+              <input
+                value={libreNumber}
+                onChange={(e) => setLibreNumber(e.target.value)}
+                placeholder="LB-3-000000"
+                className={`${INPUT} font-mono`}
+              />
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                The ownership booklet. Never expires, so it raises no warnings.
+              </p>
+            </div>
+            <div />
+
+            <div>
               <label className={LABEL}>Insurance expires</label>
               <input
                 type="date"
@@ -414,11 +445,49 @@ export function AdminFleetAssetFormPage() {
               />
             </div>
             <div>
+              <label className={LABEL}>Policy number</label>
+              <input
+                value={insurancePolicyNumber}
+                onChange={(e) => setInsurancePolicyNumber(e.target.value)}
+                placeholder="EIC/MV/2026/00000"
+                className={`${INPUT} font-mono`}
+              />
+            </div>
+            <div>
+              <label className={LABEL}>Insurer</label>
+              <input
+                value={insurer}
+                onChange={(e) => setInsurer(e.target.value)}
+                placeholder="Ethiopian Insurance Corporation"
+                className={INPUT}
+              />
+            </div>
+
+            <div>
               <label className={LABEL}>Road-worthiness expires</label>
               <input
                 type="date"
                 value={inspectionExpiry}
                 onChange={(e) => setInspectionExpiry(e.target.value)}
+                className={INPUT}
+              />
+            </div>
+            <div>
+              <label className={LABEL}>Certificate number</label>
+              <input
+                value={inspectionCertificateNumber}
+                onChange={(e) => setInspectionCertificateNumber(e.target.value)}
+                placeholder="RW-2026-00000"
+                className={`${INPUT} font-mono`}
+              />
+            </div>
+            <div>
+              <label className={LABEL}>Annual premium</label>
+              <input
+                type="number"
+                value={insuranceCost}
+                onChange={(e) => setInsuranceCost(e.target.value)}
+                placeholder="ETB"
                 className={INPUT}
               />
             </div>

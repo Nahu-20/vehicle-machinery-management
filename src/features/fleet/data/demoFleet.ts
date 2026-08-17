@@ -135,18 +135,24 @@ export const DEMO_ASSETS: FleetAsset[] = [
     meterType: 'kilometres', currentMeter: 162400, serviceIntervalMeter: 5000, lastServiceMeter: 155000,
     plateNumber: '3-B48812 OR', zoneId: 'borena', stationedAt: 'Yabelo Field Station',
     status: 'available', insuranceExpiry: ahead(18), inspectionExpiry: ahead(220), // insurance expiring soon
+    insurancePolicyNumber: 'EIC/MV/2025/44817', insurer: 'Ethiopian Insurance Corporation',
+    insuranceCost: 18400, inspectionCertificateNumber: 'RW-2025-90114', libreNumber: 'LB-3-448120',
   }),
   asset({
     assetId: 'PK-003', assetType: 'pickup', make: 'Isuzu', model: 'D-Max', year: 2022,
     meterType: 'kilometres', currentMeter: 41300, serviceIntervalMeter: 5000, lastServiceMeter: 40000,
     plateNumber: '3-C90233 OR', zoneId: 'west_hararghe', stationedAt: 'Chiro Zonal Office',
     status: 'available', insuranceExpiry: ahead(300), inspectionExpiry: ahead(150),
+    insurancePolicyNumber: 'AIC/MV/2026/10233', insurer: 'Awash Insurance',
+    insuranceCost: 21750, inspectionCertificateNumber: 'RW-2026-11902', libreNumber: 'LB-3-902317',
   }),
   asset({
     assetId: 'PK-004', assetType: 'pickup', make: 'Toyota', model: 'Hilux 2.4D', year: 2018,
     meterType: 'kilometres', currentMeter: 208900, serviceIntervalMeter: 5000, lastServiceMeter: 205000,
     plateNumber: '3-D11907 OR', zoneId: 'guji', stationedAt: 'Negele Borana Office',
     status: 'in_maintenance', insuranceExpiry: ago(12), inspectionExpiry: ahead(90), // insurance lapsed
+    insurancePolicyNumber: 'EIC/MV/2024/33108', insurer: 'Ethiopian Insurance Corporation',
+    insuranceCost: 17200, inspectionCertificateNumber: 'RW-2025-77410', libreNumber: 'LB-3-118094',
   }),
   asset({
     assetId: 'TK-001', assetType: 'truck', make: 'Isuzu', model: 'FSR 700', year: 2020,
@@ -154,13 +160,19 @@ export const DEMO_ASSETS: FleetAsset[] = [
     plateNumber: '3-E55014 OR', zoneId: 'east_shewa', stationedAt: 'Adama Depot',
     status: 'assigned', custodianUid: 'unlinked:Obbo Dassaalanyi Tolaa', custodianName: 'Obbo Dassaalanyi Tolaa',
     custodianDriverId: 'DR-004',
-    insuranceExpiry: ahead(200), inspectionExpiry: ahead(60),
+    // No insurance or roadworthiness recorded at all — deliberately. This is
+    // the case the old checks could not see: a truck in daily use whose
+    // paperwork nobody has ever entered read as compliant, because both
+    // isExpired and isExpiringSoon return false for a date that is not there.
+    libreNumber: 'LB-4-550140',
   }),
   asset({
     assetId: 'TK-002', assetType: 'truck', make: 'Sinotruk', model: 'Howo Water Tanker', year: 2021,
     meterType: 'kilometres', currentMeter: 58300, serviceIntervalMeter: 10000, lastServiceMeter: 50000,
     plateNumber: '3-F72330 OR', zoneId: 'borena', stationedAt: 'Yabelo Field Station',
     status: 'available', insuranceExpiry: ahead(160), inspectionExpiry: ahead(85),
+    insurancePolicyNumber: 'NIC/MV/2026/55240', insurer: 'Nyala Insurance',
+    insuranceCost: 34600, inspectionCertificateNumber: 'RW-2026-20551', libreNumber: 'LB-4-550218',
   }),
   asset({
     assetId: 'MC-001', assetType: 'motorcycle', make: 'Bajaj', model: 'Boxer 150', year: 2023,
@@ -175,12 +187,16 @@ export const DEMO_ASSETS: FleetAsset[] = [
     meterType: 'kilometres', currentMeter: 27800, serviceIntervalMeter: 3000, lastServiceMeter: 24000,
     plateNumber: '3-M31882 OR', zoneId: 'east_hararghe', stationedAt: 'Harar Extension Post',
     status: 'available', insuranceExpiry: ahead(70), inspectionExpiry: ahead(310), // 3800 km since service: due
+    insurancePolicyNumber: 'AIC/MC/2026/70119', insurer: 'Awash Insurance',
+    insuranceCost: 4100, libreNumber: 'LB-1-701193',
   }),
   asset({
     assetId: 'BS-001', assetType: 'bus', make: 'Toyota', model: 'Coaster', year: 2017,
     meterType: 'kilometres', currentMeter: 311500, serviceIntervalMeter: 8000, lastServiceMeter: 308000,
     plateNumber: '3-G44120 OR', zoneId: 'west_shewa', stationedAt: 'Ambo Machinery Yard',
     status: 'available', insuranceExpiry: ahead(95), inspectionExpiry: ahead(25),
+    insurancePolicyNumber: 'EIC/MV/2026/88027', insurer: 'Ethiopian Insurance Corporation',
+    insuranceCost: 41200, inspectionCertificateNumber: 'RW-2025-63308', libreNumber: 'LB-5-880273',
   }),
 
   // --- Static powered equipment: assigned and repaired like anything else

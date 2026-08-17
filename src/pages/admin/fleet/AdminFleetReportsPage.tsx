@@ -22,6 +22,9 @@ import type {
   FleetWorkOrder,
 } from '../../../features/fleet/types/fleet';
 import {
+  assessAssetCompliance,
+  worstSeverity,
+  COMPLIANCE_ORDER,
   formatMeter,
   isServiceDue,
   isExpired,
@@ -94,16 +97,24 @@ export function AdminFleetReportsPage() {
   const serviceDue = useMemo(() => assets.filter(isServiceDue), [assets]);
   const overdueReturns = useMemo(() => active.filter((a) => isOverdue(a)), [active]);
 
-  /** Road documents that have lapsed or are about to — a compliance risk, not a maintenance one. */
+  /**
+   * Road documents that need somebody to do something — a compliance risk, not
+   * a maintenance one.
+   *
+   * This used to ask isExpired and isExpiringSoon directly, which meant a
+   * vehicle with no date recorded at all passed both and was counted as fine.
+   * assessAssetCompliance names that case, so the figure now includes the
+   * vehicles nobody has checked as well as the ones known to have lapsed.
+   */
   const documentRisk = useMemo(
     () =>
-      assets.filter(
-        (a) =>
-          isExpired(a.insuranceExpiry) ||
-          isExpired(a.inspectionExpiry) ||
-          isExpiringSoon(a.insuranceExpiry) ||
-          isExpiringSoon(a.inspectionExpiry)
-      ),
+      assets
+        .map((a) => ({ asset: a, items: assessAssetCompliance(a) }))
+        .filter((r) => r.items.length > 0 && worstSeverity(r.items) !== 'ok')
+        .sort(
+          (x, y) =>
+            COMPLIANCE_ORDER[worstSeverity(x.items)] - COMPLIANCE_ORDER[worstSeverity(y.items)]
+        ),
     [assets]
   );
 
@@ -184,7 +195,7 @@ export function AdminFleetReportsPage() {
           value={documentRisk.length}
           icon={ShieldAlert}
           tone={documentRisk.length > 0 ? 'bad' : 'neutral'}
-          hint="Lapsed, or within 30 days"
+          hint="Lapsed, expiring within 30 days, or never recorded"
         />
         <StatCard
           label="Repair spend"
@@ -328,53 +339,63 @@ export function AdminFleetReportsPage() {
             nobody could act on. */}
         <FleetPanel
           title={`Document risk — ${documentRisk.length}`}
-          description="Insurance and roadworthiness, expired or falling due within 30 days. Farm machinery carries neither, so only road vehicles appear."
+          description="Insurance and roadworthiness: lapsed, falling due within 30 days, or never recorded at all. Farm machinery carries neither, so only road vehicles appear."
+          action={
+            <Link
+              to="/admin/fleet/compliance"
+              className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline whitespace-nowrap"
+            >
+              Open compliance →
+            </Link>
+          }
         >
           {documentRisk.length === 0 ? (
             <FleetEmptyState
               icon={ShieldAlert}
-              title="Nothing lapsing"
-              message="Every road vehicle is covered for the next 30 days."
+              title="Nothing outstanding"
+              message="Every road vehicle has both documents recorded and in date for the next 30 days."
             />
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {documentRisk.map((a) => {
-                const rows = [
-                  { label: 'Insurance', at: a.insuranceExpiry },
-                  { label: 'Inspection', at: a.inspectionExpiry },
-                ].filter((r) => isExpired(r.at) || isExpiringSoon(r.at));
-                return (
-                  <div key={a.assetId} className="p-4 flex flex-wrap items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <Link
-                        to={`/admin/fleet/register/${encodeURIComponent(a.assetId)}`}
-                        className="font-mono font-bold text-xs text-emerald-700 dark:text-emerald-400 hover:underline"
-                      >
-                        {a.assetId}
-                      </Link>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                        {a.make} {a.model}
-                        {a.plateNumber ? ` · ${a.plateNumber}` : ''} ·{' '}
-                        {CANONICAL_ZONE_METADATA[a.zoneId]?.displayName ?? a.zoneId}
-                      </div>
+              {documentRisk.map(({ asset: a, items }) => (
+                <div key={a.assetId} className="p-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link
+                      to={`/admin/fleet/register/${encodeURIComponent(a.assetId)}`}
+                      className="font-mono font-bold text-xs text-emerald-700 dark:text-emerald-400 hover:underline"
+                    >
+                      {a.assetId}
+                    </Link>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      {a.make} {a.model}
+                      {a.plateNumber ? ` · ${a.plateNumber}` : ''} ·{' '}
+                      {CANONICAL_ZONE_METADATA[a.zoneId]?.displayName ?? a.zoneId}
                     </div>
-                    <div className="text-right">
-                      {rows.map((r) => (
+                  </div>
+                  <div className="text-right">
+                    {items
+                      .filter((i) => i.severity !== 'ok')
+                      .map((i) => (
                         <div
-                          key={r.label}
+                          key={i.kind}
                           className={`text-[11px] font-bold ${
-                            isExpired(r.at)
+                            i.severity === 'lapsed'
                               ? 'text-red-600 dark:text-red-400'
+                              : i.severity === 'unknown'
+                              ? 'text-slate-500 dark:text-slate-400'
                               : 'text-amber-700 dark:text-amber-400'
                           }`}
                         >
-                          {r.label} {isExpired(r.at) ? 'expired' : 'due'} {fmtDay(r.at)}
+                          {i.severity === 'unknown'
+                            ? `${i.label} never recorded`
+                            : `${i.label} ${i.severity === 'lapsed' ? 'expired' : 'due'} ${fmtDay(
+                                i.expiry as any
+                              )}`}
                         </div>
                       ))}
-                    </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </FleetPanel>

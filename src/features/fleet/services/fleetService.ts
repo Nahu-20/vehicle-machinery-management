@@ -194,7 +194,12 @@ export interface CreateAssetInput {
   serviceIntervalMeter?: number;
   lastServiceMeter?: number;
   insuranceExpiry?: Timestamp | null;
+  insurancePolicyNumber?: string;
+  insurer?: string;
+  insuranceCost?: number;
   inspectionExpiry?: Timestamp | null;
+  inspectionCertificateNumber?: string;
+  libreNumber?: string;
   acquiredAt?: Timestamp | null;
   imageUrl?: string;
   notes?: FleetAsset['notes'];

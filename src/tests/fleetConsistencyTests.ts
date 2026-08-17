@@ -22,6 +22,11 @@ import {
   licenceState,
   isRoadVehicle,
   ROAD_VEHICLE_TYPES,
+  assessAssetCompliance,
+  assessDriverCompliance,
+  worstSeverity,
+  isExpired,
+  isExpiringSoon,
 } from '../features/fleet/constants/fleetVocabulary';
 
 /**
@@ -51,7 +56,8 @@ export interface TestResult {
     | 'Vocabulary'
     | 'Permissions'
     | 'Service'
-    | 'Drivers';
+    | 'Drivers'
+    | 'Compliance';
   passed: boolean;
   message: string;
   details?: any;
@@ -544,6 +550,121 @@ export function runFleetConsistencyTests(): TestResult[] {
       passed: road.length === ROAD_VEHICLE_TYPES.length && farm.every((t) => !isRoadVehicle(t)),
       message: 'The list that shows the plate and insurance fields is the same one that gates licences.',
       details: { road: [...ROAD_VEHICLE_TYPES] },
+    };
+  });
+
+  /* ------------------------------------------------------------- compliance */
+
+  /*
+   * The case worth guarding is the quiet one. isExpired and isExpiringSoon both
+   * return false for a missing date — correct in isolation, and together they
+   * made a pickup nobody had ever insured indistinguishable from one insured
+   * until next year. The Reports page counted zero and said 'nothing lapsing'.
+   */
+
+  const roadAsset = (over: Partial<FleetAsset> = {}): FleetAsset =>
+    ({
+      assetId: 'PK-TEST',
+      assetType: 'pickup',
+      status: 'available',
+      insuranceExpiry: at(200),
+      inspectionExpiry: at(200),
+      ...over,
+    }) as FleetAsset;
+
+  check('A road vehicle with no insurance date is unknown, not ok', 'Compliance', () => {
+    const items = assessAssetCompliance(roadAsset({ insuranceExpiry: null }));
+    const insurance = items.find((i) => i.kind === 'insurance');
+    return {
+      passed: insurance?.severity === 'unknown',
+      message:
+        insurance?.severity === 'unknown'
+          ? 'Absent is reported as absent rather than as valid.'
+          : 'A vehicle nobody has insured reads as compliant.',
+      details: { severity: insurance?.severity },
+    };
+  });
+
+  check('The old helpers cannot tell absent from valid', 'Compliance', () => {
+    // Not a criticism of them — it is why the severity exists.
+    const missing = null;
+    return {
+      passed: isExpired(missing) === false && isExpiringSoon(missing) === false,
+      message: 'Both return false for a missing date, so neither can raise the alarm on its own.',
+      details: { isExpired: isExpired(missing), isExpiringSoon: isExpiringSoon(missing) },
+    };
+  });
+
+  check('Farm machinery carries no documents at all', 'Compliance', () => {
+    const items = assessAssetCompliance(roadAsset({ assetType: 'tractor', insuranceExpiry: null }));
+    return {
+      passed: items.length === 0,
+      message:
+        items.length === 0
+          ? 'A plough has no insurance to lapse, so it is not listed as missing any.'
+          : 'Farm machinery was flagged, which would bury the vehicles that matter.',
+      details: { count: items.length },
+    };
+  });
+
+  check('A retired vehicle needs no cover', 'Compliance', () => {
+    const items = assessAssetCompliance(roadAsset({ status: 'disposed', insuranceExpiry: null }));
+    return {
+      passed: items.length === 0,
+      message: 'Out of the register, so out of the renewal list.',
+    };
+  });
+
+  check('An expired document beats one merely expiring', 'Compliance', () => {
+    const items = assessAssetCompliance(
+      roadAsset({ insuranceExpiry: at(-3), inspectionExpiry: at(10) })
+    );
+    return {
+      passed: worstSeverity(items) === 'lapsed',
+      message: 'The row badge shows the worst of what the vehicle has.',
+      details: { worst: worstSeverity(items), items: items.map((i) => i.severity) },
+    };
+  });
+
+  check('Unknown outranks expiring but not lapsed', 'Compliance', () => {
+    const unknownVsSoon = worstSeverity(
+      assessAssetCompliance(roadAsset({ insuranceExpiry: null, inspectionExpiry: at(10) }))
+    );
+    const unknownVsLapsed = worstSeverity(
+      assessAssetCompliance(roadAsset({ insuranceExpiry: null, inspectionExpiry: at(-5) }))
+    );
+    return {
+      passed: unknownVsSoon === 'unknown' && unknownVsLapsed === 'lapsed',
+      message:
+        'A document nobody has recorded is worse than one with days left, and better than one known to have run out.',
+      details: { unknownVsSoon, unknownVsLapsed },
+    };
+  });
+
+  check('Nothing to assess reads as ok, not as a problem', 'Compliance', () => {
+    return {
+      passed: worstSeverity([]) === 'ok',
+      message: 'A tractor with no documents is not a tractor in trouble.',
+    };
+  });
+
+  check("A driver's licence folds into the same shape", 'Compliance', () => {
+    const lapsed = assessDriverCompliance(driver({ licenceExpiry: at(-2) }));
+    const none = assessDriverCompliance(
+      driver({ licenceNumber: undefined, licenceExpiry: null })
+    );
+    return {
+      passed: lapsed[0]?.severity === 'lapsed' && none[0]?.severity === 'unknown',
+      message: 'One renewal list can hold vehicles and people, because the office chasing them is one office.',
+      details: { lapsed: lapsed[0]?.severity, none: none[0]?.severity },
+    };
+  });
+
+  check('A driver who has left is off the renewal list', 'Compliance', () => {
+    const items = assessDriverCompliance(driver({ status: 'inactive', licenceExpiry: at(-40) }));
+    return {
+      passed: items.length === 0,
+      message: 'Chasing the licence of somebody who no longer works here is noise.',
     };
   });
 
