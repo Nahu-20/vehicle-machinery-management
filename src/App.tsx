@@ -54,6 +54,7 @@ import { AdminFleetDriversPage } from './pages/admin/fleet/AdminFleetDriversPage
 import { AdminFleetDriverFormPage } from './pages/admin/fleet/AdminFleetDriverFormPage';
 import { AdminFleetDriverDetailPage } from './pages/admin/fleet/AdminFleetDriverDetailPage';
 import { AdminFleetCompliancePage } from './pages/admin/fleet/AdminFleetCompliancePage';
+import { AdminFleetFuelPage } from './pages/admin/fleet/AdminFleetFuelPage';
 import { AdminFleetGaragePage } from './pages/admin/fleet/AdminFleetGaragePage';
 import { AdminFleetReportsPage } from './pages/admin/fleet/AdminFleetReportsPage';
 import { AdminFleetMapPage } from './pages/admin/fleet/AdminFleetMapPage';
@@ -446,6 +447,7 @@ export default function App() {
                       <Route path="drivers/:driverId/edit" element={<AdminFleetDriverFormPage />} />
                       <Route path="drivers/:driverId" element={<AdminFleetDriverDetailPage />} />
                       <Route path="garage" element={<AdminFleetGaragePage />} />
+                      <Route path="fuel" element={<AdminFleetFuelPage />} />
                       <Route path="compliance" element={<AdminFleetCompliancePage />} />
                       <Route path="reports" element={<AdminFleetReportsPage />} />
                       <Route path="map" element={<AdminFleetMapPage />} />

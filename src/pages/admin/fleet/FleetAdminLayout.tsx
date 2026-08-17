@@ -5,6 +5,7 @@ import {
   Truck,
   Users,
   Wrench,
+  Fuel,
   ShieldCheck,
   BarChart3,
   Map as MapIcon,
@@ -25,6 +26,7 @@ export function FleetAdminLayout() {
   const canView = hasPermission(staffUser, 'fleet.view');
   const canMaintain = hasPermission(staffUser, 'fleet.maintenance.manage');
   const canAssign = hasPermission(staffUser, 'fleet.assign');
+  const canFuel = hasPermission(staffUser, 'fleet.fuel.record');
   const canReport = hasPermission(staffUser, 'fleet.reports.view');
 
   const navTabs = [
@@ -62,6 +64,14 @@ export function FleetAdminLayout() {
       end: false,
       icon: Wrench,
       visible: canMaintain,
+    },
+    {
+      id: 'fuel',
+      label: 'Fuel',
+      to: '/admin/fleet/fuel',
+      end: false,
+      icon: Fuel,
+      visible: canView || canFuel,
     },
     {
       // Between the garage and the reports: it is work to be done, like the

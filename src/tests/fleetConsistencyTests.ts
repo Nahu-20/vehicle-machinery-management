@@ -5,6 +5,8 @@ import type {
   FleetAssetType,
   FleetDriver,
   FleetDriverStatus,
+  FleetFuelLog,
+  FleetMeterType,
 } from '../features/fleet/types/fleet';
 import type { Permission } from '../types/auth';
 import { ALL_PERMISSIONS as LIB_PERMISSIONS, ROLE_PERMISSIONS_MAP } from '../lib/permissions';
@@ -27,6 +29,13 @@ import {
   worstSeverity,
   isExpired,
   isExpiringSoon,
+  computeConsumption,
+  averageConsumption,
+  compareToOwnAverage,
+  totalFuelSpend,
+  totalFuelLitres,
+  higherIsBetter,
+  FUEL_UNIT_LABEL,
 } from '../features/fleet/constants/fleetVocabulary';
 
 /**
@@ -57,7 +66,8 @@ export interface TestResult {
     | 'Permissions'
     | 'Service'
     | 'Drivers'
-    | 'Compliance';
+    | 'Compliance'
+    | 'Fuel';
   passed: boolean;
   message: string;
   details?: any;
@@ -403,6 +413,7 @@ export function runFleetConsistencyTests(): TestResult[] {
       'fleet.maintenance.manage',
       'fleet.reports.view',
       'fleet.driver.manage',
+      'fleet.fuel.record',
       'fleet.asset.retire',
     ];
     const granted = ROLE_PERMISSIONS_MAP.superAdmin;
@@ -665,6 +676,233 @@ export function runFleetConsistencyTests(): TestResult[] {
     return {
       passed: items.length === 0,
       message: 'Chasing the licence of somebody who no longer works here is noise.',
+    };
+  });
+
+  /* ------------------------------------------------------------------ fuel */
+
+  /*
+   * There is no hardware on these machines, so every figure here comes off a
+   * slip somebody wrote at a pump. The method is tank-to-tank, which is only
+   * valid between two FULL tanks — and the failure mode worth guarding is the
+   * flattering one. Divide each fill by the distance since the last fill and a
+   * yard that tops up little and often looks extraordinarily economical, purely
+   * because the litres it added between measurements went uncounted.
+   */
+
+  let fuelSeq = 0;
+  const fill = (
+    over: Partial<FleetFuelLog> & Pick<FleetFuelLog, 'litres' | 'meterAtFill'>
+  ): FleetFuelLog =>
+    ({
+      fuelLogId: `FL-${(fuelSeq += 1)}`,
+      assetId: 'PK-TEST',
+      zoneId: 'arsi',
+      filledAt: at(-100 + fuelSeq),
+      totalCost: (over.litres ?? 0) * 100,
+      fullTank: true,
+      recordedByUid: 'test',
+      recordedByName: 'Test',
+      ...over,
+    }) as FleetFuelLog;
+
+  const km = { meterType: 'kilometres' as FleetMeterType };
+  const hrs = { meterType: 'hours' as FleetMeterType };
+
+  check('The first fill yields no figure', 'Fuel', () => {
+    const pts = computeConsumption(km, [fill({ litres: 50, meterAtFill: 1000 })]);
+    return {
+      passed: pts[0]?.reason === 'first-fill' && pts[0]?.consumption === null,
+      message: 'Nothing before it to measure against, so nothing is claimed.',
+      details: pts,
+    };
+  });
+
+  check('Two full tanks give km per litre', 'Fuel', () => {
+    const pts = computeConsumption(km, [
+      fill({ litres: 50, meterAtFill: 1000 }),
+      fill({ litres: 40, meterAtFill: 1400 }),
+    ]);
+    // 400 km on the 40 litres it took to refill = 10 km/L
+    return {
+      passed: pts[1]?.consumption === 10,
+      message: '400 km on 40 litres is 10 km/L.',
+      details: { consumption: pts[1]?.consumption },
+    };
+  });
+
+  check('Hours give litres per hour, not the inverse', 'Fuel', () => {
+    const pts = computeConsumption(hrs, [
+      fill({ litres: 60, meterAtFill: 500 }),
+      fill({ litres: 80, meterAtFill: 520 }),
+    ]);
+    // 80 litres over 20 hours = 4 L/hr
+    return {
+      passed: pts[1]?.consumption === 4,
+      message: '80 litres over 20 hours is 4 L/hr.',
+      details: { consumption: pts[1]?.consumption },
+    };
+  });
+
+  check('The two units point in opposite directions', 'Fuel', () => {
+    return {
+      passed:
+        higherIsBetter('kilometres') &&
+        !higherIsBetter('hours') &&
+        FUEL_UNIT_LABEL.kilometres === 'km/L' &&
+        FUEL_UNIT_LABEL.hours === 'L/hr',
+      message:
+        'More km/L is better and more L/hr is worse, so the two must never share an axis.',
+    };
+  });
+
+  check('A part-fill carries its litres into the next full tank', 'Fuel', () => {
+    const pts = computeConsumption(km, [
+      fill({ litres: 50, meterAtFill: 1000 }),
+      fill({ litres: 15, meterAtFill: 1150, fullTank: false }),
+      fill({ litres: 25, meterAtFill: 1400 }),
+    ]);
+    // 400 km on 15 + 25 = 40 litres, so the same 10 km/L as the clean case
+    return {
+      passed: pts[1]?.reason === 'partial' && pts[2]?.consumption === 10,
+      message:
+        'The 15 litres are counted, so the figure is 10 km/L rather than a flattering 16.',
+      details: { partial: pts[1]?.reason, consumption: pts[2]?.consumption },
+    };
+  });
+
+  check('Dropping part-fill litres would flatter the machine', 'Fuel', () => {
+    // The bug this guards against, stated as arithmetic: 400 / 25 = 16 km/L.
+    const pts = computeConsumption(km, [
+      fill({ litres: 50, meterAtFill: 1000 }),
+      fill({ litres: 15, meterAtFill: 1150, fullTank: false }),
+      fill({ litres: 25, meterAtFill: 1400 }),
+    ]);
+    return {
+      passed: pts[2]?.consumption !== 16 && pts[2]?.litresUsed === 40,
+      message: 'Litres used is 40, not the 25 on the last slip.',
+      details: { litresUsed: pts[2]?.litresUsed },
+    };
+  });
+
+  check('A meter that goes backwards is flagged, not swallowed', 'Fuel', () => {
+    const pts = computeConsumption(km, [
+      fill({ litres: 50, meterAtFill: 1000 }),
+      fill({ litres: 40, meterAtFill: 900 }),
+    ]);
+    return {
+      passed: pts[1]?.reason === 'meter-backwards' && pts[1]?.consumption === null,
+      message: 'A reading below the last one is a mistyped slip, not a discovery.',
+      details: pts[1],
+    };
+  });
+
+  check('One bad reading does not poison the fills after it', 'Fuel', () => {
+    const pts = computeConsumption(km, [
+      fill({ litres: 50, meterAtFill: 1000 }),
+      fill({ litres: 40, meterAtFill: 900 }), // mistyped
+      fill({ litres: 30, meterAtFill: 1200 }),
+    ]);
+    // Baseline resets to 900, so 300 km on 30 litres = 10 km/L
+    return {
+      passed: pts[2]?.reason === 'ok' && pts[2]?.consumption === 10,
+      message: 'The baseline resets, so the register recovers on the next full tank.',
+      details: { consumption: pts[2]?.consumption },
+    };
+  });
+
+  check('A machine with no meter is costed but never rated', 'Fuel', () => {
+    const pts = computeConsumption({ meterType: 'none' as FleetMeterType }, [
+      fill({ litres: 50, meterAtFill: null }),
+      fill({ litres: 40, meterAtFill: null }),
+    ]);
+    return {
+      passed: pts.every((p) => p.reason === 'no-meter' && p.consumption === null),
+      message: 'A generator with no hour meter cannot have a consumption figure invented for it.',
+    };
+  });
+
+  check('A voided slip drops out of every figure', 'Fuel', () => {
+    const logs = [
+      fill({ litres: 50, meterAtFill: 1000 }),
+      fill({ litres: 999, meterAtFill: 1200, voidedAt: at(0) }),
+      fill({ litres: 40, meterAtFill: 1400 }),
+    ];
+    const pts = computeConsumption(km, logs);
+    return {
+      passed:
+        pts.length === 2 &&
+        pts[1]?.consumption === 10 &&
+        totalFuelLitres(logs) === 90 &&
+        totalFuelSpend(logs) === 9000,
+      message: 'The mistyped fill did not happen, so it is not in the litres, the spend or the maths.',
+      details: { points: pts.length, litres: totalFuelLitres(logs) },
+    };
+  });
+
+  check('The average is distance over litres, not a mean of ratios', 'Fuel', () => {
+    const pts = computeConsumption(km, [
+      fill({ litres: 10, meterAtFill: 0 }),
+      fill({ litres: 10, meterAtFill: 100 }), // 10 km/L over a short hop
+      fill({ litres: 100, meterAtFill: 600 }), // 5 km/L over a long haul
+    ]);
+    const avg = averageConsumption(pts, 'kilometres');
+    // 600 km on 110 litres = 5.45; the mean of the two ratios would be 7.5
+    return {
+      passed: avg !== null && Math.abs(avg - 600 / 110) < 1e-9,
+      message: 'A short hop must not carry the same weight as a week of work.',
+      details: { average: avg, meanOfRatios: 7.5 },
+    };
+  });
+
+  check('A machine running worse than its own past is flagged', 'Fuel', () => {
+    // Four clean intervals at 10 km/L, then three at 4 km/L. The recent window
+    // is the last three, so the decline has to be at least that long to show —
+    // one bad tank among good ones is smoothed away on purpose, because a single
+    // wet week of ploughing is not a fault.
+    const logs = [
+      fill({ litres: 10, meterAtFill: 0 }),
+      fill({ litres: 10, meterAtFill: 100 }),
+      fill({ litres: 10, meterAtFill: 200 }),
+      fill({ litres: 10, meterAtFill: 300 }),
+      fill({ litres: 10, meterAtFill: 400 }),
+      fill({ litres: 25, meterAtFill: 500 }),
+      fill({ litres: 25, meterAtFill: 600 }),
+      fill({ litres: 25, meterAtFill: 700 }),
+    ];
+    const trend = compareToOwnAverage(computeConsumption(km, logs), 'kilometres');
+    return {
+      // 700 km on 115 litres overall is 6.09 km/L; the last three intervals
+      // manage 4. That is a third worse than its own past.
+      passed: trend.worseByPct !== null && trend.worseByPct > 20,
+      message: 'A third worse than its own past — a developing fault, or fuel going somewhere else.',
+      details: trend,
+    };
+  });
+
+  check('Too little history makes no claim about a trend', 'Fuel', () => {
+    const trend = compareToOwnAverage(
+      computeConsumption(km, [
+        fill({ litres: 10, meterAtFill: 0 }),
+        fill({ litres: 10, meterAtFill: 100 }),
+      ]),
+      'kilometres'
+    );
+    return {
+      passed: trend.worseByPct === null && trend.measurableFills === 1,
+      message: 'With one measurable interval, recent and average are the same number.',
+      details: trend,
+    };
+  });
+
+  check('Fills are read in date order, not the order given', 'Fuel', () => {
+    const later = fill({ litres: 40, meterAtFill: 1400, filledAt: at(-1) });
+    const earlier = fill({ litres: 50, meterAtFill: 1000, filledAt: at(-30) });
+    const pts = computeConsumption(km, [later, earlier]);
+    return {
+      passed: pts[0]?.reason === 'first-fill' && pts[1]?.consumption === 10,
+      message: 'A list sorted newest-first for display is the wrong way round for the arithmetic.',
+      details: pts.map((p) => p.reason),
     };
   });
 

@@ -5,6 +5,7 @@ import type {
   FleetDriver,
   FleetDriverStatus,
   FleetFaultSeverity,
+  FleetFuelLog,
   FleetMeterType,
   FleetWorkOrderStatus,
 } from '../types/fleet';
@@ -630,5 +631,220 @@ export function worstSeverity(items: ComplianceItem[]): ComplianceSeverity {
 /** Whether this needs somebody to do something about it. */
 export function needsAttention(severity: ComplianceSeverity): boolean {
   return severity !== 'ok';
+}
+
+/* --------------------------------------------------------------- fuel */
+
+/**
+ * How the fuel figures are worked out, and where they cannot be.
+ *
+ * The method is tank-to-tank: fill the tank, drive, fill it again, and the
+ * litres it took the second time are the litres the machine used over that
+ * distance. It is the only method available without hardware, and it is only
+ * valid between two *full* tanks — which is why every gap below has to be named
+ * rather than quietly averaged over.
+ *
+ * The alternative, dividing every fill by the distance since the fill before it,
+ * looks the same on a tidy dataset and is wrong the moment anyone puts in
+ * 20 litres to get home. It would report that machine as extraordinarily
+ * economical, and the more part-fills a yard does the better its fleet would
+ * look on paper.
+ */
+export type FuelGapReason = 'ok' | 'first-fill' | 'partial' | 'no-meter' | 'meter-backwards';
+
+export const FUEL_GAP_EXPLANATIONS: Record<FuelGapReason, string> = {
+  ok: 'Measured between two full tanks.',
+  'first-fill': 'The first fill on record — nothing before it to measure against.',
+  partial: 'Part-fill. Its litres count towards the next full tank.',
+  'no-meter': 'No usable reading, so nothing can be worked out from it.',
+  'meter-backwards': 'The reading is not above the last one. Check the slip.',
+};
+
+export interface FuelConsumptionPoint {
+  fuelLogId: string;
+  at: { toDate?: () => Date };
+  /** Litres on this slip. */
+  litres: number;
+  /** Distance or hours since the last full tank. */
+  meterDelta: number | null;
+  /** Litres attributed to that interval, including any part-fills carried in. */
+  litresUsed: number | null;
+  /** km/L on kilometres, L/hr on hours. Null whenever the interval is not measurable. */
+  consumption: number | null;
+  reason: FuelGapReason;
+}
+
+/**
+ * Work out what each fill tells us, in order.
+ *
+ * Ascending by date, because the arithmetic is between neighbours and a list
+ * sorted for display is the wrong way round.
+ */
+export function computeConsumption(
+  asset: Pick<FleetAsset, 'meterType'>,
+  logs: FleetFuelLog[]
+): FuelConsumptionPoint[] {
+  // Voided slips are excluded outright rather than zeroed: a mistyped fill did
+  // not happen, and leaving it in with zero litres would still break the
+  // interval either side of it.
+  const ordered = [...logs]
+    .filter((l) => !l.voidedAt)
+    .sort((a, b) => a.filledAt.toMillis() - b.filledAt.toMillis());
+
+  const noMeter = asset.meterType === 'none';
+
+  let lastFullMeter: number | null = null;
+  /** Litres put in since the last full tank, from part-fills. */
+  let carried = 0;
+
+  return ordered.map((log) => {
+    const base = {
+      fuelLogId: log.fuelLogId,
+      at: log.filledAt,
+      litres: log.litres,
+      meterDelta: null as number | null,
+      litresUsed: null as number | null,
+      consumption: null as number | null,
+    };
+
+    // A generator with no hour meter can be costed but never rated. Saying so
+    // is better than showing a figure derived from a reading nobody took.
+    if (noMeter || log.meterAtFill == null) {
+      return { ...base, reason: 'no-meter' as const };
+    }
+
+    if (!log.fullTank) {
+      // Not measurable on its own, but the fuel went in and has to be counted
+      // somewhere. Dropping it is what makes a fleet look better than it is.
+      carried += log.litres;
+      return { ...base, reason: 'partial' as const };
+    }
+
+    if (lastFullMeter === null) {
+      lastFullMeter = log.meterAtFill;
+      carried = 0;
+      return { ...base, reason: 'first-fill' as const };
+    }
+
+    const delta = log.meterAtFill - lastFullMeter;
+    if (delta <= 0) {
+      // A meter that did not move, or moved backwards: a mistyped slip, or a
+      // replaced instrument. Either way this interval means nothing — but the
+      // baseline resets to the new reading so one bad row does not poison every
+      // fill after it.
+      lastFullMeter = log.meterAtFill;
+      carried = 0;
+      return { ...base, reason: 'meter-backwards' as const };
+    }
+
+    const litresUsed = carried + log.litres;
+    lastFullMeter = log.meterAtFill;
+    carried = 0;
+
+    return {
+      ...base,
+      meterDelta: delta,
+      litresUsed,
+      // Inverses of each other, and never interchangeable — see FUEL_UNIT_LABEL.
+      consumption:
+        asset.meterType === 'kilometres' ? delta / litresUsed : litresUsed / delta,
+      reason: 'ok' as const,
+    };
+  });
+}
+
+/**
+ * The unit, and which direction is good.
+ *
+ * A pickup doing 8 km/L and a tractor burning 8 L/hr are not comparable and must
+ * never share an axis: on one of them a bigger number is better and on the other
+ * it is worse. Charts read this rather than assuming.
+ */
+export const FUEL_UNIT_LABEL: Record<FleetMeterType, string> = {
+  kilometres: 'km/L',
+  hours: 'L/hr',
+  none: '',
+};
+
+export function higherIsBetter(meterType: FleetMeterType): boolean {
+  return meterType === 'kilometres';
+}
+
+/**
+ * The machine's overall figure.
+ *
+ * Total distance over total litres, NOT the mean of the per-fill ratios. Those
+ * two differ whenever the intervals are unequal, and the mean-of-ratios quietly
+ * gives a short hop the same weight as a week of ploughing.
+ */
+export function averageConsumption(
+  points: FuelConsumptionPoint[],
+  meterType: FleetMeterType
+): number | null {
+  const usable = points.filter((p) => p.reason === 'ok' && p.meterDelta && p.litresUsed);
+  if (usable.length === 0) return null;
+
+  const meter = usable.reduce((t, p) => t + (p.meterDelta ?? 0), 0);
+  const litres = usable.reduce((t, p) => t + (p.litresUsed ?? 0), 0);
+  if (meter <= 0 || litres <= 0) return null;
+
+  return meterType === 'kilometres' ? meter / litres : litres / meter;
+}
+
+/** Whether a machine is running worse than it used to. */
+export interface FuelTrend {
+  /** Every measurable interval on record. */
+  average: number | null;
+  /** The most recent few, on their own. */
+  recent: number | null;
+  /** How much worse recent is than average, as a percentage. Negative is better. */
+  worseByPct: number | null;
+  measurableFills: number;
+}
+
+/**
+ * Compare a machine against its own past.
+ *
+ * The comparison that matters. Ranking a tractor against a pickup says nothing —
+ * they do different work and the units are inverted — but a machine that has
+ * quietly got 20% thirstier than it used to be is either developing a fault or
+ * losing fuel to somebody, and both are worth a phone call.
+ *
+ * Needs enough history to mean anything: with two measurable fills, "recent"
+ * and "average" are nearly the same number and the comparison is noise.
+ */
+export function compareToOwnAverage(
+  points: FuelConsumptionPoint[],
+  meterType: FleetMeterType,
+  recentCount = 3,
+  minimumFills = 4
+): FuelTrend {
+  const usable = points.filter((p) => p.reason === 'ok');
+  const average = averageConsumption(usable, meterType);
+
+  if (usable.length < minimumFills || average === null) {
+    return { average, recent: null, worseByPct: null, measurableFills: usable.length };
+  }
+
+  const recent = averageConsumption(usable.slice(-recentCount), meterType);
+  if (recent === null) {
+    return { average, recent: null, worseByPct: null, measurableFills: usable.length };
+  }
+
+  // On kilometres a fall in km/L is worse; on hours a rise in L/hr is worse.
+  const worseByPct = higherIsBetter(meterType)
+    ? ((average - recent) / average) * 100
+    : ((recent - average) / average) * 100;
+
+  return { average, recent, worseByPct, measurableFills: usable.length };
+}
+
+/** Total spend across a set of slips, voided ones excluded. */
+export function totalFuelSpend(logs: FleetFuelLog[]): number {
+  return logs.filter((l) => !l.voidedAt).reduce((t, l) => t + (l.totalCost || 0), 0);
+}
+
+export function totalFuelLitres(logs: FleetFuelLog[]): number {
+  return logs.filter((l) => !l.voidedAt).reduce((t, l) => t + (l.litres || 0), 0);
 }
 

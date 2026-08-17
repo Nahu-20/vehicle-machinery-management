@@ -17,3 +17,4 @@ export const FLEET_WORK_ORDERS_COLLECTION = 'fleetWorkOrders';
 export const FLEET_STATUS_EVENTS_COLLECTION = 'fleetStatusEvents';
 export const FLEET_SERVICE_RECORDS_COLLECTION = 'fleetServiceRecords';
 export const FLEET_DRIVERS_COLLECTION = 'fleetDrivers';
+export const FLEET_FUEL_LOGS_COLLECTION = 'fleetFuelLogs';

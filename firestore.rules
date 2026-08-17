@@ -562,6 +562,24 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Fuel slips, typed from paper at a pump.
+    //
+    // Append-only with one exception. A slip against the wrong vehicle, or with
+    // the litres transposed, are the two mistakes that actually happen at a
+    // counter, and both need undoing — so an existing row may be voided and
+    // nothing else. The clause below enforces that literally: the only fields a
+    // writer may touch on an existing slip are the three that record the void.
+    match /fleetFuelLogs/{fuelLogId} {
+      allow get, list: if isCurrentActiveStaff();
+      allow create: if hasFleetPermission('fleet.fuel.record');
+      allow update: if hasFleetPermission('fleet.fuel.record')
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['voidedAt', 'voidedByUid', 'voidReason']);
+      // Deleting would leave a gap the register cannot explain. A voided slip
+      // stays visible, struck through, and out of every figure.
+      allow delete: if false;
+    }
+
     match /fleetMeterReadings/{readingId} {
       allow get, list: if isCurrentActiveStaff();
       allow create: if hasFleetPermission('fleet.assign')

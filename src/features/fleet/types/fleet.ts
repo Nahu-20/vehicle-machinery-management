@@ -407,8 +407,74 @@ export interface FleetServiceRecord {
   recordedByName: string;
 }
 
+/**
+ * One fill of the tank.
+ *
+ * Typed from a fuel slip, because there is no hardware on these machines and
+ * there is not going to be. Everything the dashboard shows is derived from what
+ * somebody wrote down at a pump, which is worth remembering before treating any
+ * of it as a measurement.
+ *
+ * Kept apart from work orders and service records: fuel is neither a breakdown
+ * nor upkeep, it is the running cost, and folding it into either would make the
+ * machines that work hardest look like the machines that go wrong.
+ */
+export interface FleetFuelLog {
+  fuelLogId: string;
+  assetId: string;
+  /** Denormalised from the asset so zone spend needs no join. */
+  zoneId: CanonicalZoneId;
+
+  /** Who drew it, when the register knows. Denormalised for the same reason as assignments. */
+  driverId?: string | null;
+  driverName?: string;
+
+  filledAt: Timestamp;
+  litres: number;
+  costPerLitre?: number;
+  totalCost: number;
+
+  /**
+   * The reading on the dial at the pump.
+   *
+   * Null only for a machine with no meter at all. Everything downstream — how
+   * far it went on those litres, whether that is worse than it used to be —
+   * rests on this number and the one from the fill before it.
+   */
+  meterAtFill: number | null;
+
+  /**
+   * Whether the tank was filled to the top.
+   *
+   * The whole method depends on it. Consumption is measured between two full
+   * tanks; a part-fill measures nothing on its own, and its litres have to be
+   * carried into the next full one rather than dropped.
+   */
+  fullTank: boolean;
+
+  station?: string;
+  /** Fuel slip or voucher number, so a figure can be traced back to paper. */
+  reference?: string;
+
+  recordedByUid: string;
+  recordedByName: string;
+  createdAt?: Timestamp;
+
+  /**
+   * A mistyped slip is voided, never deleted.
+   *
+   * Wrong vehicle and transposed litres are the two mistakes that actually
+   * happen, and both need undoing. Deleting the row would leave the register
+   * with a gap it cannot explain; voiding leaves it visible, struck through,
+   * and out of every figure.
+   */
+  voidedAt?: Timestamp | null;
+  voidedByUid?: string;
+  voidReason?: string;
+}
+
 /** One entry on a vehicle's combined history. */
-export type FleetTimelineKind = 'status' | 'assignment' | 'work_order' | 'service';
+export type FleetTimelineKind = 'status' | 'assignment' | 'work_order' | 'service' | 'fuel';
 
 export interface FleetTimelineEntry {
   id: string;

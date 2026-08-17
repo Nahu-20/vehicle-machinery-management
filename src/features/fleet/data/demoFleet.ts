@@ -3,6 +3,7 @@ import type {
   FleetAsset,
   FleetAssignment,
   FleetDriver,
+  FleetFuelLog,
   FleetWorkOrder,
 } from '../types/fleet';
 
@@ -211,8 +212,11 @@ export const DEMO_ASSETS: FleetAsset[] = [
     zoneId: 'borena', stationedAt: 'Yabelo Field Station', status: 'awaiting_parts',
   }),
   asset({
+    // No hour meter fitted, which older sets often are not. It can be fuelled
+    // and costed but never rated, and the register says so rather than inventing
+    // a figure — the case the fuel maths has to handle rather than hide.
     assetId: 'GN-001', assetType: 'generator', make: 'Perkins', model: '30 kVA', year: 2020,
-    meterType: 'hours', currentMeter: 2240, serviceIntervalMeter: 250, lastServiceMeter: 2100,
+    meterType: 'none', currentMeter: 0,
     zoneId: 'east_wellega', stationedAt: 'Nekemte Zonal Office', status: 'available',
   }),
   asset({
@@ -364,6 +368,120 @@ export const DEMO_ASSIGNMENTS: FleetAssignment[] = [
     meterOut: 1310, meterIn: 1348, status: 'returned',
     issuedByUid: 'demo-fleetofficer-001', returnedByUid: 'demo-fleetofficer-001',
   },
+];
+
+/**
+ * Fuel slips.
+ *
+ * Shaped to exercise the maths rather than to look tidy: a clean run that gives
+ * a believable figure, a part-fill that has to be carried forward, a mistyped
+ * reading that must be flagged rather than averaged in, a voided slip, a machine
+ * with no meter at all, and one pickup quietly getting thirstier than it used to
+ * be. A demo where every fill computes cleanly proves none of it.
+ *
+ * Prices are near the Ethiopian pump price for diesel at the time of writing.
+ */
+const DIESEL = 91;
+const PETROL = 98;
+
+function slip(
+  a: Pick<FleetFuelLog, 'fuelLogId' | 'assetId' | 'zoneId' | 'litres' | 'meterAtFill' | 'filledAt'> &
+    Partial<FleetFuelLog>
+): FleetFuelLog {
+  const perLitre = a.costPerLitre ?? DIESEL;
+  return {
+    fullTank: true,
+    costPerLitre: perLitre,
+    totalCost: Math.round(a.litres * perLitre),
+    recordedByUid: 'demo-fleetofficer-001',
+    recordedByName: 'Obbo Tashoomaa Waaqjiraa',
+    station: 'NOC Adama',
+    ...a,
+  } as FleetFuelLog;
+}
+
+export const DEMO_FUEL_LOGS: FleetFuelLog[] = [
+  // --- PK-003: a clean run, roughly 9 km/L, the shape everything else is read against
+  slip({ fuelLogId: 'FL-001', assetId: 'PK-003', zoneId: 'west_hararghe', filledAt: ago(96),
+    litres: 62, meterAtFill: 37600, station: 'TotalEnergies Chiro', costPerLitre: PETROL,
+    driverId: 'DR-009', driverName: 'Obbo Nagaash Baqqalaa', reference: 'FS-104772' }),
+  slip({ fuelLogId: 'FL-002', assetId: 'PK-003', zoneId: 'west_hararghe', filledAt: ago(71),
+    litres: 68, meterAtFill: 38210, station: 'TotalEnergies Chiro', costPerLitre: PETROL,
+    driverId: 'DR-009', driverName: 'Obbo Nagaash Baqqalaa', reference: 'FS-106014' }),
+  slip({ fuelLogId: 'FL-003', assetId: 'PK-003', zoneId: 'west_hararghe', filledAt: ago(44),
+    litres: 71, meterAtFill: 38850, station: 'TotalEnergies Chiro', costPerLitre: PETROL,
+    driverId: 'DR-009', driverName: 'Obbo Nagaash Baqqalaa', reference: 'FS-108330' }),
+  slip({ fuelLogId: 'FL-004', assetId: 'PK-003', zoneId: 'west_hararghe', filledAt: ago(17),
+    litres: 66, meterAtFill: 39450, station: 'TotalEnergies Chiro', costPerLitre: PETROL,
+    driverId: 'DR-009', driverName: 'Obbo Nagaash Baqqalaa', reference: 'FS-110918' }),
+
+  // --- PK-001: a part-fill between two full tanks. Drop those 20 litres and this
+  //     pickup would read about 40% more economical than it is.
+  slip({ fuelLogId: 'FL-010', assetId: 'PK-001', zoneId: 'east_shewa', filledAt: ago(58),
+    litres: 70, meterAtFill: 82900, costPerLitre: PETROL,
+    driverId: 'DR-003', driverName: 'Aaddee Boontuu Hundee', reference: 'FS-201455' }),
+  slip({ fuelLogId: 'FL-011', assetId: 'PK-001', zoneId: 'east_shewa', filledAt: ago(41),
+    litres: 20, meterAtFill: 83320, fullTank: false, costPerLitre: PETROL,
+    driverId: 'DR-003', driverName: 'Aaddee Boontuu Hundee', reference: 'FS-203109',
+    station: 'NOC Modjo' }),
+  slip({ fuelLogId: 'FL-012', assetId: 'PK-001', zoneId: 'east_shewa', filledAt: ago(20),
+    litres: 55, meterAtFill: 83810, costPerLitre: PETROL,
+    driverId: 'DR-003', driverName: 'Aaddee Boontuu Hundee', reference: 'FS-205770' }),
+
+  // --- TR-002: a tractor on hours. Around 6 L/hr, which is the other unit
+  //     entirely — and one mistyped reading in the middle of it.
+  slip({ fuelLogId: 'FL-020', assetId: 'TR-002', zoneId: 'arsi', filledAt: ago(82),
+    litres: 95, meterAtFill: 3910, station: 'Asella Bureau Pump', reference: 'FS-300118' }),
+  slip({ fuelLogId: 'FL-021', assetId: 'TR-002', zoneId: 'arsi', filledAt: ago(60),
+    litres: 108, meterAtFill: 3928, station: 'Asella Bureau Pump', reference: 'FS-301204' }),
+  // Reading typed as 3,082 instead of 3,982 — flagged, not averaged in.
+  slip({ fuelLogId: 'FL-022', assetId: 'TR-002', zoneId: 'arsi', filledAt: ago(38),
+    litres: 112, meterAtFill: 3082, station: 'Asella Bureau Pump', reference: 'FS-302661' }),
+  slip({ fuelLogId: 'FL-023', assetId: 'TR-002', zoneId: 'arsi', filledAt: ago(12),
+    litres: 121, meterAtFill: 3102, station: 'Asella Bureau Pump', reference: 'FS-304019' }),
+
+  // --- TK-001: the truck that is getting thirstier. Four steady intervals, then
+  //     three noticeably worse — the pattern the trend panel exists to surface.
+  slip({ fuelLogId: 'FL-030', assetId: 'TK-001', zoneId: 'east_shewa', filledAt: ago(120),
+    litres: 180, meterAtFill: 94100, reference: 'FS-400221',
+    driverId: 'DR-004', driverName: 'Obbo Dassaalanyi Tolaa' }),
+  slip({ fuelLogId: 'FL-031', assetId: 'TK-001', zoneId: 'east_shewa', filledAt: ago(101),
+    litres: 176, meterAtFill: 94720, reference: 'FS-401558',
+    driverId: 'DR-004', driverName: 'Obbo Dassaalanyi Tolaa' }),
+  slip({ fuelLogId: 'FL-032', assetId: 'TK-001', zoneId: 'east_shewa', filledAt: ago(84),
+    litres: 182, meterAtFill: 95360, reference: 'FS-402907',
+    driverId: 'DR-004', driverName: 'Obbo Dassaalanyi Tolaa' }),
+  slip({ fuelLogId: 'FL-033', assetId: 'TK-001', zoneId: 'east_shewa', filledAt: ago(65),
+    litres: 178, meterAtFill: 95990, reference: 'FS-404330',
+    driverId: 'DR-004', driverName: 'Obbo Dassaalanyi Tolaa' }),
+  slip({ fuelLogId: 'FL-034', assetId: 'TK-001', zoneId: 'east_shewa', filledAt: ago(46),
+    litres: 205, meterAtFill: 96300, reference: 'FS-405771',
+    driverId: 'DR-004', driverName: 'Obbo Dassaalanyi Tolaa' }),
+  slip({ fuelLogId: 'FL-035', assetId: 'TK-001', zoneId: 'east_shewa', filledAt: ago(27),
+    litres: 212, meterAtFill: 96620, reference: 'FS-407004',
+    driverId: 'DR-004', driverName: 'Obbo Dassaalanyi Tolaa' }),
+  slip({ fuelLogId: 'FL-036', assetId: 'TK-001', zoneId: 'east_shewa', filledAt: ago(8),
+    litres: 208, meterAtFill: 96700, reference: 'FS-408612',
+    driverId: 'DR-004', driverName: 'Obbo Dassaalanyi Tolaa' }),
+
+  // --- GN-001: a generator with no meter. Costed, never rated.
+  slip({ fuelLogId: 'FL-040', assetId: 'GN-001', zoneId: 'east_wellega', filledAt: ago(52),
+    litres: 40, meterAtFill: null, station: 'Nekemte Bureau Store', reference: 'FS-500114' }),
+  slip({ fuelLogId: 'FL-041', assetId: 'GN-001', zoneId: 'east_wellega', filledAt: ago(21),
+    litres: 45, meterAtFill: null, station: 'Nekemte Bureau Store', reference: 'FS-501330' }),
+
+  // --- MC-002: a voided slip. Recorded against the wrong machine and undone.
+  slip({ fuelLogId: 'FL-050', assetId: 'MC-002', zoneId: 'east_hararghe', filledAt: ago(30),
+    litres: 9, meterAtFill: 15900, costPerLitre: PETROL, station: 'NOC Harar',
+    reference: 'FS-600277' }),
+  slip({ fuelLogId: 'FL-051', assetId: 'MC-002', zoneId: 'east_hararghe', filledAt: ago(15),
+    litres: 190, meterAtFill: 16100, costPerLitre: PETROL, station: 'NOC Harar',
+    reference: 'FS-601045',
+    voidedAt: ago(14), voidedByUid: 'demo-fleetofficer-001',
+    voidReason: 'Recorded against the motorcycle in error — this was the water tanker.' }),
+  slip({ fuelLogId: 'FL-052', assetId: 'MC-002', zoneId: 'east_hararghe', filledAt: ago(4),
+    litres: 10, meterAtFill: 16240, costPerLitre: PETROL, station: 'NOC Harar',
+    reference: 'FS-602881' }),
 ];
 
 export const DEMO_WORK_ORDERS: FleetWorkOrder[] = [

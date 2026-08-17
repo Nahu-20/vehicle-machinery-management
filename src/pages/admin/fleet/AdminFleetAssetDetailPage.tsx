@@ -12,6 +12,7 @@ import {
   Gauge,
   CheckCircle2,
   Droplets,
+  Fuel,
   ShieldAlert,
 } from 'lucide-react';
 import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
@@ -35,6 +36,7 @@ import type {
   FleetWorkOrder,
   FleetServiceRecord,
   FleetDriver,
+  FleetFuelLog,
   FleetStatusEvent,
   FleetAssetStatus,
 } from '../../../features/fleet/types/fleet';
@@ -49,6 +51,9 @@ import {
   assessDriverForAsset,
   assessAssetCompliance,
   licenceState,
+  computeConsumption,
+  compareToOwnAverage,
+  FUEL_UNIT_LABEL,
 } from '../../../features/fleet/constants/fleetVocabulary';
 import {
   StatusPill,
@@ -65,6 +70,10 @@ import {
   type ChangeAssetStatusResult,
 } from '../../../features/fleet/services/fleetStatusService';
 import { listDrivers } from '../../../features/fleet/services/fleetDriverService';
+import {
+  listFuelLogs,
+  recordFuelFill,
+} from '../../../features/fleet/services/fleetFuelService';
 import { AssetImage } from '../../../features/fleet/components/AssetImage';
 import { AssetTimeline } from '../../../features/fleet/components/AssetTimeline';
 import {
@@ -116,6 +125,7 @@ export function AdminFleetAssetDetailPage() {
   const canManage = hasPermission(staffUser, 'fleet.asset.manage');
   const canAssign = hasPermission(staffUser, 'fleet.assign');
   const canMaintain = hasPermission(staffUser, 'fleet.maintenance.manage');
+  const canFuel = hasPermission(staffUser, 'fleet.fuel.record');
 
   const [asset, setAsset] = useState<FleetAsset | null>(null);
   const [assignments, setAssignments] = useState<FleetAssignment[]>([]);
@@ -151,6 +161,17 @@ export function AdminFleetAssetDetailPage() {
   const [drivers, setDrivers] = useState<FleetDriver[]>([]);
   const [driverId, setDriverId] = useState('');
 
+  const [fuelLogs, setFuelLogs] = useState<FleetFuelLog[]>([]);
+  const [showFuel, setShowFuel] = useState(false);
+  const [fuelDate, setFuelDate] = useState('');
+  const [fuelLitres, setFuelLitres] = useState('');
+  const [fuelPrice, setFuelPrice] = useState('');
+  const [fuelTotal, setFuelTotal] = useState('');
+  const [fuelMeter, setFuelMeter] = useState('');
+  const [fuelFull, setFuelFull] = useState(true);
+  const [fuelStation, setFuelStation] = useState('');
+  const [fuelRef, setFuelRef] = useState('');
+
   const [serviceRecords, setServiceRecords] = useState<FleetServiceRecord[]>([]);
   const [showService, setShowService] = useState(false);
   const [serviceMeter, setServiceMeter] = useState('');
@@ -163,7 +184,7 @@ export function AdminFleetAssetDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const [a, history, faults, events, services, driverRows] = await Promise.all([
+      const [a, history, faults, events, services, driverRows, fuelRows] = await Promise.all([
         getAssetById(assetId),
         listAssignmentsForAsset(assetId).catch(() => [] as FleetAssignment[]),
         listWorkOrdersForAsset(assetId).catch(() => [] as FleetWorkOrder[]),
@@ -172,6 +193,7 @@ export function AdminFleetAssetDetailPage() {
         // Non-critical: without it the form falls back to a typed name, which
         // is exactly what it did before drivers existed.
         listDrivers({ status: 'active' }).catch(() => [] as FleetDriver[]),
+        listFuelLogs(assetId).catch(() => [] as FleetFuelLog[]),
       ]);
       if (!a) {
         setError(`Asset ${assetId} was not found.`);
@@ -183,12 +205,15 @@ export function AdminFleetAssetDetailPage() {
         // now, so that is offered rather than an empty box to retype.
         setServiceMeter(String(a.currentMeter));
         setServiceDate(new Date().toISOString().slice(0, 10));
+        setFuelMeter(a.meterType === 'none' ? '' : String(a.currentMeter));
+        setFuelDate(new Date().toISOString().slice(0, 10));
       }
       setAssignments(history);
       setWorkOrders(faults);
       setStatusEvents(events);
       setServiceRecords(services);
       setDrivers(driverRows);
+      setFuelLogs(fuelRows);
       // Not a.status: the current status is often one the dropdown does not
       // offer, and defaulting to a value that is not in the list leaves the
       // select showing the first option while the state says another.
@@ -224,6 +249,16 @@ export function AdminFleetAssetDetailPage() {
     const elsewhere = drivers.filter((d) => d.zoneId !== asset.zoneId);
     return [...here, ...elsewhere];
   }, [drivers, asset]);
+
+  /** This machine's own fuel record, and whether it is drifting. */
+  const fuelPoints = useMemo(
+    () => (asset ? computeConsumption(asset, fuelLogs) : []),
+    [asset, fuelLogs]
+  );
+  const fuelTrend = useMemo(
+    () => (asset ? compareToOwnAverage(fuelPoints, asset.meterType) : null),
+    [fuelPoints, asset]
+  );
 
   const complianceItems = useMemo(
     () => (asset ? assessAssetCompliance(asset) : []),
@@ -314,6 +349,60 @@ export function AdminFleetAssetDetailPage() {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not receive the asset.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRecordFuel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!asset || !staffUser || busy) return;
+
+    const litresValue = Number(fuelLitres);
+    if (!Number.isFinite(litresValue) || litresValue <= 0) {
+      return setError('Enter the litres put in.');
+    }
+    const cost = Number(fuelTotal);
+    if (!Number.isFinite(cost) || cost < 0) return setError('Enter what it cost.');
+
+    const needsMeter = asset.meterType !== 'none';
+    const meter = fuelMeter.trim() ? Number(fuelMeter) : null;
+    if (needsMeter && (meter === null || !Number.isFinite(meter))) {
+      return setError('The reading at the pump is needed — every later figure rests on it.');
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      await recordFuelFill(
+        {
+          assetId: asset.assetId,
+          expectedVersion: asset.version,
+          filledAt: fuelDate ? new Date(`${fuelDate}T00:00:00`) : new Date(),
+          litres: litresValue,
+          costPerLitre: fuelPrice.trim() ? Number(fuelPrice) : undefined,
+          totalCost: cost,
+          meterAtFill: needsMeter ? meter : null,
+          fullTank: fuelFull,
+          station: fuelStation.trim() || undefined,
+          reference: fuelRef.trim() || undefined,
+          driverId: asset.custodianDriverId ?? null,
+          driverName: asset.custodianName,
+        },
+        staffUser
+      );
+      setShowFuel(false);
+      setFuelLitres('');
+      setFuelTotal('');
+      setFuelRef('');
+      setNotice(
+        fuelFull
+          ? `${litresValue} L recorded against ${asset.assetId}.`
+          : `${litresValue} L recorded as a part-fill — its litres count towards the next full tank.`
+      );
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not record the fill.');
     } finally {
       setBusy(false);
     }
@@ -466,6 +555,15 @@ export function AdminFleetAssetDetailPage() {
               Report fault
             </FleetButton>
           )}
+          {canFuel && asset.status !== 'disposed' && (
+            <FleetButton
+              variant="secondary"
+              icon={Fuel}
+              onClick={() => setShowFuel((v) => !v)}
+            >
+              Record fill
+            </FleetButton>
+          )}
           {canMaintain && asset.status !== 'disposed' && asset.meterType !== 'none' && (
             <FleetButton
               variant="secondary"
@@ -601,6 +699,33 @@ export function AdminFleetAssetDetailPage() {
             )}
           </div>
         </div>
+
+        {/* What it costs to run, when there is enough to say anything. */}
+        {fuelTrend && fuelTrend.average !== null && (
+          <div className="mt-5 pt-5 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+            <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
+              <Fuel className="w-3.5 h-3.5 shrink-0 text-violet-500" />
+              <span className="font-mono font-bold">
+                {fuelTrend.average.toFixed(2)} {FUEL_UNIT_LABEL[asset.meterType]}
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                over {fuelTrend.measurableFills} measured fill
+                {fuelTrend.measurableFills === 1 ? '' : 's'}
+              </span>
+            </span>
+            {fuelTrend.worseByPct !== null && fuelTrend.worseByPct >= 15 && (
+              <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                Lately {fuelTrend.worseByPct.toFixed(0)}% worse than its own average
+              </span>
+            )}
+            <Link
+              to="/admin/fleet/fuel"
+              className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
+            >
+              Fuel →
+            </Link>
+          </div>
+        )}
 
         {/* Documents, said out loud rather than left to a blank date field.
             An empty date is not the same as a valid one, and this is the page
@@ -811,6 +936,126 @@ export function AdminFleetAssetDetailPage() {
         </FleetPanel>
       )}
 
+      {showFuel && (
+        <FleetPanel
+          title="Record a fill"
+          description="From the slip. Consumption is measured between two full tanks, so whether this one filled the tank matters as much as the litres."
+        >
+          <form onSubmit={handleRecordFuel} className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div>
+              <label className={LABEL}>Litres *</label>
+              <input
+                type="number"
+                step="0.01"
+                value={fuelLitres}
+                onChange={(e) => {
+                  setFuelLitres(e.target.value);
+                  const l = Number(e.target.value);
+                  const p = Number(fuelPrice);
+                  if (l > 0 && p > 0) setFuelTotal(String(Math.round(l * p)));
+                }}
+                className={INPUT}
+              />
+            </div>
+            <div>
+              <label className={LABEL}>Price per litre</label>
+              <input
+                type="number"
+                step="0.01"
+                value={fuelPrice}
+                onChange={(e) => {
+                  setFuelPrice(e.target.value);
+                  const l = Number(fuelLitres);
+                  const p = Number(e.target.value);
+                  if (l > 0 && p > 0) setFuelTotal(String(Math.round(l * p)));
+                }}
+                placeholder="ETB"
+                className={INPUT}
+              />
+            </div>
+            <div>
+              <label className={LABEL}>Total cost *</label>
+              <input
+                type="number"
+                value={fuelTotal}
+                onChange={(e) => setFuelTotal(e.target.value)}
+                placeholder="ETB"
+                className={INPUT}
+              />
+            </div>
+
+            <div>
+              <label className={LABEL}>Date</label>
+              <input
+                type="date"
+                value={fuelDate}
+                onChange={(e) => setFuelDate(e.target.value)}
+                className={INPUT}
+              />
+            </div>
+            <div>
+              <label className={LABEL}>
+                Reading at the pump{' '}
+                {asset.meterType !== 'none' ? `(${METER_UNIT_LABEL[asset.meterType]})` : ''}
+              </label>
+              <input
+                type="number"
+                value={fuelMeter}
+                onChange={(e) => setFuelMeter(e.target.value)}
+                disabled={asset.meterType === 'none'}
+                className={`${INPUT} disabled:opacity-50`}
+              />
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                {asset.meterType === 'none'
+                  ? 'No meter, so this fill can be costed but not rated.'
+                  : `Currently ${formatMeter(asset.currentMeter, asset.meterType)}. A higher reading moves the register forward.`}
+              </p>
+            </div>
+            <div>
+              <label className={LABEL}>Slip number</label>
+              <input
+                value={fuelRef}
+                onChange={(e) => setFuelRef(e.target.value)}
+                placeholder="FS-000000"
+                className={`${INPUT} font-mono`}
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className={LABEL}>Station</label>
+              <input
+                value={fuelStation}
+                onChange={(e) => setFuelStation(e.target.value)}
+                placeholder="NOC Adama"
+                className={INPUT}
+              />
+            </div>
+            <div className="flex items-end">
+              <label className="inline-flex items-start gap-2 cursor-pointer pb-2">
+                <input
+                  type="checkbox"
+                  checked={fuelFull}
+                  onChange={(e) => setFuelFull(e.target.checked)}
+                  className="accent-emerald-600 mt-0.5"
+                />
+                <span className="text-xs text-slate-700 dark:text-slate-200">
+                  Filled to the top
+                </span>
+              </label>
+            </div>
+
+            <div className="md:col-span-3 flex justify-end gap-3">
+              <FleetButton type="button" variant="secondary" onClick={() => setShowFuel(false)}>
+                Cancel
+              </FleetButton>
+              <FleetButton type="submit" icon={Fuel} disabled={busy}>
+                {busy ? 'Saving…' : 'Record fill'}
+              </FleetButton>
+            </div>
+          </form>
+        </FleetPanel>
+      )}
+
       {showService && (
         <FleetPanel
           title="Record service"
@@ -928,7 +1173,7 @@ export function AdminFleetAssetDetailPage() {
 
       <FleetPanel
         title="Working history"
-        description="Everything this machine has done, newest first — issues, returns, faults, repairs and status changes on one timeline."
+        description="Everything this machine has done, newest first — issues, returns, faults, repairs, services, fuel and status changes on one timeline."
       >
         <AssetTimeline
           asset={asset}
@@ -936,6 +1181,7 @@ export function AdminFleetAssetDetailPage() {
           assignments={assignments}
           workOrders={workOrders}
           serviceRecords={serviceRecords}
+          fuelLogs={fuelLogs}
         />
       </FleetPanel>
 

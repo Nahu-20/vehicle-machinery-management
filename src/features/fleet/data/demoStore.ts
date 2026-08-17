@@ -5,11 +5,18 @@ import type {
   FleetAssignment,
   FleetDriver,
   FleetDriverStatus,
+  FleetFuelLog,
   FleetServiceRecord,
   FleetStatusEvent,
   FleetWorkOrder,
 } from '../types/fleet';
-import { DEMO_ASSETS, DEMO_ASSIGNMENTS, DEMO_DRIVERS, DEMO_WORK_ORDERS } from './demoFleet';
+import {
+  DEMO_ASSETS,
+  DEMO_ASSIGNMENTS,
+  DEMO_DRIVERS,
+  DEMO_FUEL_LOGS,
+  DEMO_WORK_ORDERS,
+} from './demoFleet';
 
 /**
  * Writable in-memory register, used only when Firebase is unconfigured.
@@ -31,6 +38,7 @@ let workOrders: FleetWorkOrder[] = DEMO_WORK_ORDERS.map((w) => ({ ...w }));
 let statusEvents: FleetStatusEvent[] = [];
 let serviceRecords: FleetServiceRecord[] = [];
 let drivers: FleetDriver[] = DEMO_DRIVERS.map((d) => ({ ...d }));
+let fuelLogs: FleetFuelLog[] = DEMO_FUEL_LOGS.map((f) => ({ ...f }));
 
 /**
  * Subscribers are notified after every mutation.
@@ -71,6 +79,7 @@ export const demoGetDriver = (driverId: string): FleetDriver | null => {
   const found = drivers.find((d) => d.driverId === driverId);
   return found ? { ...found } : null;
 };
+export const demoListFuelLogs = (): FleetFuelLog[] => fuelLogs.map((f) => ({ ...f }));
 
 /* -------------------------------------------------------------- writes */
 
@@ -279,6 +288,53 @@ export function demoReset(): void {
   statusEvents = [];
   serviceRecords = [];
   drivers = DEMO_DRIVERS.map((d) => ({ ...d }));
+  fuelLogs = DEMO_FUEL_LOGS.map((f) => ({ ...f }));
+  notify();
+}
+
+/* ----------------------------------------------------------------- fuel */
+
+/**
+ * Record a fill.
+ *
+ * Moves the asset's meter forward when the pump reading is higher than the one
+ * on record, and never backwards. A fill-up is the most frequent moment anybody
+ * actually reads a dial — weekly, against a sign-out that might be monthly — so
+ * refusing to use it would leave currentMeter stale and the service-due list
+ * wrong. lastServiceMeter is left alone: filling a tank is not servicing.
+ */
+export function demoRecordFuelFill(log: Omit<FleetFuelLog, 'fuelLogId'>): string {
+  const id = nextId('fl');
+  fuelLogs = [...fuelLogs, { ...log, fuelLogId: id }];
+
+  const asset = assets.find((a) => a.assetId === log.assetId);
+  if (
+    asset &&
+    asset.meterType !== 'none' &&
+    log.meterAtFill != null &&
+    log.meterAtFill > asset.currentMeter
+  ) {
+    mutateAsset(asset.assetId, { currentMeter: log.meterAtFill });
+  }
+
+  notify();
+  return id;
+}
+
+/** Undo a mistyped slip without removing it. */
+export function demoVoidFuelFill(fuelLogId: string, actorUid: string, reason: string): void {
+  const i = fuelLogs.findIndex((f) => f.fuelLogId === fuelLogId);
+  if (i === -1) throw new Error('That fuel record no longer exists.');
+  if (fuelLogs[i].voidedAt) throw new Error('That fuel record is already voided.');
+  fuelLogs[i] = {
+    ...fuelLogs[i],
+    voidedAt: Timestamp.now(),
+    voidedByUid: actorUid,
+    voidReason: reason,
+  };
+  // The asset's meter is deliberately left where it is. It may have moved on
+  // since, and winding a register backwards on the strength of a correction is
+  // how a meter ends up below a reading somebody has already worked from.
   notify();
 }
 

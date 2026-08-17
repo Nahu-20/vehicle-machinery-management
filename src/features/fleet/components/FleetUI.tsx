@@ -237,3 +237,192 @@ export const FleetButton: React.FC<
     </button>
   );
 };
+
+/* ------------------------------------------------------------------ charts */
+
+/*
+ * Drawn by hand, in SVG and CSS, rather than by adding a charting library.
+ *
+ * Three reasons. The shapes needed here are a bar, a column and a sparkline, and
+ * a library that draws those also ships axes, legends, tooltips and a rendering
+ * layer this module will never use — on a portal that already carries Mapbox.
+ * The horizontal bar in particular already existed in four hand-written copies
+ * across this repo, so the choice was never library-or-nothing, it was
+ * one-copy-or-four. And a chart nobody can read is worse than a table, so each
+ * of these carries a text label and an aria-label; the dashboard readiness bar
+ * was the only graphic in the module that had one before.
+ */
+
+/**
+ * A proportion, as a horizontal bar.
+ *
+ * Consolidates the idiom from the fleet dashboard's readiness column and the
+ * three copies outside this module (AlertsRiskRadar, ProgramCard,
+ * ProgramDossierModal). Tone is passed rather than derived, because what counts
+ * as good differs per caller: high availability is good, high fuel spend is not.
+ */
+export const FleetBar: React.FC<{
+  value: number;
+  max: number;
+  label: string;
+  tone?: 'good' | 'warn' | 'bad' | 'neutral';
+  className?: string;
+}> = ({ value, max, label, tone = 'neutral', className = '' }) => {
+  const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
+  const fill = {
+    good: 'bg-emerald-500',
+    warn: 'bg-amber-500',
+    bad: 'bg-red-500',
+    neutral: 'bg-slate-400 dark:bg-slate-500',
+  }[tone];
+
+  return (
+    <div
+      className={`h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden ${className}`}
+      role="img"
+      aria-label={label}
+    >
+      <div
+        className={`h-full rounded-full transition-all duration-500 ${fill}`}
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
+};
+
+export interface ColumnDatum {
+  label: string;
+  value: number;
+  /** Shown under the column when there is room. Falls back to `label`. */
+  shortLabel?: string;
+}
+
+/**
+ * A run of columns over time.
+ *
+ * Zero-baselined deliberately. A chart that starts its axis at the smallest
+ * value makes a 5% wobble look like a collapse, which is exactly the mistake
+ * that gets a fleet officer asked why spending "doubled" when it did not.
+ */
+export const FleetColumnChart: React.FC<{
+  data: ColumnDatum[];
+  /** Formats the value for the tooltip and the accessible description. */
+  format?: (value: number) => string;
+  tone?: 'good' | 'warn' | 'bad' | 'neutral';
+  height?: number;
+  caption: string;
+}> = ({ data, format = (v) => v.toLocaleString(), tone = 'neutral', height = 120, caption }) => {
+  const max = Math.max(...data.map((d) => d.value), 0);
+  const fill = {
+    good: 'bg-emerald-500',
+    warn: 'bg-amber-500',
+    bad: 'bg-red-500',
+    neutral: 'bg-emerald-600/80 dark:bg-emerald-500/70',
+  }[tone];
+
+  if (data.length === 0 || max <= 0) {
+    return (
+      <div className="text-xs text-slate-500 dark:text-slate-400 py-8 text-center">
+        Nothing to chart yet.
+      </div>
+    );
+  }
+
+  return (
+    <figure
+      role="img"
+      aria-label={`${caption}. ${data.map((d) => `${d.label}: ${format(d.value)}`).join('; ')}`}
+    >
+      <div className="flex items-end gap-1.5" style={{ height }}>
+        {data.map((d) => (
+          <div key={d.label} className="flex-1 min-w-0 flex flex-col justify-end h-full group">
+            <div className="text-[10px] font-bold text-slate-600 dark:text-slate-300 text-center opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              {format(d.value)}
+            </div>
+            <div
+              className={`w-full rounded-t-md transition-all duration-500 ${fill}`}
+              // A floor of 2px so an occupied-but-tiny month is still visibly
+              // different from a month with nothing in it.
+              style={{ height: `${Math.max(2, (d.value / max) * 100)}%` }}
+              title={`${d.label}: ${format(d.value)}`}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-1.5 mt-2">
+        {data.map((d) => (
+          <div
+            key={d.label}
+            className="flex-1 min-w-0 text-[10px] text-slate-500 dark:text-slate-400 text-center truncate"
+          >
+            {d.shortLabel ?? d.label}
+          </div>
+        ))}
+      </div>
+      <figcaption className="sr-only">{caption}</figcaption>
+    </figure>
+  );
+};
+
+/**
+ * A trend line, small enough to sit inside a table row.
+ *
+ * No axis and no scale: it answers "which way is this going", not "by how much".
+ * The number beside it answers that, which is why this is never shown alone.
+ */
+export const FleetSparkline: React.FC<{
+  values: number[];
+  label: string;
+  tone?: 'good' | 'warn' | 'bad' | 'neutral';
+  width?: number;
+  height?: number;
+}> = ({ values, label, tone = 'neutral', width = 96, height = 24 }) => {
+  const stroke = {
+    good: 'stroke-emerald-500',
+    warn: 'stroke-amber-500',
+    bad: 'stroke-red-500',
+    neutral: 'stroke-slate-400',
+  }[tone];
+
+  if (values.length < 2) {
+    return (
+      <span className="text-[10px] text-slate-400 dark:text-slate-500" title={label}>
+        not enough history
+      </span>
+    );
+  }
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const step = width / (values.length - 1);
+
+  const points = values
+    .map((v, i) => {
+      // Inset by 2px top and bottom so the stroke is not clipped at the extremes.
+      const y = height - 2 - ((v - min) / span) * (height - 4);
+      return `${(i * step).toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label={label}
+      className="shrink-0 overflow-visible"
+    >
+      <polyline
+        points={points}
+        fill="none"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={stroke}
+      />
+    </svg>
+  );
+};
+

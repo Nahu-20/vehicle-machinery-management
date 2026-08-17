@@ -7,10 +7,12 @@ import {
   CheckCircle2,
   History,
   Droplets,
+  Fuel,
 } from 'lucide-react';
 import type {
   FleetAsset,
   FleetAssignment,
+  FleetFuelLog,
   FleetServiceRecord,
   FleetStatusEvent,
   FleetTimelineEntry,
@@ -43,9 +45,34 @@ export function buildTimeline(
   statusEvents: FleetStatusEvent[],
   assignments: FleetAssignment[],
   workOrders: FleetWorkOrder[],
-  serviceRecords: FleetServiceRecord[] = []
+  serviceRecords: FleetServiceRecord[] = [],
+  fuelLogs: FleetFuelLog[] = []
 ): FleetTimelineEntry[] {
   const entries: FleetTimelineEntry[] = [];
+
+  for (const f of fuelLogs) {
+    entries.push({
+      id: `fl-${f.fuelLogId}`,
+      kind: 'fuel',
+      at: f.filledAt,
+      // A voided slip stays on the timeline. Removing it would leave a machine
+      // whose meter jumped for no reason anybody reading this could see.
+      title: f.voidedAt
+        ? `Fuel — ${f.litres.toLocaleString()} L (voided)`
+        : `Fuelled — ${f.litres.toLocaleString()} L`,
+      detail: [
+        `${Math.round(f.totalCost).toLocaleString()} ETB`,
+        f.fullTank ? null : 'part-fill',
+        f.station,
+        f.reference,
+        f.voidedAt ? `Voided: ${f.voidReason ?? 'no reason given'}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      actorName: f.recordedByName,
+      meter: f.meterAtFill ?? undefined,
+    });
+  }
 
   for (const r of serviceRecords) {
     entries.push({
@@ -148,6 +175,7 @@ const KIND_ICON = {
 };
 
 function iconFor(entry: FleetTimelineEntry) {
+  if (entry.kind === 'fuel') return Fuel;
   if (entry.kind === 'service') return Droplets;
   if (entry.kind === 'assignment') return entry.id.startsWith('rt-') ? LogIn : LogOut;
   if (entry.kind === 'work_order') return entry.id.startsWith('wv-') ? CheckCircle2 : Wrench;
@@ -158,6 +186,13 @@ function toneFor(entry: FleetTimelineEntry): string {
   // Servicing gets its own hue: it is the one entry that is good news, and it
   // should not read as another thing that went wrong.
   if (entry.kind === 'service') return 'bg-sky-500/15 text-sky-600 dark:text-sky-400';
+  // Fuel is routine, not an event: a muted violet keeps a busy machine's
+  // timeline readable rather than making every fill compete with a breakdown.
+  if (entry.kind === 'fuel') {
+    return entry.title.includes('voided')
+      ? 'bg-slate-500/15 text-slate-500 dark:text-slate-500'
+      : 'bg-violet-500/15 text-violet-600 dark:text-violet-400';
+  }
   if (entry.severity === 'grounded') return 'bg-red-500/15 text-red-600 dark:text-red-400';
   if (entry.kind === 'work_order') {
     return entry.id.startsWith('wv-')
@@ -185,10 +220,18 @@ export const AssetTimeline: React.FC<{
   assignments: FleetAssignment[];
   workOrders: FleetWorkOrder[];
   serviceRecords?: FleetServiceRecord[];
-}> = ({ asset, statusEvents, assignments, workOrders, serviceRecords = [] }) => {
+  fuelLogs?: FleetFuelLog[];
+}> = ({
+  asset,
+  statusEvents,
+  assignments,
+  workOrders,
+  serviceRecords = [],
+  fuelLogs = [],
+}) => {
   const entries = useMemo(
-    () => buildTimeline(asset, statusEvents, assignments, workOrders, serviceRecords),
-    [asset, statusEvents, assignments, workOrders, serviceRecords]
+    () => buildTimeline(asset, statusEvents, assignments, workOrders, serviceRecords, fuelLogs),
+    [asset, statusEvents, assignments, workOrders, serviceRecords, fuelLogs]
   );
 
   if (entries.length === 0) {
@@ -196,7 +239,7 @@ export const AssetTimeline: React.FC<{
       <FleetEmptyState
         icon={History}
         title="Nothing recorded yet"
-        message="Issues, returns, faults, services and status changes will appear here as they happen."
+        message="Issues, returns, faults, services, fuel and status changes will appear here as they happen."
       />
     );
   }
