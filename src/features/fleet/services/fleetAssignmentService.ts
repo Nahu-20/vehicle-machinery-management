@@ -13,8 +13,9 @@ import {
 import { db } from '../../../lib/firebase';
 import { logAuditEvent } from '../../../services/auditService';
 import type { StaffUser } from '../../../types/auth';
-import type { FleetAsset, FleetAssignment } from '../types/fleet';
-import { humanise, isIssuable } from '../constants/fleetVocabulary';
+import type { FleetAsset, FleetAssignment, FleetDriver } from '../types/fleet';
+import { assessDriverForAsset, humanise, isIssuable } from '../constants/fleetVocabulary';
+import { FLEET_DRIVERS_COLLECTION } from './fleetCollections';
 import {
   FLEET_ASSETS_COLLECTION,
   FleetNotFoundError,
@@ -26,6 +27,7 @@ import {
   demoIssueAsset,
   demoReturnAsset,
   demoGetAsset,
+  demoGetDriver,
 } from '../data/demoStore';
 
 /**
@@ -38,7 +40,8 @@ import {
  * here.
  */
 
-export const FLEET_ASSIGNMENTS_COLLECTION = 'fleetAssignments';
+export { FLEET_ASSIGNMENTS_COLLECTION } from './fleetCollections';
+import { FLEET_ASSIGNMENTS_COLLECTION } from './fleetCollections';
 
 function requireDb() {
   if (!db) {
@@ -58,10 +61,36 @@ export interface IssueAssetInput {
   expectedVersion: number;
   assignedToUid: string;
   assignedToName: string;
+  /**
+   * The driver record, when the holder is one.
+   *
+   * Optional, and deliberately so. A machine handed to a labourer taken on for
+   * the week still has to be recordable, and a register that refuses the awkward
+   * case is one people keep a second book alongside. When it is present the
+   * licence is checked; when it is absent nothing is claimed about a licence,
+   * which is the honest position rather than a silent pass.
+   */
+  driverId?: string | null;
   purpose: string;
   /** Meter read at the counter as the machine goes out. */
   meterOut: number;
   dueAt?: Date | null;
+}
+
+/**
+ * Refuse the issue if the driver may not take this machine.
+ *
+ * Enforced here rather than only in the form, because a disabled button is a
+ * suggestion. The check needs the driver record, which is why the collection
+ * name comes from the leaf module — reaching for the driver service from here
+ * would close an import cycle, since that service reads assignments.
+ */
+function guardDriver(driver: FleetDriver | null, asset: FleetAsset, driverId: string): void {
+  if (!driver) {
+    throw new Error(`Driver ${driverId} was not found in the directory.`);
+  }
+  const verdict = assessDriverForAsset(driver, asset);
+  if (!verdict.allowed) throw new Error(verdict.reason ?? 'This driver may not take this machine.');
 }
 
 /**
@@ -91,11 +120,14 @@ export async function issueAsset(
         `Reading ${input.meterOut} is below the recorded ${asset.currentMeter}. Check the meter.`
       );
     }
+    if (input.driverId) guardDriver(demoGetDriver(input.driverId), asset, input.driverId);
+
     return demoIssueAsset({
       assetId: input.assetId,
       zoneId: asset.zoneId,
       assignedToUid: input.assignedToUid,
       assignedToName: input.assignedToName,
+      driverId: input.driverId ?? null,
       purpose: { en: input.purpose },
       issuedAt: Timestamp.now(),
       dueAt: input.dueAt ? Timestamp.fromDate(input.dueAt) : null,
@@ -110,6 +142,9 @@ export async function issueAsset(
   const database = requireDb();
   const assetRef = doc(database, FLEET_ASSETS_COLLECTION, input.assetId);
   const assignmentRef = doc(collection(database, FLEET_ASSIGNMENTS_COLLECTION));
+  const driverRef = input.driverId
+    ? doc(database, FLEET_DRIVERS_COLLECTION, input.driverId)
+    : null;
 
   await runTransaction(database, async (tx) => {
     const snap = await tx.get(assetRef);
@@ -132,6 +167,19 @@ export async function issueAsset(
       );
     }
 
+    // Read inside the transaction so a licence that lapses, or a driver
+    // suspended, between the form opening and this write is caught rather than
+    // waved through on stale data. A document get is allowed here; a query is
+    // not, which is why the driver is addressed by id.
+    if (driverRef && input.driverId) {
+      const driverSnap = await tx.get(driverRef);
+      guardDriver(
+        driverSnap.exists() ? (driverSnap.data() as FleetDriver) : null,
+        asset,
+        input.driverId
+      );
+    }
+
     tx.set(
       assignmentRef,
       stripUndefined({
@@ -140,6 +188,7 @@ export async function issueAsset(
         zoneId: asset.zoneId,
         assignedToUid: input.assignedToUid,
         assignedToName: input.assignedToName,
+        driverId: input.driverId ?? null,
         purpose: { en: input.purpose },
         issuedAt: serverTimestamp(),
         dueAt: input.dueAt ? Timestamp.fromDate(input.dueAt) : null,
@@ -155,6 +204,7 @@ export async function issueAsset(
       status: 'assigned',
       custodianUid: input.assignedToUid,
       custodianName: input.assignedToName,
+      custodianDriverId: input.driverId ?? null,
       currentMeter: asset.meterType === 'none' ? asset.currentMeter : input.meterOut,
       version: asset.version + 1,
       updatedAt: serverTimestamp(),
@@ -258,6 +308,7 @@ export async function returnAsset(
       status: input.returnToMaintenance ? 'in_maintenance' : 'available',
       custodianUid: null,
       custodianName: null,
+      custodianDriverId: null,
       currentMeter: asset.meterType === 'none' ? asset.currentMeter : input.meterIn,
       version: asset.version + 1,
       updatedAt: serverTimestamp(),

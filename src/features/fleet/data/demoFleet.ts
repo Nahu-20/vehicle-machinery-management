@@ -1,5 +1,10 @@
 import { Timestamp } from 'firebase/firestore';
-import type { FleetAsset, FleetAssignment, FleetWorkOrder } from '../types/fleet';
+import type {
+  FleetAsset,
+  FleetAssignment,
+  FleetDriver,
+  FleetWorkOrder,
+} from '../types/fleet';
 
 /**
  * Demonstration fleet.
@@ -46,6 +51,7 @@ export const DEMO_ASSETS: FleetAsset[] = [
     meterType: 'hours', currentMeter: 890, serviceIntervalMeter: 300, lastServiceMeter: 750,
     zoneId: 'east_shewa', stationedAt: 'Adama Depot', status: 'assigned',
     custodianUid: 'unlinked:Obbo Girmaa Bekele', custodianName: 'Obbo Girmaa Bekele',
+    custodianDriverId: 'DR-001',
   }),
   asset({
     assetId: 'TR-004', assetType: 'tractor', make: 'Massey Ferguson', model: 'MF 275', year: 2016,
@@ -62,6 +68,7 @@ export const DEMO_ASSETS: FleetAsset[] = [
     meterType: 'hours', currentMeter: 2255, serviceIntervalMeter: 250, lastServiceMeter: 2100,
     zoneId: 'bale', stationedAt: 'Robe Machinery Yard', status: 'assigned',
     custodianUid: 'unlinked:Aaddee Caaltuu Nagaasaa', custodianName: 'Aaddee Caaltuu Nagaasaa',
+    custodianDriverId: 'DR-002',
   }),
   asset({
     assetId: 'TR-007', assetType: 'tractor', make: 'Massey Ferguson', model: 'MF 385', year: 2018,
@@ -101,6 +108,7 @@ export const DEMO_ASSETS: FleetAsset[] = [
     assetId: 'IM-002', assetType: 'implement', make: 'Agrolead', model: 'Seed Drill 3m',
     meterType: 'none', currentMeter: 0, zoneId: 'east_shewa', stationedAt: 'Adama Depot',
     status: 'assigned', custodianUid: 'unlinked:Obbo Taaddasaa Roobaa', custodianName: 'Obbo Taaddasaa Roobaa',
+    custodianDriverId: 'DR-006',
   }),
   asset({
     assetId: 'IM-003', assetType: 'implement', make: 'Ozdoken', model: 'Offset Harrow',
@@ -119,6 +127,7 @@ export const DEMO_ASSETS: FleetAsset[] = [
     meterType: 'kilometres', currentMeter: 84200, serviceIntervalMeter: 5000, lastServiceMeter: 80000,
     plateNumber: '3-A12345 OR', zoneId: 'east_shewa', stationedAt: 'Adama Depot',
     status: 'assigned', custodianUid: 'unlinked:Aaddee Boontuu Hundee', custodianName: 'Aaddee Boontuu Hundee',
+    custodianDriverId: 'DR-003',
     insuranceExpiry: ahead(112), inspectionExpiry: ahead(40),
   }),
   asset({
@@ -144,6 +153,7 @@ export const DEMO_ASSETS: FleetAsset[] = [
     meterType: 'kilometres', currentMeter: 96700, serviceIntervalMeter: 10000, lastServiceMeter: 90000,
     plateNumber: '3-E55014 OR', zoneId: 'east_shewa', stationedAt: 'Adama Depot',
     status: 'assigned', custodianUid: 'unlinked:Obbo Dassaalanyi Tolaa', custodianName: 'Obbo Dassaalanyi Tolaa',
+    custodianDriverId: 'DR-004',
     insuranceExpiry: ahead(200), inspectionExpiry: ahead(60),
   }),
   asset({
@@ -157,6 +167,7 @@ export const DEMO_ASSETS: FleetAsset[] = [
     meterType: 'kilometres', currentMeter: 12400, serviceIntervalMeter: 3000, lastServiceMeter: 12000,
     plateNumber: '3-M20114 OR', zoneId: 'jimma', stationedAt: 'Jimma Zonal Office',
     status: 'assigned', custodianUid: 'unlinked:Obbo Fiqaaduu Alamuu', custodianName: 'Obbo Fiqaaduu Alamuu',
+    custodianDriverId: 'DR-005',
     insuranceExpiry: ahead(240), inspectionExpiry: ahead(120),
   }),
   asset({
@@ -195,17 +206,98 @@ export const DEMO_ASSETS: FleetAsset[] = [
   }),
 ];
 
+/**
+ * The people who hold the machines above.
+ *
+ * Names deliberately match the holders the fixture already used, so the driver
+ * records and the sign-out history describe the same people rather than two
+ * parallel casts. Licences are spread across every state the rules distinguish —
+ * valid, expiring, lapsed, none at all — because a demo where every licence is
+ * in order proves nothing about the checks.
+ */
+export const DEMO_DRIVERS: FleetDriver[] = [
+  {
+    driverId: 'DR-001', fullName: 'Obbo Girmaa Bekele', phone: '+251 911 204 118',
+    employeeNumber: 'OAB-3312', employment: 'permanent',
+    licenceNumber: 'ET-3-448127', licenceGrade: '3', licenceExpiry: ahead(412),
+    zoneId: 'east_shewa', stationedAt: 'Adama Depot', status: 'active', version: 1,
+  },
+  {
+    driverId: 'DR-002', fullName: 'Aaddee Caaltuu Nagaasaa', phone: '+251 912 776 043',
+    employeeNumber: 'OAB-2874', employment: 'permanent',
+    licenceNumber: 'ET-3-330916', licenceGrade: '3', licenceExpiry: ahead(233),
+    zoneId: 'bale', stationedAt: 'Robe Machinery Yard', status: 'active', version: 1,
+  },
+  {
+    // Holds PK-001, a pickup. Licence still valid, but only just — issuing a
+    // road vehicle to her warns rather than refuses.
+    driverId: 'DR-003', fullName: 'Aaddee Boontuu Hundee', phone: '+251 913 550 287',
+    employeeNumber: 'OAB-4106', employment: 'permanent',
+    licenceNumber: 'ET-2-771540', licenceGrade: '2', licenceExpiry: ahead(21),
+    zoneId: 'east_shewa', stationedAt: 'Adama Depot', status: 'active', version: 1,
+  },
+  {
+    // The case worth seeing: already out with TK-001, a truck, on a licence that
+    // lapsed while the vehicle was signed out. Nothing recalls it automatically —
+    // the register can only surface it, which is what the compliance view is for.
+    driverId: 'DR-004', fullName: 'Obbo Dassaalanyi Tolaa', phone: '+251 911 908 336',
+    employment: 'contract',
+    licenceNumber: 'ET-4-118203', licenceGrade: '4', licenceExpiry: ago(9),
+    zoneId: 'east_shewa', stationedAt: 'Adama Depot', status: 'active', version: 1,
+  },
+  {
+    driverId: 'DR-005', fullName: 'Obbo Fiqaaduu Alamuu', phone: '+251 917 442 690',
+    employeeNumber: 'OAB-5027', employment: 'permanent',
+    licenceNumber: 'ET-1-620884', licenceGrade: '1', licenceExpiry: ahead(508),
+    zoneId: 'jimma', stationedAt: 'Jimma Zonal Office', status: 'active', version: 1,
+  },
+  {
+    // Daily labour, no licence on file. Holds an implement, which needs none —
+    // so this issue is allowed, with a warning that a road move would not be.
+    driverId: 'DR-006', fullName: 'Obbo Taaddasaa Roobaa', phone: '+251 918 113 725',
+    employment: 'daily',
+    zoneId: 'east_shewa', stationedAt: 'Adama Seed Site', status: 'active', version: 1,
+  },
+  {
+    driverId: 'DR-007', fullName: 'Obbo Kabbadaa Tolaa', phone: '+251 911 337 052',
+    employeeNumber: 'OAB-1998', employment: 'permanent',
+    licenceNumber: 'ET-3-205774', licenceGrade: '3', licenceExpiry: ahead(690),
+    zoneId: 'arsi', stationedAt: 'Asella Zonal Office', status: 'active', version: 1,
+  },
+  {
+    driverId: 'DR-008', fullName: 'Aaddee Hawwii Guutuu', phone: '+251 916 820 471',
+    employeeNumber: 'OAB-4471', employment: 'seconded',
+    licenceNumber: 'ET-3-664219', licenceGrade: '3', licenceExpiry: ahead(147),
+    zoneId: 'arsi', stationedAt: 'Asella Zonal Office', status: 'active', version: 1,
+  },
+  {
+    // Nobody's machine at the moment, so the directory is not entirely busy.
+    driverId: 'DR-009', fullName: 'Obbo Nagaash Baqqalaa', phone: '+251 910 665 194',
+    employeeNumber: 'OAB-3760', employment: 'permanent',
+    licenceNumber: 'ET-3-903518', licenceGrade: '3', licenceExpiry: ahead(365),
+    zoneId: 'west_arsi', stationedAt: 'Shashamane Depot', status: 'active', version: 1,
+  },
+  {
+    // Suspended, so the outright refusal is demonstrable without editing anything.
+    driverId: 'DR-010', fullName: 'Aaddee Meskerem Taye', phone: '+251 915 271 608',
+    employment: 'contract',
+    licenceNumber: 'ET-2-540117', licenceGrade: '2', licenceExpiry: ahead(276),
+    zoneId: 'jimma', stationedAt: 'Jimma Zonal Office', status: 'suspended', version: 1,
+    notes: { en: 'Suspended pending the outcome of a road incident review.' },
+  },
+];
+
 export const DEMO_ASSIGNMENTS: FleetAssignment[] = [
   {
     assignmentId: 'demo-as-1', assetId: 'TR-003', zoneId: 'east_shewa',
-    assignedToUid: 'unlinked:Obbo Girmaa Bekele', assignedToName: 'Obbo Girmaa Bekele',
+    assignedToUid: 'unlinked:Obbo Girmaa Bekele', assignedToName: 'Obbo Girmaa Bekele', driverId: 'DR-001',
     purpose: { en: 'Ploughing at Boset farmers cooperative' },
     issuedAt: ago(6), dueAt: ahead(3), returnedAt: null,
     meterOut: 872, meterIn: null, status: 'active', issuedByUid: 'demo-fleetofficer-001',
   },
   {
     assignmentId: 'demo-as-2', assetId: 'TR-006', zoneId: 'bale',
-    assignedToUid: 'unlinked:Aaddee Caaltuu Nagaasaa', assignedToName: 'Aaddee Caaltuu Nagaasaa',
+    assignedToUid: 'unlinked:Aaddee Caaltuu Nagaasaa', assignedToName: 'Aaddee Caaltuu Nagaasaa', driverId: 'DR-002',
     purpose: { en: 'Land preparation, Sinana demonstration plots' },
     // Deliberately overdue, so the dashboard has something to flag.
     issuedAt: ago(21), dueAt: ago(4), returnedAt: null,
@@ -213,28 +305,28 @@ export const DEMO_ASSIGNMENTS: FleetAssignment[] = [
   },
   {
     assignmentId: 'demo-as-3', assetId: 'PK-001', zoneId: 'east_shewa',
-    assignedToUid: 'unlinked:Aaddee Boontuu Hundee', assignedToName: 'Aaddee Boontuu Hundee',
+    assignedToUid: 'unlinked:Aaddee Boontuu Hundee', assignedToName: 'Aaddee Boontuu Hundee', driverId: 'DR-003',
     purpose: { en: 'Extension officer field visits, Lume woreda' },
     issuedAt: ago(2), dueAt: ahead(12), returnedAt: null,
     meterOut: 83900, meterIn: null, status: 'active', issuedByUid: 'demo-fleetofficer-001',
   },
   {
     assignmentId: 'demo-as-4', assetId: 'TK-001', zoneId: 'east_shewa',
-    assignedToUid: 'unlinked:Obbo Dassaalanyi Tolaa', assignedToName: 'Obbo Dassaalanyi Tolaa',
+    assignedToUid: 'unlinked:Obbo Dassaalanyi Tolaa', assignedToName: 'Obbo Dassaalanyi Tolaa', driverId: 'DR-004',
     purpose: { en: 'Fertiliser delivery to Adama and Boset stores' },
     issuedAt: ago(1), dueAt: ahead(2), returnedAt: null,
     meterOut: 96100, meterIn: null, status: 'active', issuedByUid: 'demo-fleetofficer-001',
   },
   {
     assignmentId: 'demo-as-5', assetId: 'MC-001', zoneId: 'jimma',
-    assignedToUid: 'unlinked:Obbo Fiqaaduu Alamuu', assignedToName: 'Obbo Fiqaaduu Alamuu',
+    assignedToUid: 'unlinked:Obbo Fiqaaduu Alamuu', assignedToName: 'Obbo Fiqaaduu Alamuu', driverId: 'DR-005',
     purpose: { en: 'Coffee extension visits, Gomma woreda' },
     issuedAt: ago(9), dueAt: ahead(20), returnedAt: null,
     meterOut: 11800, meterIn: null, status: 'active', issuedByUid: 'demo-fleetofficer-001',
   },
   {
     assignmentId: 'demo-as-6', assetId: 'IM-002', zoneId: 'east_shewa',
-    assignedToUid: 'unlinked:Obbo Taaddasaa Roobaa', assignedToName: 'Obbo Taaddasaa Roobaa',
+    assignedToUid: 'unlinked:Obbo Taaddasaa Roobaa', assignedToName: 'Obbo Taaddasaa Roobaa', driverId: 'DR-006',
     purpose: { en: 'Row seeding at Adama seed multiplication site' },
     issuedAt: ago(4), dueAt: ahead(6), returnedAt: null,
     meterOut: 0, meterIn: null, status: 'active', issuedByUid: 'demo-fleetofficer-001',
@@ -242,7 +334,7 @@ export const DEMO_ASSIGNMENTS: FleetAssignment[] = [
   // Closed rows, so the history table is not empty
   {
     assignmentId: 'demo-as-7', assetId: 'TR-001', zoneId: 'arsi',
-    assignedToUid: 'unlinked:Obbo Kabbadaa Tolaa', assignedToName: 'Obbo Kabbadaa Tolaa',
+    assignedToUid: 'unlinked:Obbo Kabbadaa Tolaa', assignedToName: 'Obbo Kabbadaa Tolaa', driverId: 'DR-007',
     purpose: { en: 'Ploughing, Tiyo woreda' },
     issuedAt: ago(34), dueAt: ago(20), returnedAt: ago(22),
     meterOut: 1265, meterIn: 1310, status: 'returned',
@@ -250,7 +342,7 @@ export const DEMO_ASSIGNMENTS: FleetAssignment[] = [
   },
   {
     assignmentId: 'demo-as-8', assetId: 'TR-001', zoneId: 'arsi',
-    assignedToUid: 'unlinked:Aaddee Hawwii Guutuu', assignedToName: 'Aaddee Hawwii Guutuu',
+    assignedToUid: 'unlinked:Aaddee Hawwii Guutuu', assignedToName: 'Aaddee Hawwii Guutuu', driverId: 'DR-008',
     purpose: { en: 'Harrowing, Digeluna Tijo woreda' },
     issuedAt: ago(15), dueAt: ago(8), returnedAt: ago(9),
     meterOut: 1310, meterIn: 1348, status: 'returned',

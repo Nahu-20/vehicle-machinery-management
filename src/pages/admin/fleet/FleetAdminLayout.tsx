@@ -1,6 +1,14 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Truck, Wrench, BarChart3, Map as MapIcon, Info } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Truck,
+  Users,
+  Wrench,
+  BarChart3,
+  Map as MapIcon,
+  Info,
+} from 'lucide-react';
 import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
 import { hasPermission } from '../../../lib/permissions';
 import { isDemoFleet } from '../../../features/fleet/services/fleetService';
@@ -15,6 +23,7 @@ export function FleetAdminLayout() {
 
   const canView = hasPermission(staffUser, 'fleet.view');
   const canMaintain = hasPermission(staffUser, 'fleet.maintenance.manage');
+  const canAssign = hasPermission(staffUser, 'fleet.assign');
   const canReport = hasPermission(staffUser, 'fleet.reports.view');
 
   const navTabs = [
@@ -33,6 +42,17 @@ export function FleetAdminLayout() {
       end: false,
       icon: Truck,
       visible: canView,
+    },
+    {
+      // Sits next to the register rather than under Reports: the directory is
+      // something staff act on when issuing a machine, not something they read
+      // at the end of a month.
+      id: 'drivers',
+      label: 'Drivers',
+      to: '/admin/fleet/drivers',
+      end: false,
+      icon: Users,
+      visible: canView || canAssign,
     },
     {
       id: 'garage',

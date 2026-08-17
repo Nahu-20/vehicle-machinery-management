@@ -54,6 +54,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   'fleet.assign',
   'fleet.maintenance.manage',
   'fleet.reports.view',
+  'fleet.driver.manage',
   'fleet.asset.retire',
 ];
 
@@ -138,6 +139,7 @@ export const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
     'fleet.assign',
     'fleet.maintenance.manage',
     'fleet.reports.view',
+    'fleet.driver.manage',
   ],
 };
 

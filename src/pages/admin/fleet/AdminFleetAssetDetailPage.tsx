@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import {
   Gauge,
   CheckCircle2,
   Droplets,
+  ShieldAlert,
 } from 'lucide-react';
 import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
 import { hasPermission } from '../../../lib/permissions';
@@ -33,6 +34,7 @@ import type {
   FleetFaultSeverity,
   FleetWorkOrder,
   FleetServiceRecord,
+  FleetDriver,
   FleetStatusEvent,
   FleetAssetStatus,
 } from '../../../features/fleet/types/fleet';
@@ -44,6 +46,8 @@ import {
   METER_UNIT_LABEL,
   MANUAL_ASSET_STATUSES,
   humanise,
+  assessDriverForAsset,
+  licenceState,
 } from '../../../features/fleet/constants/fleetVocabulary';
 import {
   StatusPill,
@@ -52,11 +56,13 @@ import {
   FleetPanel,
   FleetButton,
   FleetEmptyState,
+  LicencePill,
 } from '../../../features/fleet/components/FleetUI';
 import {
   changeAssetStatus,
   type ChangeAssetStatusResult,
 } from '../../../features/fleet/services/fleetStatusService';
+import { listDrivers } from '../../../features/fleet/services/fleetDriverService';
 import { AssetImage } from '../../../features/fleet/components/AssetImage';
 import { AssetTimeline } from '../../../features/fleet/components/AssetTimeline';
 import {
@@ -138,6 +144,11 @@ export function AdminFleetAssetDetailPage() {
   const [statusReason, setStatusReason] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
 
+  // The directory, loaded once with the page. A few hundred rows at most, and
+  // fetching it per keystroke would be slower than holding it.
+  const [drivers, setDrivers] = useState<FleetDriver[]>([]);
+  const [driverId, setDriverId] = useState('');
+
   const [serviceRecords, setServiceRecords] = useState<FleetServiceRecord[]>([]);
   const [showService, setShowService] = useState(false);
   const [serviceMeter, setServiceMeter] = useState('');
@@ -150,12 +161,15 @@ export function AdminFleetAssetDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const [a, history, faults, events, services] = await Promise.all([
+      const [a, history, faults, events, services, driverRows] = await Promise.all([
         getAssetById(assetId),
         listAssignmentsForAsset(assetId).catch(() => [] as FleetAssignment[]),
         listWorkOrdersForAsset(assetId).catch(() => [] as FleetWorkOrder[]),
         listStatusEvents(assetId).catch(() => [] as FleetStatusEvent[]),
         listServiceRecords(assetId).catch(() => [] as FleetServiceRecord[]),
+        // Non-critical: without it the form falls back to a typed name, which
+        // is exactly what it did before drivers existed.
+        listDrivers({ status: 'active' }).catch(() => [] as FleetDriver[]),
       ]);
       if (!a) {
         setError(`Asset ${assetId} was not found.`);
@@ -172,6 +186,7 @@ export function AdminFleetAssetDetailPage() {
       setWorkOrders(faults);
       setStatusEvents(events);
       setServiceRecords(services);
+      setDrivers(driverRows);
       // Not a.status: the current status is often one the dropdown does not
       // offer, and defaulting to a value that is not in the list leaves the
       // select showing the first option while the state says another.
@@ -193,11 +208,41 @@ export function AdminFleetAssetDetailPage() {
 
   const activeAssignment = assignments.find((a) => a.status === 'active') ?? null;
 
+  /**
+   * Drivers offered for this machine.
+   *
+   * The zone the machine sits in comes first, because that is who will actually
+   * be standing at the counter, but the rest of the register follows rather than
+   * being hidden — machines do get moved between zones, and a picker that
+   * silently omits the right person sends the clerk to the free-text box.
+   */
+  const driverOptions = useMemo(() => {
+    if (!asset) return [] as FleetDriver[];
+    const here = drivers.filter((d) => d.zoneId === asset.zoneId);
+    const elsewhere = drivers.filter((d) => d.zoneId !== asset.zoneId);
+    return [...here, ...elsewhere];
+  }, [drivers, asset]);
+
+  const chosenDriver = useMemo(
+    () => drivers.find((d) => d.driverId === driverId) ?? null,
+    [drivers, driverId]
+  );
+
+  /** What the rules say about this pairing, computed as the clerk chooses. */
+  const eligibility = useMemo(
+    () => (chosenDriver && asset ? assessDriverForAsset(chosenDriver, asset) : null),
+    [chosenDriver, asset]
+  );
+
   const handleIssue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!asset || !staffUser || busy) return;
-    if (!holderName.trim()) return setError('Who is taking the asset?');
+    const name = chosenDriver ? chosenDriver.fullName : holderName.trim();
+    if (!name) return setError('Who is taking the asset?');
     if (!purpose.trim()) return setError('A purpose is required — it is what the register is for.');
+    // The same verdict the service will reach, said before the round trip so the
+    // clerk is not told 'no' by a failed save.
+    if (eligibility && !eligibility.allowed) return setError(eligibility.reason ?? 'Not permitted.');
 
     setBusy(true);
     setError(null);
@@ -207,9 +252,14 @@ export function AdminFleetAssetDetailPage() {
           assetId: asset.assetId,
           expectedVersion: asset.version,
           // Operators in the zones are rarely system users, so the holder is a
-          // name plus an optional staff or employee reference.
-          assignedToUid: holderRef.trim() || `unlinked:${holderName.trim()}`,
-          assignedToName: holderName.trim(),
+          // name plus an optional staff or employee reference. A driver record
+          // supplies both, and the name is still written down rather than
+          // joined, so this row keeps reading correctly years later.
+          assignedToUid: chosenDriver
+            ? `driver:${chosenDriver.driverId}`
+            : holderRef.trim() || `unlinked:${name}`,
+          assignedToName: name,
+          driverId: chosenDriver ? chosenDriver.driverId : null,
           purpose: purpose.trim(),
           meterOut: Number(meterOut),
           dueAt: dueAt ? new Date(`${dueAt}T00:00:00`) : null,
@@ -219,8 +269,14 @@ export function AdminFleetAssetDetailPage() {
       setShowIssue(false);
       setHolderName('');
       setHolderRef('');
+      setDriverId('');
       setPurpose('');
       setDueAt('');
+      setNotice(
+        eligibility?.warning
+          ? `${asset.assetId} issued to ${name}. ${eligibility.warning}`
+          : `${asset.assetId} issued to ${name}.`
+      );
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not issue the asset.');
@@ -511,7 +567,16 @@ export function AdminFleetAssetDetailPage() {
               Held by
             </div>
             <div className="text-slate-700 dark:text-slate-200 font-semibold mt-0.5">
-              {asset.custodianName || '—'}
+              {asset.custodianDriverId ? (
+                <Link
+                  to={`/admin/fleet/drivers/${asset.custodianDriverId}`}
+                  className="text-emerald-700 dark:text-emerald-400 hover:underline"
+                >
+                  {asset.custodianName}
+                </Link>
+              ) : (
+                asset.custodianName || '—'
+              )}
             </div>
           </div>
           <div>
@@ -533,23 +598,90 @@ export function AdminFleetAssetDetailPage() {
         >
           <form onSubmit={handleIssue} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className={LABEL}>Issued to *</label>
-              <input
-                value={holderName}
-                onChange={(e) => setHolderName(e.target.value)}
-                placeholder="Obbo Girmaa Bekele"
+              <label className={LABEL}>Driver</label>
+              <select
+                value={driverId}
+                onChange={(e) => {
+                  setDriverId(e.target.value);
+                  setError(null);
+                }}
                 className={INPUT}
-              />
+              >
+                <option value="">Someone not in the directory…</option>
+                {driverOptions.map((d) => (
+                  <option key={d.driverId} value={d.driverId}>
+                    {d.fullName} · {d.driverId}
+                    {d.zoneId !== asset.zoneId
+                      ? ` (${CANONICAL_ZONE_METADATA[d.zoneId]?.displayName ?? d.zoneId})`
+                      : ''}
+                  </option>
+                ))}
+              </select>
+              {chosenDriver && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <LicencePill state={licenceState(chosenDriver)} />
+                  {chosenDriver.phone && (
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {chosenDriver.phone}
+                    </span>
+                  )}
+                  <Link
+                    to={`/admin/fleet/drivers/${chosenDriver.driverId}`}
+                    className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
+                  >
+                    Open record
+                  </Link>
+                </div>
+              )}
             </div>
-            <div>
-              <label className={LABEL}>Staff or employee reference</label>
-              <input
-                value={holderRef}
-                onChange={(e) => setHolderRef(e.target.value)}
-                placeholder="Optional — operators often have no system login"
-                className={INPUT}
-              />
-            </div>
+
+            {chosenDriver ? (
+              <div className="flex items-end">
+                {eligibility && !eligibility.allowed ? (
+                  <div className="w-full rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-[11px] text-red-700 dark:text-red-300 flex items-start gap-2">
+                    <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <span>{eligibility.reason}</span>
+                  </div>
+                ) : eligibility?.warning ? (
+                  <div className="w-full rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <span>{eligibility.warning}</span>
+                  </div>
+                ) : (
+                  <div className="w-full rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-[11px] text-emerald-800 dark:text-emerald-300 flex items-start gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <span>Nothing on record stops this issue.</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                <label className={LABEL}>Issued to *</label>
+                <input
+                  value={holderName}
+                  onChange={(e) => setHolderName(e.target.value)}
+                  placeholder="Obbo Girmaa Bekele"
+                  className={INPUT}
+                />
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  A typed name records the sign-out but checks no licence, and it
+                  will not appear on anyone's driver page. Add them to the
+                  directory when there is time.
+                </p>
+              </div>
+            )}
+
+            {!chosenDriver && (
+              <div className="md:col-span-2">
+                <label className={LABEL}>Staff or employee reference</label>
+                <input
+                  value={holderRef}
+                  onChange={(e) => setHolderRef(e.target.value)}
+                  placeholder="Optional — operators often have no system login"
+                  className={INPUT}
+                />
+              </div>
+            )}
             <div className="md:col-span-2">
               <label className={LABEL}>Purpose *</label>
               <input

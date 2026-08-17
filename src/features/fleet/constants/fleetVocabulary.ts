@@ -2,6 +2,8 @@ import type {
   FleetAsset,
   FleetAssetStatus,
   FleetAssetType,
+  FleetDriver,
+  FleetDriverStatus,
   FleetFaultSeverity,
   FleetMeterType,
   FleetWorkOrderStatus,
@@ -57,6 +59,25 @@ export const DEFAULT_METER_BY_TYPE: Record<FleetAssetType, FleetMeterType> = {
   generator: 'hours',
   other: 'none',
 };
+
+/**
+ * The types that go on a public road.
+ *
+ * Lived as a literal array inside the asset form, where it decided whether to
+ * show the plate and insurance fields. It now also decides whether an expired
+ * licence stops an issue, so it belongs here with the other rules rather than
+ * being written out a second time and drifting.
+ */
+export const ROAD_VEHICLE_TYPES: readonly FleetAssetType[] = [
+  'pickup',
+  'truck',
+  'motorcycle',
+  'bus',
+];
+
+export function isRoadVehicle(assetType: FleetAssetType): boolean {
+  return ROAD_VEHICLE_TYPES.includes(assetType);
+}
 
 /** Unit suffix for display. Deliberately short — these appear inside table cells. */
 export const METER_UNIT_LABEL: Record<FleetMeterType, string> = {
@@ -322,3 +343,151 @@ export function planStatusChange(
     verifyWorkOrders: leavingGarage && ctx.completedWorkOrderCount > 0,
   };
 }
+
+/* ------------------------------------------------------------- drivers */
+
+export const DRIVER_STATUS_PILL_CLASSES: Record<FleetDriverStatus, string> = {
+  active: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+  suspended: 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30',
+  inactive: 'bg-slate-500/20 text-slate-600 dark:text-slate-400 border-slate-500/30',
+};
+
+export const DRIVER_STATUS_LABELS: Record<FleetDriverStatus, string> = {
+  active: 'Active',
+  suspended: 'Suspended',
+  inactive: 'Left',
+};
+
+/**
+ * Where a licence stands.
+ *
+ * `none` is a state, not an absence. A driver with no licence recorded is not
+ * the same as a driver whose licence is valid, and the existing expiry helpers
+ * cannot tell them apart — both isExpired and isExpiringSoon return false for a
+ * missing date, so an unrecorded licence reads as fine. Naming the case is what
+ * lets the register say 'nobody typed this in' out loud.
+ */
+export type LicenceState = 'valid' | 'expiring' | 'lapsed' | 'none';
+
+export const LICENCE_LABELS: Record<LicenceState, string> = {
+  valid: 'Licence valid',
+  expiring: 'Licence expiring',
+  lapsed: 'Licence lapsed',
+  none: 'No licence recorded',
+};
+
+export const LICENCE_PILL_CLASSES: Record<LicenceState, string> = {
+  valid: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+  expiring: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30',
+  lapsed: 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30',
+  none: 'bg-slate-500/20 text-slate-600 dark:text-slate-400 border-slate-500/30',
+};
+
+/** Whole days until an expiry. Negative means past, null means no date held. */
+export function daysUntil(expiry: { toDate?: () => Date } | null | undefined): number | null {
+  if (!expiry?.toDate) return null;
+  const ms = expiry.toDate().getTime() - Date.now();
+  return Math.ceil(ms / (24 * 60 * 60 * 1000));
+}
+
+export function licenceState(
+  driver: Pick<FleetDriver, 'licenceNumber' | 'licenceExpiry'>,
+  days = 30
+): LicenceState {
+  // Both halves are required. A number with no expiry cannot be checked, and an
+  // expiry with no number is not a licence anybody can produce at a roadblock.
+  if (!driver.licenceNumber?.trim() || !driver.licenceExpiry) return 'none';
+  if (isExpired(driver.licenceExpiry)) return 'lapsed';
+  if (isExpiringSoon(driver.licenceExpiry, days)) return 'expiring';
+  return 'valid';
+}
+
+/** Whether this driver may be given this machine, and what the issuer should know. */
+export interface DriverEligibility {
+  allowed: boolean;
+  /** Why not. Present only when allowed is false. */
+  reason?: string;
+  /** Worth saying, but not worth stopping the work for. */
+  warning?: string;
+}
+
+/**
+ * Decide whether a driver may take a machine.
+ *
+ * The asymmetry here is deliberate and is the whole point of the function.
+ *
+ * A road vehicle with a lapsed or unrecorded licence is refused outright, at the
+ * service layer rather than by greying a button, because that is the one case
+ * with consequences outside this system: if a Bureau pickup is stopped or is in
+ * a collision, the register is the evidence, and 'the software let me' is not a
+ * defence anyone wants to be making.
+ *
+ * Farm machinery only warns. A tractor working a field needs no road licence,
+ * and a system that refuses to record real work is a system people stop using —
+ * which costs the register far more than the warning was worth. The warning
+ * still appears, because the same tractor driven down a road does need one.
+ */
+export function assessDriverForAsset(
+  driver: Pick<FleetDriver, 'fullName' | 'status' | 'licenceNumber' | 'licenceExpiry'>,
+  asset: Pick<FleetAsset, 'assetId' | 'assetType'>
+): DriverEligibility {
+  if (driver.status === 'suspended') {
+    return {
+      allowed: false,
+      reason: `${driver.fullName} is suspended and may not be issued a machine.`,
+    };
+  }
+  if (driver.status === 'inactive') {
+    return {
+      allowed: false,
+      reason: `${driver.fullName} has left the register and may not be issued a machine.`,
+    };
+  }
+
+  const state = licenceState(driver);
+  const road = isRoadVehicle(asset.assetType);
+  const days = daysUntil(driver.licenceExpiry);
+
+  if (road) {
+    if (state === 'none') {
+      return {
+        allowed: false,
+        reason: `${asset.assetId} goes on the road and no licence is recorded for ${driver.fullName}.`,
+      };
+    }
+    if (state === 'lapsed') {
+      return {
+        allowed: false,
+        reason: `${driver.fullName}'s licence lapsed ${Math.abs(days ?? 0)} day(s) ago, and ${asset.assetId} goes on the road.`,
+      };
+    }
+    if (state === 'expiring') {
+      return {
+        allowed: true,
+        warning: `${driver.fullName}'s licence expires in ${days} day(s). Renew it before this machine is due back.`,
+      };
+    }
+    return { allowed: true };
+  }
+
+  if (state === 'none') {
+    return {
+      allowed: true,
+      warning: `No licence is recorded for ${driver.fullName}. ${asset.assetId} does not need one in the field, but moving it by road does.`,
+    };
+  }
+  if (state === 'lapsed') {
+    return {
+      allowed: true,
+      warning: `${driver.fullName}'s licence lapsed ${Math.abs(days ?? 0)} day(s) ago. ${asset.assetId} may still be worked, but not driven on a road.`,
+    };
+  }
+  if (state === 'expiring') {
+    return {
+      allowed: true,
+      warning: `${driver.fullName}'s licence expires in ${days} day(s).`,
+    };
+  }
+  return { allowed: true };
+}
+

@@ -2,10 +2,19 @@ import React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type {
   FleetAssetStatus,
+  FleetDriverStatus,
   FleetFaultSeverity,
   FleetWorkOrderStatus,
 } from '../types/fleet';
-import { SEVERITY_PILL_CLASSES, STATUS_PILL_CLASSES } from '../constants/fleetVocabulary';
+import {
+  DRIVER_STATUS_LABELS,
+  DRIVER_STATUS_PILL_CLASSES,
+  LICENCE_LABELS,
+  LICENCE_PILL_CLASSES,
+  SEVERITY_PILL_CLASSES,
+  STATUS_PILL_CLASSES,
+  type LicenceState,
+} from '../constants/fleetVocabulary';
 
 /**
  * Shared presentation pieces for the fleet module.
@@ -77,6 +86,30 @@ export const WorkOrderPill: React.FC<{ status: FleetWorkOrderStatus }> = ({ stat
       : 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30';
   return <span className={`${PILL_BASE} ${tone}`}>{WORK_ORDER_LABELS[status]}</span>;
 };
+
+export const DriverStatusPill: React.FC<{ status: FleetDriverStatus }> = ({ status }) => (
+  <span className={`${PILL_BASE} ${DRIVER_STATUS_PILL_CLASSES[status]}`}>
+    <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" aria-hidden="true" />
+    {DRIVER_STATUS_LABELS[status]}
+  </span>
+);
+
+/**
+ * Where a licence stands.
+ *
+ * `none` gets its own grey pill rather than being left blank, because a blank
+ * cell reads as "fine" and the whole reason this state is named is that it is
+ * not.
+ */
+export const LicencePill: React.FC<{ state: LicenceState; detail?: string }> = ({
+  state,
+  detail,
+}) => (
+  <span className={`${PILL_BASE} ${LICENCE_PILL_CLASSES[state]}`}>
+    <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" aria-hidden="true" />
+    {detail ? `${LICENCE_LABELS[state]} · ${detail}` : LICENCE_LABELS[state]}
+  </span>
+);
 
 /**
  * Headline figure card, matching AdminDashboardPage's stat treatment.

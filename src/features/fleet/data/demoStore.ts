@@ -3,11 +3,13 @@ import type {
   FleetAsset,
   FleetAssetStatus,
   FleetAssignment,
+  FleetDriver,
+  FleetDriverStatus,
   FleetServiceRecord,
   FleetStatusEvent,
   FleetWorkOrder,
 } from '../types/fleet';
-import { DEMO_ASSETS, DEMO_ASSIGNMENTS, DEMO_WORK_ORDERS } from './demoFleet';
+import { DEMO_ASSETS, DEMO_ASSIGNMENTS, DEMO_DRIVERS, DEMO_WORK_ORDERS } from './demoFleet';
 
 /**
  * Writable in-memory register, used only when Firebase is unconfigured.
@@ -28,6 +30,7 @@ let assignments: FleetAssignment[] = DEMO_ASSIGNMENTS.map((a) => ({ ...a }));
 let workOrders: FleetWorkOrder[] = DEMO_WORK_ORDERS.map((w) => ({ ...w }));
 let statusEvents: FleetStatusEvent[] = [];
 let serviceRecords: FleetServiceRecord[] = [];
+let drivers: FleetDriver[] = DEMO_DRIVERS.map((d) => ({ ...d }));
 
 /**
  * Subscribers are notified after every mutation.
@@ -63,6 +66,11 @@ export const demoListWorkOrders = (): FleetWorkOrder[] => workOrders.map((w) => 
 export const demoListStatusEvents = (): FleetStatusEvent[] => statusEvents.map((e) => ({ ...e }));
 export const demoListServiceRecords = (): FleetServiceRecord[] =>
   serviceRecords.map((r) => ({ ...r }));
+export const demoListDrivers = (): FleetDriver[] => drivers.map((d) => ({ ...d }));
+export const demoGetDriver = (driverId: string): FleetDriver | null => {
+  const found = drivers.find((d) => d.driverId === driverId);
+  return found ? { ...found } : null;
+};
 
 /* -------------------------------------------------------------- writes */
 
@@ -119,6 +127,7 @@ export function demoSetStatus(
     // the register reads as though somebody still has it.
     custodianUid: next === 'assigned' ? current.custodianUid : undefined,
     custodianName: next === 'assigned' ? current.custodianName : undefined,
+    custodianDriverId: next === 'assigned' ? current.custodianDriverId : null,
   });
   notify();
 }
@@ -142,6 +151,9 @@ export function demoIssueAsset(assignment: Omit<FleetAssignment, 'assignmentId'>
       status: 'assigned',
       custodianUid: assignment.assignedToUid,
       custodianName: assignment.assignedToName,
+      // Null rather than undefined when the holder is a one-off name, so the
+      // field is cleared rather than left showing the previous driver.
+      custodianDriverId: assignment.driverId ?? null,
       currentMeter: asset.meterType === 'none' ? asset.currentMeter : assignment.meterOut,
     });
   }
@@ -183,6 +195,7 @@ export function demoReturnAsset(
       status: next,
       custodianUid: undefined,
       custodianName: undefined,
+      custodianDriverId: null,
       currentMeter: asset.meterType === 'none' ? asset.currentMeter : meterIn,
     });
   }
@@ -265,7 +278,46 @@ export function demoReset(): void {
   workOrders = DEMO_WORK_ORDERS.map((w) => ({ ...w }));
   statusEvents = [];
   serviceRecords = [];
+  drivers = DEMO_DRIVERS.map((d) => ({ ...d }));
   notify();
+}
+
+/* -------------------------------------------------------------- drivers */
+
+export function demoCreateDriver(driver: FleetDriver): FleetDriver {
+  if (drivers.some((d) => d.driverId === driver.driverId)) {
+    throw new Error(`Driver ${driver.driverId} already exists.`);
+  }
+  drivers = [...drivers, { ...driver }];
+  notify();
+  return { ...driver };
+}
+
+function mutateDriver(driverId: string, changes: Partial<FleetDriver>): FleetDriver {
+  const i = drivers.findIndex((d) => d.driverId === driverId);
+  if (i === -1) throw new Error(`Driver ${driverId} was not found.`);
+  drivers[i] = { ...drivers[i], ...changes, version: drivers[i].version + 1 };
+  return { ...drivers[i] };
+}
+
+export function demoUpdateDriver(driverId: string, changes: Partial<FleetDriver>): FleetDriver {
+  const updated = mutateDriver(driverId, changes);
+  notify();
+  return updated;
+}
+
+/**
+ * Change a driver's status.
+ *
+ * Note what this deliberately does NOT do: it leaves open sign-outs alone. A
+ * machine is physically with that person, and marking them suspended in an
+ * office does not put the tractor back in the yard. Recalling it is a return,
+ * done by whoever receives the machine, on the reading it comes back on.
+ */
+export function demoSetDriverStatus(driverId: string, status: FleetDriverStatus): FleetDriver {
+  const updated = mutateDriver(driverId, { status });
+  notify();
+  return updated;
 }
 
 /* --------------------------------------- single-collection reconciliation */

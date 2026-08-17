@@ -50,6 +50,9 @@ import { AdminFleetDashboardPage } from './pages/admin/fleet/AdminFleetDashboard
 import { AdminFleetRegisterPage } from './pages/admin/fleet/AdminFleetRegisterPage';
 import { AdminFleetAssetFormPage } from './pages/admin/fleet/AdminFleetAssetFormPage';
 import { AdminFleetAssetDetailPage } from './pages/admin/fleet/AdminFleetAssetDetailPage';
+import { AdminFleetDriversPage } from './pages/admin/fleet/AdminFleetDriversPage';
+import { AdminFleetDriverFormPage } from './pages/admin/fleet/AdminFleetDriverFormPage';
+import { AdminFleetDriverDetailPage } from './pages/admin/fleet/AdminFleetDriverDetailPage';
 import { AdminFleetGaragePage } from './pages/admin/fleet/AdminFleetGaragePage';
 import { AdminFleetReportsPage } from './pages/admin/fleet/AdminFleetReportsPage';
 import { AdminFleetMapPage } from './pages/admin/fleet/AdminFleetMapPage';
@@ -437,6 +440,10 @@ export default function App() {
                       <Route path="register/new" element={<AdminFleetAssetFormPage />} />
                       <Route path="register/:assetId/edit" element={<AdminFleetAssetFormPage />} />
                       <Route path="register/:assetId" element={<AdminFleetAssetDetailPage />} />
+                      <Route path="drivers" element={<AdminFleetDriversPage />} />
+                      <Route path="drivers/new" element={<AdminFleetDriverFormPage />} />
+                      <Route path="drivers/:driverId/edit" element={<AdminFleetDriverFormPage />} />
+                      <Route path="drivers/:driverId" element={<AdminFleetDriverDetailPage />} />
                       <Route path="garage" element={<AdminFleetGaragePage />} />
                       <Route path="reports" element={<AdminFleetReportsPage />} />
                       <Route path="map" element={<AdminFleetMapPage />} />

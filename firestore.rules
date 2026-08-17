@@ -548,6 +548,20 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // The people who drive and operate the machines.
+    //
+    // Records, not accounts. A zone operator has no portal login, so nothing
+    // here can be tied back to request.auth — these documents describe people
+    // who will never sign in. Reads are open to any active staff member because
+    // the issue form has to name a driver; writing one is narrower.
+    match /fleetDrivers/{driverId} {
+      allow get, list: if isCurrentActiveStaff();
+      allow create, update: if hasFleetPermission('fleet.driver.manage');
+      // A driver who leaves is set inactive, never deleted: the sign-out book
+      // points at these ids, and removing one would orphan its own history.
+      allow delete: if false;
+    }
+
     match /fleetMeterReadings/{readingId} {
       allow get, list: if isCurrentActiveStaff();
       allow create: if hasFleetPermission('fleet.assign')

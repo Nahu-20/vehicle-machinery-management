@@ -67,6 +67,7 @@ export type Permission =
   | 'fleet.assign'
   | 'fleet.maintenance.manage'
   | 'fleet.reports.view'
+  | 'fleet.driver.manage'
   | 'fleet.asset.retire';
 
 export type StaffAuthorizationStatus =

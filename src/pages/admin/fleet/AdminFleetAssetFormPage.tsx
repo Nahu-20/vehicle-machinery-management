@@ -15,6 +15,7 @@ import {
   DEFAULT_METER_BY_TYPE,
   FLEET_ASSET_TYPES,
   METER_UNIT_LABEL,
+  isRoadVehicle,
 } from '../../../features/fleet/constants/fleetVocabulary';
 import { FleetPanel, FleetButton } from '../../../features/fleet/components/FleetUI';
 import { AssetImage } from '../../../features/fleet/components/AssetImage';
@@ -95,10 +96,7 @@ export function AdminFleetAssetFormPage() {
   const [notes, setNotes] = useState('');
 
   /** Road vehicles carry documents; farm machinery does not. */
-  const isRoadVehicle = useMemo(
-    () => ['pickup', 'truck', 'motorcycle', 'bus'].includes(assetType),
-    [assetType]
-  );
+  const roadVehicle = useMemo(() => isRoadVehicle(assetType), [assetType]);
 
   useEffect(() => {
     if (!isEdit || !routeAssetId) return;
@@ -167,7 +165,7 @@ export function AdminFleetAssetFormPage() {
       make: make.trim(),
       model: model.trim(),
       year: year ? Number(year) : undefined,
-      plateNumber: isRoadVehicle ? plateNumber.trim() || undefined : undefined,
+      plateNumber: roadVehicle ? plateNumber.trim() || undefined : undefined,
       chassisNumber: chassisNumber.trim() || undefined,
       meterType,
       currentMeter: meter,
@@ -175,8 +173,8 @@ export function AdminFleetAssetFormPage() {
       stationedAt: stationedAt.trim(),
       serviceIntervalMeter: serviceIntervalMeter ? Number(serviceIntervalMeter) : undefined,
       lastServiceMeter: lastServiceMeter ? Number(lastServiceMeter) : undefined,
-      insuranceExpiry: isRoadVehicle ? fromDateInput(insuranceExpiry) : null,
-      inspectionExpiry: isRoadVehicle ? fromDateInput(inspectionExpiry) : null,
+      insuranceExpiry: roadVehicle ? fromDateInput(insuranceExpiry) : null,
+      inspectionExpiry: roadVehicle ? fromDateInput(inspectionExpiry) : null,
       imageUrl: imageUrl.trim() || undefined,
       notes: notes.trim() ? { en: notes.trim() } : undefined,
     };
@@ -391,7 +389,7 @@ export function AdminFleetAssetFormPage() {
         </div>
       </FleetPanel>
 
-      {isRoadVehicle && (
+      {roadVehicle && (
         <FleetPanel
           title="Road documents"
           description="Shown for road vehicles only — tractors and machinery carry neither."

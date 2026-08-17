@@ -1,4 +1,11 @@
-import type { FleetAssetStatus } from '../features/fleet/types/fleet';
+import { Timestamp } from 'firebase/firestore';
+import type {
+  FleetAsset,
+  FleetAssetStatus,
+  FleetAssetType,
+  FleetDriver,
+  FleetDriverStatus,
+} from '../features/fleet/types/fleet';
 import type { Permission } from '../types/auth';
 import { ALL_PERMISSIONS as LIB_PERMISSIONS, ROLE_PERMISSIONS_MAP } from '../lib/permissions';
 import { ALL_PERMISSIONS as AUTH_PERMISSIONS } from '../auth/permissions';
@@ -11,6 +18,10 @@ import {
   IN_GARAGE_WORK_ORDER_STATUSES,
   OPEN_WORK_ORDER_STATUSES,
   isGarageStatus,
+  assessDriverForAsset,
+  licenceState,
+  isRoadVehicle,
+  ROAD_VEHICLE_TYPES,
 } from '../features/fleet/constants/fleetVocabulary';
 
 /**
@@ -33,7 +44,14 @@ import {
 export interface TestResult {
   id: number;
   name: string;
-  category: 'Status' | 'Assignment' | 'Garage' | 'Vocabulary' | 'Permissions' | 'Service';
+  category:
+    | 'Status'
+    | 'Assignment'
+    | 'Garage'
+    | 'Vocabulary'
+    | 'Permissions'
+    | 'Service'
+    | 'Drivers';
   passed: boolean;
   message: string;
   details?: any;
@@ -378,6 +396,7 @@ export function runFleetConsistencyTests(): TestResult[] {
       'fleet.assign',
       'fleet.maintenance.manage',
       'fleet.reports.view',
+      'fleet.driver.manage',
       'fleet.asset.retire',
     ];
     const granted = ROLE_PERMISSIONS_MAP.superAdmin;
@@ -388,6 +407,143 @@ export function runFleetConsistencyTests(): TestResult[] {
         ? 'The nav offers Fleet and the pages then refuse every action.'
         : 'Every fleet action is available to a super admin.',
       details: { missing },
+    };
+  });
+
+  /* ---------------------------------------------------------------- drivers */
+
+  /*
+   * The rule under test is asymmetric on purpose, and the asymmetry is the
+   * point: a lapsed licence stops a pickup outright and only warns on a
+   * tractor. Blocking both would refuse to record work that legitimately
+   * happens in a field, and blocking neither would let the register be the
+   * thing that says an unlicensed driver was sent onto a public road.
+   */
+
+  const DAY = 24 * 60 * 60 * 1000;
+  const at = (days: number) => Timestamp.fromDate(new Date(Date.now() + days * DAY));
+
+  const driver = (over: Partial<FleetDriver> = {}): FleetDriver =>
+    ({
+      driverId: 'DR-TEST',
+      fullName: 'Obbo Test Driver',
+      employment: 'permanent',
+      licenceNumber: 'ET-3-000001',
+      licenceGrade: '3',
+      licenceExpiry: at(200),
+      zoneId: 'arsi',
+      status: 'active' as FleetDriverStatus,
+      version: 1,
+      ...over,
+    }) as FleetDriver;
+
+  const vehicle = (assetType: FleetAssetType) =>
+    ({ assetId: assetType === 'pickup' ? 'PK-TEST' : 'TR-TEST', assetType }) as FleetAsset;
+
+  check('A valid licence may take a road vehicle', 'Drivers', () => {
+    const r = assessDriverForAsset(driver(), vehicle('pickup'));
+    return {
+      passed: r.allowed && !r.warning,
+      message: 'Nothing to flag on a licence with 200 days left.',
+      details: r,
+    };
+  });
+
+  check('A lapsed licence is refused a road vehicle', 'Drivers', () => {
+    const r = assessDriverForAsset(driver({ licenceExpiry: at(-9) }), vehicle('pickup'));
+    return {
+      passed: !r.allowed && Boolean(r.reason),
+      message: !r.allowed
+        ? 'Refused, with a reason the issuer can read.'
+        : 'A lapsed licence was allowed onto a public road.',
+      details: r,
+    };
+  });
+
+  check('A lapsed licence only warns on farm machinery', 'Drivers', () => {
+    const r = assessDriverForAsset(driver({ licenceExpiry: at(-9) }), vehicle('tractor'));
+    return {
+      passed: r.allowed && Boolean(r.warning),
+      message: r.allowed
+        ? 'Allowed with a warning — a tractor in a field needs no road licence.'
+        : 'Refused, which would push real fieldwork back to paper.',
+      details: r,
+    };
+  });
+
+  check('No licence at all is refused a road vehicle', 'Drivers', () => {
+    const r = assessDriverForAsset(
+      driver({ licenceNumber: undefined, licenceExpiry: null }),
+      vehicle('pickup')
+    );
+    return {
+      passed: !r.allowed,
+      message: !r.allowed
+        ? 'Absent is not the same as valid.'
+        : 'An unrecorded licence read as a valid one.',
+      details: r,
+    };
+  });
+
+  check('No licence at all still warns on farm machinery', 'Drivers', () => {
+    const r = assessDriverForAsset(
+      driver({ licenceNumber: undefined, licenceExpiry: null }),
+      vehicle('tractor')
+    );
+    return {
+      passed: r.allowed && Boolean(r.warning),
+      message: 'Allowed, but the road-move caveat is said out loud.',
+      details: r,
+    };
+  });
+
+  check('A suspended driver is refused everything', 'Drivers', () => {
+    const d = driver({ status: 'suspended' });
+    const road = assessDriverForAsset(d, vehicle('pickup'));
+    const farm = assessDriverForAsset(d, vehicle('tractor'));
+    return {
+      passed: !road.allowed && !farm.allowed,
+      message: 'Suspension is about the person, not the machine, so it applies to both.',
+      details: { road, farm },
+    };
+  });
+
+  check('A driver who has left is refused everything', 'Drivers', () => {
+    const d = driver({ status: 'inactive' });
+    return {
+      passed:
+        !assessDriverForAsset(d, vehicle('pickup')).allowed &&
+        !assessDriverForAsset(d, vehicle('tractor')).allowed,
+      message: 'Left the register, so holds nothing.',
+    };
+  });
+
+  check('An expiring licence warns without blocking', 'Drivers', () => {
+    const r = assessDriverForAsset(driver({ licenceExpiry: at(12) }), vehicle('pickup'));
+    return {
+      passed: r.allowed && Boolean(r.warning),
+      message: 'Twelve days left: the work goes ahead and somebody is told to renew it.',
+      details: r,
+    };
+  });
+
+  check('A half-recorded licence counts as none', 'Drivers', () => {
+    const numberOnly = licenceState({ licenceNumber: 'ET-3-000001', licenceExpiry: null });
+    const expiryOnly = licenceState({ licenceNumber: undefined, licenceExpiry: at(300) });
+    return {
+      passed: numberOnly === 'none' && expiryOnly === 'none',
+      message: 'A number with no expiry cannot be checked, and an expiry with no number is not a licence.',
+      details: { numberOnly, expiryOnly },
+    };
+  });
+
+  check('Road vehicles are the ones that carry documents', 'Drivers', () => {
+    const road = ROAD_VEHICLE_TYPES.filter((t) => isRoadVehicle(t));
+    const farm: FleetAssetType[] = ['tractor', 'harvester', 'implement', 'pump', 'generator'];
+    return {
+      passed: road.length === ROAD_VEHICLE_TYPES.length && farm.every((t) => !isRoadVehicle(t)),
+      message: 'The list that shows the plate and insurance fields is the same one that gates licences.',
+      details: { road: [...ROAD_VEHICLE_TYPES] },
     };
   });
 

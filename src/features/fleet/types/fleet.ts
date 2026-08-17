@@ -96,6 +96,16 @@ export interface FleetAsset {
   /** StaffUser.uid of whoever currently holds it, set while status is 'assigned'. */
   custodianUid?: string;
   custodianName?: string;
+  /**
+   * The driver record holding it, when the holder is one.
+   *
+   * Additive alongside custodianUid rather than replacing it: operators taken on
+   * for a season are issued machines too, and refusing to record that until
+   * somebody creates a driver record would send the work back to paper. Absent
+   * means the holder is a one-off name, which is exactly what the register said
+   * before drivers existed.
+   */
+  custodianDriverId?: string | null;
 
   /**
    * Servicing is expressed as an interval in the asset's own meter unit, so a
@@ -132,6 +142,69 @@ export interface FleetAsset {
 }
 
 /**
+ * A person who drives or operates the Bureau's machines.
+ *
+ * A record, not an account. Zone operators and seasonal drivers do not have
+ * portal logins and never will, so requiring one would leave the register
+ * describing only the handful of drivers who happen to work at a desk. What the
+ * Bureau actually needs held against a person is narrow: how to reach them, what
+ * they are licensed to drive, and when that licence stops being valid.
+ *
+ * Deliberately not merged into StaffUser. That type carries a role and a set of
+ * permissions — it answers "what may this account do in the system", which is a
+ * different question from "may this person take that pickup out on the road".
+ */
+export type FleetDriverStatus = 'active' | 'suspended' | 'inactive';
+
+/**
+ * How the driver is engaged.
+ *
+ * Kept because it changes who is answerable when something goes wrong, and
+ * because daily and contract drivers are the ones whose licences nobody checks.
+ */
+export type FleetDriverEmployment = 'permanent' | 'contract' | 'seconded' | 'daily';
+
+export interface FleetDriver {
+  /** Human id painted on nothing, but written on forms: DR-001. */
+  driverId: string;
+  fullName: string;
+  phone?: string;
+  /** Absent for contract and daily labour, who have no employee number. */
+  employeeNumber?: string;
+  employment: FleetDriverEmployment;
+
+  licenceNumber?: string;
+  /**
+   * Ethiopian licences are graded 1-5 by what they permit. Held as a string
+   * rather than a union until the Bureau confirms which grades it recognises —
+   * guessing the enum would either reject valid licences or silently accept
+   * anything, and the second is worse.
+   */
+  licenceGrade?: string;
+  licenceExpiry?: Timestamp | null;
+
+  zoneId: CanonicalZoneId;
+  /** Depot or office, free text, matching the asset's stationedAt. */
+  stationedAt?: string;
+  photoUrl?: string;
+
+  /**
+   * suspended and inactive are separate on purpose. Suspended is a decision
+   * about this person that someone made and may reverse; inactive is that they
+   * have left. Both stop machines being issued, but only one of them is news.
+   */
+  status: FleetDriverStatus;
+  notes?: LocalizedText;
+
+  version: number;
+
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+  createdByUid?: string;
+  updatedByUid?: string;
+}
+
+/**
  * A single issue of an asset to a person, and its return.
  *
  * This is the sign-out book. Rows are never deleted or edited after return,
@@ -147,7 +220,17 @@ export interface FleetAssignment {
   zoneId: CanonicalZoneId;
 
   assignedToUid: string;
+  /**
+   * The name is stored, not looked up.
+   *
+   * A sign-out from two seasons ago has to keep reading correctly after the
+   * driver is renamed, moved to another zone or deactivated. Joining to the
+   * driver record at read time would let a change today rewrite what the book
+   * says about last year, which is the one thing a sign-out book must not do.
+   */
   assignedToName: string;
+  /** The driver record, when the holder is one. Absent for one-off names. */
+  driverId?: string | null;
   purpose: LocalizedText;
 
   issuedAt: Timestamp;

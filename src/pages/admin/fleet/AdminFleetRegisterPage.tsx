@@ -264,7 +264,16 @@ export function AdminFleetRegisterPage() {
                         <StatusPill status={asset.status} />
                       </td>
                       <td className="px-6 py-3 text-xs text-slate-600 dark:text-slate-300">
-                        {asset.custodianName || <span className="text-slate-400">—</span>}
+                        {asset.custodianDriverId ? (
+                          <Link
+                            to={`/admin/fleet/drivers/${asset.custodianDriverId}`}
+                            className="font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
+                          >
+                            {asset.custodianName}
+                          </Link>
+                        ) : (
+                          asset.custodianName || <span className="text-slate-400">—</span>
+                        )}
                       </td>
                       <td className="px-6 py-3 text-xs font-mono text-slate-600 dark:text-slate-300">
                         {formatMeter(asset.currentMeter, asset.meterType)}
