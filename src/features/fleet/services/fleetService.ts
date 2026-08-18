@@ -426,29 +426,25 @@ export async function setAssetStatus(
   } as any);
 }
 
-/**
- * Retire an asset.
+/*
+ * Retiring an asset lives in fleetStatusService, not here.
  *
- * Sets `disposed` rather than deleting. The register's worth is its history —
- * which machine broke, how often, what it cost — and deleting the row destroys
- * that along with the audit trail pointing at it.
+ * There used to be a retireAsset() at this point that called setAssetStatus
+ * directly. That set the status and nothing else — so a machine could be
+ * retired while an open garage job and an open sign-out stayed behind it,
+ * pointing at something the Bureau no longer owns. The garage went on listing
+ * the job; nothing would ever close either record.
+ *
+ * Retiring has the same consequences for the neighbouring collections as any
+ * other status change, so it goes through the same planner and the same
+ * reconciliation: changeAssetStatus({ next: 'disposed' }). This module cannot
+ * call that itself — fleetStatusService imports setAssetStatus from here, and
+ * the reverse import would be a cycle — so callers use it directly.
+ *
+ * Deliberately not left as a thin wrapper: a second route to 'disposed' that
+ * skipped the reconciliation is precisely the bug, and one that compiles is
+ * one somebody will call.
  */
-export async function retireAsset(
-  assetId: string,
-  expectedVersion: number,
-  actor: StaffUser,
-  reason?: string
-): Promise<void> {
-  // The reason is what makes a retirement legible a year later. It was
-  // hardcoded to a phrase that restated the status and said nothing else,
-  // which went unnoticed because nothing called this — there was no caller to
-  // supply one. 'Sold at auction' and 'written off after the Bale rollover'
-  // are different facts about the same status.
-  const why = reason?.trim();
-  await setAssetStatus(assetId, 'disposed', expectedVersion, actor, {
-    reason: why || 'Retired from the register',
-  });
-}
 
 export const FLEET_SERVICE_RECORDS_COLLECTION = 'fleetServiceRecords';
 

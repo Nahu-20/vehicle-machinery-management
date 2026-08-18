@@ -150,6 +150,86 @@ export function runFleetConsistencyTests(): TestResult[] {
     };
   });
 
+  /* --------------------------------------------------------- retirement */
+
+  /*
+   * Retiring used to skip the planner entirely.
+   *
+   * `disposed` is not in MANUAL_ASSET_STATUSES, so planStatusChange refused it,
+   * so retireAsset called setAssetStatus directly and none of this ran. A
+   * machine was retired and its paperwork was not: the garage went on listing
+   * an open job against something the Bureau no longer owned, and an open
+   * sign-out had nothing left that would ever close it.
+   */
+
+  check('Retiring cancels the open jobs against the machine', 'Garage', () => {
+    const plan = planStatusChange('in_maintenance', 'disposed', ctx(false, 1));
+    return {
+      passed: plan.cancelWorkOrders === true,
+      message: plan.cancelWorkOrders
+        ? 'The garage stops being asked to repair a machine that has been sold.'
+        : 'An open job survives its own asset, and nothing will ever close it.',
+      details: plan,
+    };
+  });
+
+  check('Retiring cancels jobs raised outside the garage too', 'Garage', () => {
+    // Not conditional on leaving a garage status: a machine grounded in a field
+    // has an open job and a status that was never a garage one.
+    const plan = planStatusChange('out_of_service', 'disposed', ctx(false, 2));
+    return {
+      passed: plan.cancelWorkOrders === true,
+      message: 'Cancelling is about the asset going away, not about where it went from.',
+      details: plan,
+    };
+  });
+
+  check('Retiring closes an open sign-out', 'Garage', () => {
+    const plan = planStatusChange('assigned', 'disposed', ctx(true, 0));
+    return {
+      passed: plan.closeAssignment === true,
+      message: plan.closeAssignment
+        ? 'The holder is not left on record as still having it.'
+        : 'The machine is retired while still signed out to someone.',
+      details: plan,
+    };
+  });
+
+  check('Retiring raises no new job', 'Garage', () => {
+    const plan = planStatusChange('available', 'disposed', ctx());
+    return {
+      passed: plan.raiseWorkOrder === false,
+      message: 'Nothing is sent to the garage on its way out of the register.',
+      details: plan,
+    };
+  });
+
+  check('Retiring does not sign off unfinished sign-offs', 'Garage', () => {
+    // Verifying means confirming the machine works. Nobody is confirming
+    // anything about a machine that has just been written off.
+    const plan = planStatusChange('in_maintenance', 'disposed', ctx(false, 0, 2));
+    return {
+      passed: plan.verifyWorkOrders === false,
+      message: 'A completed repair is left as it stands rather than rubber-stamped.',
+      details: plan,
+    };
+  });
+
+  check('A retired asset still cannot come back', 'Garage', () => {
+    let threw = false;
+    try {
+      planStatusChange('disposed', 'available', ctx());
+    } catch {
+      threw = true;
+    }
+    return {
+      passed: threw,
+      message: threw
+        ? 'Retirement stays terminal — the new branch did not open a way back.'
+        : 'A retired asset can be returned to service.',
+    };
+  });
+
   check('Releasing with nothing open cancels nothing', 'Garage', () => {
     const plan = planStatusChange('in_maintenance', 'available', ctx());
     return {

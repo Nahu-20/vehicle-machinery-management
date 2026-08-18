@@ -320,6 +320,32 @@ export function planStatusChange(
   if (from === to) {
     throw new Error('That is already the current status.');
   }
+  /*
+   * Retiring, which the dropdown cannot reach but the retire action can.
+   *
+   * This case was missing entirely, and because `disposed` is not in
+   * MANUAL_ASSET_STATUSES the planner refused it — so retireAsset went straight
+   * to setAssetStatus and skipped all of this. The machine was retired and its
+   * paperwork was not: open jobs stayed open in the garage against a machine
+   * the Bureau no longer owns, and an active sign-out stayed open forever,
+   * because nothing else will ever close it.
+   *
+   * Unlike leaving the garage, this cancels regardless of where it is coming
+   * from. A job against a disposed machine is moot whether it was in for
+   * repair or grounded in a field.
+   *
+   * Completed jobs are left alone rather than auto-verified: signing off a
+   * repair means confirming the machine works, and nobody is confirming
+   * anything about a machine that has just been sold.
+   */
+  if (to === 'disposed') {
+    return {
+      closeAssignment: ctx.hasActiveAssignment,
+      raiseWorkOrder: false,
+      cancelWorkOrders: ctx.openWorkOrderCount > 0,
+      verifyWorkOrders: false,
+    };
+  }
   if (!MANUAL_ASSET_STATUSES.includes(to)) {
     throw new Error(
       to === 'assigned'

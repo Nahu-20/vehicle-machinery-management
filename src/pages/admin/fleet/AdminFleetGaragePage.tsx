@@ -90,10 +90,27 @@ export function AdminFleetGaragePage() {
     void load();
   }, [load]);
 
+  /**
+   * Machines the Bureau no longer owns.
+   *
+   * Retiring now cancels the jobs against a machine on its way out, so in
+   * normal use this changes nothing. It is here for the rows written before it
+   * did, and for anything edited straight in the database: a job the garage can
+   * never act on is worse than no job, because somebody has to work out why it
+   * will not go away.
+   */
+  const disposedAssetIds = useMemo(
+    () => new Set(assets.filter((a) => a.status === 'disposed').map((a) => a.assetId)),
+    [assets]
+  );
+
   // Everything the garage still owes, a repair awaiting sign-off included.
   const open = useMemo(
-    () => orders.filter((o) => IN_GARAGE_WORK_ORDER_STATUSES.includes(o.status)),
-    [orders]
+    () =>
+      orders.filter(
+        (o) => IN_GARAGE_WORK_ORDER_STATUSES.includes(o.status) && !disposedAssetIds.has(o.assetId)
+      ),
+    [orders, disposedAssetIds]
   );
   const closed = useMemo(
     () => orders.filter((o) => !IN_GARAGE_WORK_ORDER_STATUSES.includes(o.status)),

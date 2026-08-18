@@ -23,7 +23,6 @@ import {
   listStatusEvents,
   listServiceRecords,
   recordService,
-  retireAsset,
 } from '../../../features/fleet/services/fleetService';
 import {
   issueAsset,
@@ -539,11 +538,27 @@ export function AdminFleetAssetDetailPage() {
     setBusy(true);
     setError(null);
     try {
-      await retireAsset(asset.assetId, asset.version, staffUser, retireReason.trim());
+      // The same path as any other status change, so an open sign-out is closed
+      // and open garage jobs are cancelled rather than left behind pointing at a
+      // machine the Bureau no longer owns.
+      const outcome = await changeAssetStatus(
+        {
+          assetId: asset.assetId,
+          next: 'disposed',
+          expectedVersion: asset.version,
+          reason: retireReason.trim(),
+        },
+        staffUser
+      );
       closePanel();
       setRetireReason('');
       setRetireConfirm('');
-      setNotice(`${asset.assetId} is retired. It stays in the register, out of service.`);
+      const tidied = summarise(outcome).replace(/^Status updated( — )?/, '').replace(/\.$/, '');
+      setNotice(
+        tidied
+          ? `${asset.assetId} is retired — ${tidied}. It stays in the register.`
+          : `${asset.assetId} is retired. It stays in the register, out of service.`
+      );
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not retire the asset.');
