@@ -404,18 +404,17 @@ service cloud.firestore {
       ];
     }
 
-    // Collection: investmentZoneProfiles
+    // Collection: investmentZoneProfiles (Governed: reads allowed, direct client writes blocked)
     match /investmentZoneProfiles/{zoneId} {
       allow get, list: if isCurrentActiveStaff() || (
         resource != null && resource.data != null
         && resource.data.status == 'published'
         && resource.data.verificationStatus == 'verified'
       );
-      // All writes must originate from trusted backend server endpoint
       allow create, update, delete: if false;
     }
 
-    // Collection: investmentDatasets
+    // Collection: investmentDatasets (Governed: reads allowed, direct client writes blocked)
     match /investmentDatasets/{datasetId} {
       allow get, list: if isCurrentActiveStaff() || (
         resource != null && resource.data != null
@@ -435,27 +434,25 @@ service cloud.firestore {
       }
     }
 
-    // Collection: investmentSources
+    // Collection: investmentSources (Governed: reads allowed, direct client writes blocked)
     match /investmentSources/{sourceId} {
       allow get, list: if isCurrentActiveStaff() || (
         resource != null && resource.data != null
-        && resource.data.status == 'published'
-        && resource.data.verificationStatus == 'verified'
+        && (resource.data.status == 'active' || resource.data.status == 'published')
       );
       allow create, update, delete: if false;
     }
 
-    // Collection: investmentMethodologies
+    // Collection: investmentMethodologies (Governed: reads allowed, direct client writes blocked)
     match /investmentMethodologies/{methodologyId} {
       allow get, list: if isCurrentActiveStaff() || (
         resource != null && resource.data != null
-        && resource.data.status == 'published'
-        && resource.data.verificationStatus == 'verified'
+        && (resource.data.status == 'active' || resource.data.status == 'published')
       );
       allow create, update, delete: if false;
     }
 
-    // Collection: investmentOpportunities
+    // Collection: investmentOpportunities (Governed: reads allowed, direct client writes blocked)
     match /investmentOpportunities/{opportunityId} {
       allow get, list: if isCurrentActiveStaff() || (
         resource != null && resource.data != null
@@ -465,24 +462,25 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
-    // Collection: investmentInfrastructure
+    // Collection: investmentInfrastructure (Governed: reads allowed, direct client writes blocked)
     match /investmentInfrastructure/{recordId} {
       allow get, list: if isCurrentActiveStaff() || (
-        resource != null && resource.data != null && resource.data.verificationStatus == 'verified'
+        resource != null && resource.data != null
+        && resource.data.lifecycleStatus == 'published'
+        && resource.data.verificationStatus == 'verified'
       );
       allow create, update, delete: if false;
     }
 
-    // Collection: investmentMapConfig
+    // Collection: investmentMapConfig (Governed: reads allowed, direct client writes blocked)
     match /investmentMapConfig/{configId} {
       allow get, list: if true;
       allow create, update, delete: if false;
     }
 
-    // Collection: investmentAuditLogs
+    // Collection: investmentAuditLogs (Authoritative audit logs: reads allowed for audit staff, browser writes strictly denied)
     match /investmentAuditLogs/{logId} {
       allow read: if hasAuditViewPermission();
-      // HARD REQUIREMENT: Browser/client code must NOT directly create, update, or delete audit records.
       allow create, update, delete: if false;
     }
   }

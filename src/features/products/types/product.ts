@@ -1,4 +1,6 @@
 import type { LocalizedText } from '../../../types';
+import type { CanonicalZoneId } from '../../investment-map/constants/canonicalZones';
+import type { PublicInvestmentSource } from '../../../types/investment';
 
 /**
  * Public agricultural product catalog types.
@@ -36,14 +38,69 @@ export interface AgriculturalProduct {
   sourceIds?: string[];
 }
 
-/** Future hook shape — returns null until verified published datasets exist. */
+export interface MajorZoneProduction {
+  zoneId: CanonicalZoneId;
+  productionVolume: number;
+  productionUnit?: string;
+  harvestedAreaHa?: number | null;
+  yieldValue?: number | null;
+  yieldUnit?: string;
+  regionalSharePercent?: number | null;
+  regionalRank?: number | null;
+}
+
+export interface ProductCoverageInfo {
+  populatedZoneCount: number;
+  totalCanonicalZones: number; // 22
+  missingZoneCount: number;
+  coveragePercent: number;
+  isFullCoverage: boolean;
+}
+
+/**
+ * Verified Product Statistics DTO
+ * Aggregated exclusively from published + verified Investment Datasets.
+ */
 export interface ProductStatistics {
   productId: string;
-  annualProduction?: { value: number; unit: string; period: string } | null;
-  cultivatedArea?: { value: number; unit: string; period: string } | null;
-  averageYield?: { value: number; unit: string; period: string } | null;
+  commodityKey: string;
+  datasetId: string;
+  datasetTitle: string;
+  referencePeriod: {
+    label: string;
+    startYear: number;
+    endYear?: number;
+    seasonName?: string;
+  };
+  metric: string;
+  unit: string;
+  annualProduction?: {
+    value: number;
+    unit: string;
+    period: string;
+    formatted?: string;
+  } | null;
+  cultivatedArea?: {
+    value: number;
+    unit: string;
+    period: string;
+    formatted?: string;
+  } | null;
+  averageYield?: {
+    value: number;
+    unit: string; // e.g. 't/ha' or 'MT/ha'
+    period: string;
+    isDerived: boolean;
+    formatted?: string;
+  } | null;
+  coverage: ProductCoverageInfo;
+  majorZones: MajorZoneProduction[];
+  majorZoneIds: string[];
   regionalRank?: number | null;
-  majorZoneIds?: string[];
-  verificationStatus: 'verified' | 'unpublished';
+  verificationStatus: 'verified';
+  lifecycleStatus: 'published';
+  sources: PublicInvestmentSource[];
+  publishedAt?: string;
   sourceLabel?: LocalizedText;
 }
+

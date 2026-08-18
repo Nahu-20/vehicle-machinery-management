@@ -27,11 +27,12 @@ export function QualitySummaryCard({
 
   const populatedZoneIds = new Set<string>();
 
-  zoneValues.forEach((zv) => {
+  (zoneValues || []).forEach((zv) => {
+    if (!zv) return;
     const raw = isProd ? zv.productionVolume : zv.value;
     const isPopulated = raw !== null && raw !== undefined && typeof raw === 'number' && !isNaN(raw);
 
-    if (isPopulated) {
+    if (isPopulated && zv.zoneId) {
       populatedZoneIds.add(zv.zoneId);
       const flag = zv.qualityFlag || 'unverified';
       if (flag === 'measured') counts.measured += 1;

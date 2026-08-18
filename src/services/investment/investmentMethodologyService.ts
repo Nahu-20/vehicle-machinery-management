@@ -2,6 +2,7 @@ import { db } from '../../lib/firebase';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { InvestmentMethodology } from '../../types/investment';
 import { StaffUser } from '../../types/auth';
+import { callInvestmentCallable } from './investmentMutationClient';
 
 export async function getMethodology(methodologyId: string): Promise<InvestmentMethodology | null> {
   if (!db) return null;
@@ -23,21 +24,31 @@ export async function saveMethodology(
   input: Partial<InvestmentMethodology> & { methodologyId: string },
   expectedVersion?: number
 ): Promise<InvestmentMethodology> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'save_methodology',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload: input,
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to save methodology "${input.methodologyId}"`);
+  const res = await callInvestmentCallable<InvestmentMethodology>(
+    'save_methodology',
+    input,
+    expectedVersion,
+    actor
+  );
+  if (!res.data) {
+    throw new Error(res.error || 'Failed to save methodology');
   }
+  return res.data;
+}
 
-  return resData.data as InvestmentMethodology;
+export async function deleteMethodology(
+  actor: StaffUser,
+  methodologyId: string,
+  expectedVersion?: number
+): Promise<{ success: boolean; deletedId: string }> {
+  const res = await callInvestmentCallable<{ deletedId: string }>(
+    'delete_methodology',
+    { methodologyId },
+    expectedVersion,
+    actor
+  );
+  return {
+    success: res.success,
+    deletedId: res.deletedId || res.data?.deletedId || methodologyId,
+  };
 }

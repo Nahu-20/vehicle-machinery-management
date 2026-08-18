@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Layers,
   CheckCircle2,
+  ShieldCheck,
 } from 'lucide-react';
 import { OromiaZoneFeature } from '../types/gis';
 import { ZoneProfileEmptyState } from './ZoneProfileEmptyState';
@@ -31,11 +32,14 @@ import {
   classifyThematicValue,
   THEMATIC_CLASS_LABELS,
 } from '../services/thematicService';
+import { PublicThematicDatasetResult } from '../services/publicThematicInvestmentService';
+import { CanonicalZoneId } from '../constants/canonicalZones';
 
 export interface ZoneProfilePanelProps {
   selectedFeature: OromiaZoneFeature | null;
   selectedCommodity?: CommodityKey | null;
   selectedMetric?: ThematicMetric;
+  thematicResult?: PublicThematicDatasetResult | null;
   onClearSelection?: () => void;
   isPublic?: boolean;
   className?: string;
@@ -45,6 +49,7 @@ export const ZoneProfilePanel: React.FC<ZoneProfilePanelProps> = ({
   selectedFeature,
   selectedCommodity: rawCommodity,
   selectedMetric = 'production',
+  thematicResult,
   onClearSelection,
   isPublic = false,
   className = '',
@@ -55,13 +60,17 @@ export const ZoneProfilePanel: React.FC<ZoneProfilePanelProps> = ({
   }
 
   const { properties } = selectedFeature;
-  const zid = properties.zone_id;
+  const zid = properties.zone_id as CanonicalZoneId;
 
   const commodityObj = SUPPORTED_COMMODITIES.find((c) => c.key === selectedCommodity);
   const metricObj = SUPPORTED_METRICS.find((m) => m.key === selectedMetric);
 
-  const demoMetrics = selectedCommodity ? getDemoZoneCommodityMetrics(zid, selectedCommodity) : null;
-  const derivedStats = selectedCommodity ? getDerivedProductionStats(zid, selectedCommodity) : null;
+  // Real published verified zone value (if available)
+  const realZoneVal = thematicResult && thematicResult.valuesByZoneId ? thematicResult.valuesByZoneId[zid] : null;
+
+  // Synthetic demo stats (used ONLY if no published dataset in non-public/lab mode)
+  const demoMetrics = !thematicResult && selectedCommodity ? getDemoZoneCommodityMetrics(zid, selectedCommodity) : null;
+  const derivedStats = !thematicResult && selectedCommodity ? getDerivedProductionStats(zid, selectedCommodity) : null;
 
   const rawSuitabilityVal = demoMetrics?.suitability?.score;
   const suitabilityClassRes = selectedCommodity
@@ -122,32 +131,150 @@ export const ZoneProfilePanel: React.FC<ZoneProfilePanelProps> = ({
             <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-md">
               zone_id: {properties.zone_id}
             </span>
-            {selectedCommodity && !isPublic && (
+            {thematicResult ? (
+              <span className="bg-emerald-600/15 text-emerald-900 dark:text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-md font-bold flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Official Published Dataset</span>
+              </span>
+            ) : selectedCommodity && !isPublic ? (
               <span className="bg-amber-500/20 text-amber-900 dark:text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-md font-bold flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                 <span>DEMO DATA — NOT OFFICIAL OAB DATA</span>
               </span>
-            )}
+            ) : null}
           </div>
 
-          {/* Candidate GIS & Status Indicator */}
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex items-start gap-2.5 text-xs text-amber-950 dark:text-amber-200">
-            <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          {/* Official GIS & Status Indicator */}
+          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex items-start gap-2.5 text-xs text-emerald-950 dark:text-emerald-200">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
             <div className="space-y-0.5">
               <p className="font-bold">
-                {selectedCommodity && !isPublic ? 'Synthetic Development Fixtures Active' : 'Candidate GIS — Technical Validation Passed'}
+                {thematicResult
+                  ? `Published Dataset: ${thematicResult.dataset.title}`
+                  : selectedCommodity && !isPublic
+                  ? 'Synthetic Development Fixtures Active'
+                  : 'Official Regional GIS Dataset'}
               </p>
-              <p className="text-[11px] text-amber-900/90 dark:text-amber-300/90 leading-normal">
-                {selectedCommodity && !isPublic
+              <p className="text-[11px] text-emerald-900/90 dark:text-emerald-300/90 leading-normal">
+                {thematicResult
+                  ? `Verified statistics from reference period ${thematicResult.dataset.referencePeriod.label} joined with canonical Oromia boundary.`
+                  : selectedCommodity && !isPublic
                   ? 'Values displayed are synthetic development test fixtures created for interface validation.'
-                  : 'Formal Bureau GIS acceptance pending. Afaan Oromo / Amharic naming signoff pending.'}
+                  : 'Canonical 22-zone administrative boundaries for the Regional Government of Oromia.'}
               </p>
             </div>
           </div>
         </div>
 
-        {/* 2. Public No-Dataset Block when in Public Mode */}
-        {selectedCommodity && isPublic && (
+        {/* 2A. Real Verified Thematic Dataset Profile (Priority) */}
+        {thematicResult && realZoneVal && (
+          <div className="space-y-4 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/20 pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-emerald-700 text-white font-bold text-xs uppercase font-mono">
+                  {thematicResult.dataset.commodity}
+                </span>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">
+                    {thematicResult.dataset.title}
+                  </h3>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    Ref Period: {thematicResult.dataset.referencePeriod.label} • Metric: {thematicResult.dataset.metric}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border border-emerald-500/30">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Verified Data</span>
+              </div>
+            </div>
+
+            {/* Zone Statistics Cards */}
+            {realZoneVal.isNoData ? (
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-center space-y-1.5">
+                <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                  No Data Recorded for {properties.name_en}
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  This zone was omitted or not measured in the active published dataset ({thematicResult.dataset.referencePeriod.label}).
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase font-sans flex items-center gap-1">
+                    <BarChart3 className="w-3 h-3 text-emerald-600" />
+                    <span>{thematicResult.dataset.metric === 'production' ? 'Production Volume' : 'Score / Value'}</span>
+                  </span>
+                  <p className="text-base font-black text-slate-900 dark:text-slate-50 font-mono">
+                    {realZoneVal.productionVolume !== null && realZoneVal.productionVolume !== undefined
+                      ? `${realZoneVal.productionVolume.toLocaleString()} ${thematicResult.dataset.unit || 'MT'}`
+                      : realZoneVal.value !== null && realZoneVal.value !== undefined
+                      ? `${realZoneVal.value} ${thematicResult.dataset.unit || 'Score'}`
+                      : 'N/A'}
+                  </p>
+                  <span className="text-[10px] text-slate-400 block font-mono">
+                    Class: {THEMATIC_CLASS_LABELS[realZoneVal.thematicClass]}
+                  </span>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase font-sans flex items-center gap-1">
+                    <Award className="w-3 h-3 text-emerald-600" />
+                    <span>Oromia Rank</span>
+                  </span>
+                  <p className="text-base font-black text-slate-900 dark:text-slate-50 font-mono">
+                    {realZoneVal.regionalRank !== null ? `#${realZoneVal.regionalRank} of 22` : 'N/A'}
+                  </p>
+                  <span className="text-[10px] text-slate-400 block font-mono">
+                    Regional Position
+                  </span>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase font-sans flex items-center gap-1">
+                    <PieChart className="w-3 h-3 text-emerald-600" />
+                    <span>Regional Share</span>
+                  </span>
+                  <p className="text-base font-black text-slate-900 dark:text-slate-50 font-mono">
+                    {realZoneVal.regionalSharePercent !== null ? `${realZoneVal.regionalSharePercent}%` : 'N/A'}
+                  </p>
+                  <span className="text-[10px] text-slate-400 block font-mono">
+                    Of Oromia Total
+                  </span>
+                </div>
+
+                {realZoneVal.harvestedAreaHa !== null && realZoneVal.harvestedAreaHa !== undefined && (
+                  <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase font-sans">Harvested Area</span>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200 font-mono">
+                      {realZoneVal.harvestedAreaHa.toLocaleString()} ha
+                    </p>
+                  </div>
+                )}
+
+                {realZoneVal.yieldValue !== null && realZoneVal.yieldValue !== undefined && (
+                  <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase font-sans">Yield</span>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200 font-mono">
+                      {realZoneVal.yieldValue} {realZoneVal.yieldUnit || 'tons/ha'}
+                    </p>
+                  </div>
+                )}
+
+                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase font-sans">Quality Flag</span>
+                  <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 capitalize font-mono">
+                    {realZoneVal.qualityFlag}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 2B. Public No-Dataset Block when in Public Mode */}
+        {selectedCommodity && isPublic && !thematicResult && (
           <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 text-center space-y-2">
             <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center mx-auto">
               <FileCheck className="w-5 h-5" />
@@ -168,8 +295,8 @@ export const ZoneProfilePanel: React.FC<ZoneProfilePanelProps> = ({
           </div>
         )}
 
-        {/* 2. Metric-Specific Profile Hierarchy (Dev / Lab Mode Only) */}
-        {selectedCommodity && !isPublic && (
+        {/* 2C. Metric-Specific Profile Hierarchy (Dev / Lab Mode Only) */}
+        {selectedCommodity && !isPublic && !thematicResult && (
           <div className="space-y-4">
             {/* A. PRODUCTION METRIC PROFILE (WHEN SELECTED METRIC IS PRODUCTION) */}
             {selectedMetric === 'production' && derivedStats && (
@@ -561,32 +688,44 @@ export const ZoneProfilePanel: React.FC<ZoneProfilePanelProps> = ({
               <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-700/60 pb-1.5">
                 <span className="text-slate-500 font-sans">Dataset</span>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {isPublic ? 'Candidate Administrative Boundaries (22 Zones)' : 'Synthetic Development Fixture'}
+                  {thematicResult
+                    ? thematicResult.dataset.title
+                    : isPublic
+                    ? 'Candidate Administrative Boundaries (22 Zones)'
+                    : 'Synthetic Development Fixture'}
                 </span>
               </div>
 
               <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-700/60 pb-1.5">
                 <span className="text-slate-500 font-sans">Verification</span>
-                <span className={`font-bold ${isPublic ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
-                  {isPublic ? 'Passed GIS Validation' : 'Demo / Unverified'}
+                <span className={`font-bold ${thematicResult || isPublic ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                  {thematicResult
+                    ? `Verified (${thematicResult.dataset.verificationStatus})`
+                    : isPublic
+                    ? 'Passed GIS Validation'
+                    : 'Demo / Unverified'}
                 </span>
               </div>
 
               <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-700/60 pb-1.5">
                 <span className="text-slate-500 font-sans">Source</span>
                 <span className="font-bold text-slate-700 dark:text-slate-300">
-                  {isPublic ? 'UN-OCHA COD-AB v04' : 'No official source connected'}
+                  {thematicResult && thematicResult.sources.length > 0
+                    ? thematicResult.sources.map((s) => s.organization).join(', ')
+                    : isPublic
+                    ? 'UN-OCHA COD-AB v04'
+                    : 'No official source connected'}
                 </span>
               </div>
 
               <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-700/60 pb-1.5">
                 <span className="text-slate-500 font-sans">Boundary Base</span>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  UN-OCHA COD-AB v04
+                  UN-OCHA COD-AB v04 (22 Canonical Zones)
                 </span>
               </div>
 
-              {!isPublic && (
+              {!isPublic && !thematicResult && (
                 <div className="pt-1 text-[10px] text-amber-700 dark:text-amber-400 font-sans font-bold flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3 text-amber-600 shrink-0" />
                   <span>DEMO DATA — NOT OFFICIAL OAB DATA</span>

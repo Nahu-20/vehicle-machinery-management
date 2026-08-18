@@ -14,7 +14,7 @@ export const OFFICIAL_GIS_METADATA: GisMetadata = {
   boundaryReferenceDate: '2025-01-01',
   sourceOrganization: 'UN-OCHA FIS / Ethiopia CSA + BoFED',
   licenseTitle: 'Creative Commons Attribution for Intergovernmental Organisations (CC BY-IGO)',
-  runtimeChecksum: 'edfe7b6427c70d3b17250b9d9adf35a218dc9697b47a43599e4d8f86719a2088',
+  runtimeChecksum: '2fd8286a9608b4b2db04029f51eae3eeeafcea890e06ea2469670102acd4e6f0',
   attribution: 'Base Boundaries: UN-OCHA FIS / Ethiopia CSA COD-AB (v04, 2025) via HDX',
   disclaimer: 'Candidate GIS Dataset — For Technical Laboratory & Planning Evaluation Only',
   caveat:
@@ -118,7 +118,7 @@ export async function loadAndValidateOromiaGeoJSON(): Promise<GisValidationResul
       let minLat = 90;
       let maxLat = -90;
 
-      data.features.forEach((feature: OromiaZoneFeature, idx: number) => {
+      (data?.features || []).forEach((feature: OromiaZoneFeature, idx: number) => {
         const indexStr = `Feature [${idx}]`;
         const props = (feature.properties || {}) as Partial<OromiaZoneProperties>;
 

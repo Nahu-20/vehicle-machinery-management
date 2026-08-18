@@ -1,5 +1,10 @@
 import { db } from '../../lib/firebase';
-import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+} from 'firebase/firestore';
 import {
   InvestmentDataset,
   InvestmentZoneValue,
@@ -7,6 +12,7 @@ import {
 } from '../../types/investment';
 import { StaffUser } from '../../types/auth';
 import { CANONICAL_ZONE_IDS, CanonicalZoneId } from '../../features/investment-map/constants/canonicalZones';
+import { callInvestmentCallable } from './investmentMutationClient';
 
 export async function getDataset(datasetId: string): Promise<InvestmentDataset | null> {
   if (!db) return null;
@@ -71,22 +77,16 @@ export async function createDataset(
     'version' | 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy' | 'publishedAt' | 'publishedBy' | 'lifecycleStatus' | 'isCurrent'
   >
 ): Promise<InvestmentDataset> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'save_dataset',
-      actorUid: actor.uid,
-      payload: input,
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to create dataset "${input.datasetId}"`);
+  const res = await callInvestmentCallable<InvestmentDataset>(
+    'save_dataset_draft',
+    input,
+    undefined,
+    actor
+  );
+  if (!res.data) {
+    throw new Error(res.error || 'Failed to create dataset');
   }
-
-  return resData.data as InvestmentDataset;
+  return res.data;
 }
 
 export async function setZoneValues(
@@ -96,28 +96,17 @@ export async function setZoneValues(
   expectedVersion?: number,
   requestId?: string
 ): Promise<{ success: boolean; count: number; newVersion: number }> {
-  const dataset = await getDataset(datasetId);
-  const metric = dataset?.metric || 'production';
-
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'set_dataset_values',
-      actorUid: actor.uid,
-      expectedVersion: expectedVersion !== undefined ? expectedVersion : dataset?.version,
-      payload: { datasetId, metric, values, requestId },
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    const err: any = new Error(resData.error || `Failed to set zone values for dataset "${datasetId}"`);
-    err.code = resData.code;
-    throw err;
-  }
-
-  return { success: true, count: resData.count, newVersion: resData.newVersion };
+  const res = await callInvestmentCallable<{ count: number; newVersion: number }>(
+    'update_dataset_values',
+    { datasetId, values, requestId },
+    expectedVersion,
+    actor
+  );
+  return {
+    success: res.success,
+    count: res.count || res.data?.count || values.length,
+    newVersion: res.newVersion || res.data?.newVersion || (expectedVersion || 1) + 1,
+  };
 }
 
 export async function publishDataset(
@@ -126,23 +115,16 @@ export async function publishDataset(
   expectedVersion: number,
   _methodology?: InvestmentMethodology | null
 ): Promise<InvestmentDataset> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'publish_dataset',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload: { datasetId },
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to publish dataset "${datasetId}"`);
+  const res = await callInvestmentCallable<InvestmentDataset>(
+    'publish_dataset',
+    { datasetId },
+    expectedVersion,
+    actor
+  );
+  if (!res.data) {
+    throw new Error(res.error || 'Failed to publish dataset');
   }
-
-  return resData.data as InvestmentDataset;
+  return res.data;
 }
 
 export async function submitDatasetForReview(
@@ -150,23 +132,16 @@ export async function submitDatasetForReview(
   datasetId: string,
   expectedVersion: number
 ): Promise<InvestmentDataset> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'submit_dataset_for_review',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload: { datasetId },
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to submit dataset "${datasetId}" for review`);
+  const res = await callInvestmentCallable<InvestmentDataset>(
+    'submit_dataset_review',
+    { datasetId },
+    expectedVersion,
+    actor
+  );
+  if (!res.data) {
+    throw new Error(res.error || 'Failed to submit dataset for review');
   }
-
-  return resData.data as InvestmentDataset;
+  return res.data;
 }
 
 export async function returnDatasetToDraft(
@@ -174,23 +149,16 @@ export async function returnDatasetToDraft(
   datasetId: string,
   expectedVersion: number
 ): Promise<InvestmentDataset> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'return_dataset_to_draft',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload: { datasetId },
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to return dataset "${datasetId}" to draft`);
+  const res = await callInvestmentCallable<InvestmentDataset>(
+    'return_dataset_draft',
+    { datasetId },
+    expectedVersion,
+    actor
+  );
+  if (!res.data) {
+    throw new Error(res.error || 'Failed to return dataset to draft');
   }
-
-  return resData.data as InvestmentDataset;
+  return res.data;
 }
 
 export async function unpublishDataset(
@@ -198,47 +166,34 @@ export async function unpublishDataset(
   datasetId: string,
   expectedVersion: number
 ): Promise<InvestmentDataset> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'unpublish_dataset',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload: { datasetId },
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to unpublish dataset "${datasetId}"`);
+  const res = await callInvestmentCallable<InvestmentDataset>(
+    'unpublish_dataset',
+    { datasetId },
+    expectedVersion,
+    actor
+  );
+  if (!res.data) {
+    throw new Error(res.error || 'Failed to unpublish dataset');
   }
-
-  return resData.data as InvestmentDataset;
+  return res.data;
 }
 
 export async function verifyDataset(
   actor: StaffUser,
   datasetId: string,
-  expectedVersion: number
+  expectedVersion: number,
+  notes?: string
 ): Promise<InvestmentDataset> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'mark_dataset_verified',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload: { datasetId },
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to verify dataset "${datasetId}"`);
+  const res = await callInvestmentCallable<InvestmentDataset>(
+    'verify_dataset',
+    { datasetId, notes },
+    expectedVersion,
+    actor
+  );
+  if (!res.data) {
+    throw new Error(res.error || 'Failed to verify dataset');
   }
-
-  return resData.data as InvestmentDataset;
+  return res.data;
 }
 
 export async function rejectDataset(
@@ -247,23 +202,16 @@ export async function rejectDataset(
   expectedVersion: number,
   notes?: string
 ): Promise<InvestmentDataset> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'mark_dataset_rejected',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload: { datasetId, notes },
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to reject dataset "${datasetId}"`);
+  const res = await callInvestmentCallable<InvestmentDataset>(
+    'reject_dataset',
+    { datasetId, reason: notes, notes },
+    expectedVersion,
+    actor
+  );
+  if (!res.data) {
+    throw new Error(res.error || 'Failed to reject dataset');
   }
-
-  return resData.data as InvestmentDataset;
+  return res.data;
 }
 
 export async function attachSourceToDataset(
@@ -272,23 +220,20 @@ export async function attachSourceToDataset(
   sourceId: string,
   expectedVersion?: number
 ): Promise<InvestmentDataset> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'attach_source',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload: { datasetId, sourceId },
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to attach source "${sourceId}" to dataset "${datasetId}"`);
+  const current = await getDataset(datasetId);
+  if (!current) throw new Error(`Dataset "${datasetId}" not found`);
+  const currentSources = Array.isArray(current.sourceIds) ? [...current.sourceIds] : [];
+  if (!currentSources.includes(sourceId)) {
+    currentSources.push(sourceId);
   }
-
-  return resData.data as InvestmentDataset;
+  const res = await callInvestmentCallable<InvestmentDataset>(
+    'save_dataset_draft',
+    { ...current, sourceIds: currentSources },
+    expectedVersion ?? current.version,
+    actor
+  );
+  if (!res.data) throw new Error(res.error || 'Failed to attach source');
+  return res.data;
 }
 
 export async function removeSourceFromDataset(
@@ -297,23 +242,19 @@ export async function removeSourceFromDataset(
   sourceId: string,
   expectedVersion?: number
 ): Promise<InvestmentDataset> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'remove_source',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload: { datasetId, sourceId },
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to remove source "${sourceId}" from dataset "${datasetId}"`);
-  }
-
-  return resData.data as InvestmentDataset;
+  const current = await getDataset(datasetId);
+  if (!current) throw new Error(`Dataset "${datasetId}" not found`);
+  const currentSources = (Array.isArray(current.sourceIds) ? current.sourceIds : []).filter(
+    (s) => s !== sourceId
+  );
+  const res = await callInvestmentCallable<InvestmentDataset>(
+    'save_dataset_draft',
+    { ...current, sourceIds: currentSources },
+    expectedVersion ?? current.version,
+    actor
+  );
+  if (!res.data) throw new Error(res.error || 'Failed to remove source');
+  return res.data;
 }
 
 export async function attachMethodologyToDataset(
@@ -322,23 +263,16 @@ export async function attachMethodologyToDataset(
   methodologyId: string,
   expectedVersion?: number
 ): Promise<InvestmentDataset> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'attach_methodology',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload: { datasetId, methodologyId },
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to attach methodology "${methodologyId}" to dataset "${datasetId}"`);
-  }
-
-  return resData.data as InvestmentDataset;
+  const current = await getDataset(datasetId);
+  if (!current) throw new Error(`Dataset "${datasetId}" not found`);
+  const res = await callInvestmentCallable<InvestmentDataset>(
+    'save_dataset_draft',
+    { ...current, methodologyId },
+    expectedVersion ?? current.version,
+    actor
+  );
+  if (!res.data) throw new Error(res.error || 'Failed to attach methodology');
+  return res.data;
 }
 
 export async function removeMethodologyFromDataset(
@@ -346,21 +280,15 @@ export async function removeMethodologyFromDataset(
   datasetId: string,
   expectedVersion?: number
 ): Promise<InvestmentDataset> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'remove_methodology',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload: { datasetId },
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to remove methodology from dataset "${datasetId}"`);
-  }
-
-  return resData.data as InvestmentDataset;
+  const current = await getDataset(datasetId);
+  if (!current) throw new Error(`Dataset "${datasetId}" not found`);
+  const { methodologyId: _removed, ...rest } = current;
+  const res = await callInvestmentCallable<InvestmentDataset>(
+    'save_dataset_draft',
+    rest,
+    expectedVersion ?? current.version,
+    actor
+  );
+  if (!res.data) throw new Error(res.error || 'Failed to remove methodology');
+  return res.data;
 }

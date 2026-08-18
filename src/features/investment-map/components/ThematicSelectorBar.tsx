@@ -164,7 +164,7 @@ export const ThematicSelectorBar: React.FC<ThematicSelectorBarProps> = ({
               <span className="font-medium">{getNoDataMessage()}</span>
             </div>
             <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 px-2 py-0.5 rounded text-amber-800 dark:text-amber-300 shrink-0 font-mono">
-              Coming When Verified
+              Pending Verification
             </span>
           </div>
         </div>

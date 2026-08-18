@@ -5,6 +5,7 @@ import {
   OromiaZoneFeature,
 } from '../types/gis';
 import { loadAndValidateOromiaGeoJSON } from '../services/gisLoader';
+import { CanonicalZoneId } from '../constants/canonicalZones';
 import {
   ZoomIn,
   ZoomOut,
@@ -22,13 +23,16 @@ import {
   getDemoZoneCommodityMetrics,
   classifyThematicValue,
   getThematicColor,
+  THEMATIC_CLASS_LABELS,
 } from '../services/thematicService';
+import { PublicThematicDatasetResult } from '../services/publicThematicInvestmentService';
 
 interface SvgMapContainerProps {
   height?: string;
   selectedZoneId?: string | null;
   selectedCommodity?: CommodityKey | null;
   selectedMetric?: ThematicMetric;
+  thematicResult?: PublicThematicDatasetResult | null;
   onSelectZone?: (zoneId: string) => void;
   onGisVerified?: (result: GisValidationResult) => void;
   allowDemoData?: boolean;
@@ -131,8 +135,10 @@ export const SvgMapContainer: React.FC<SvgMapContainerProps> = ({
   selectedZoneId,
   selectedCommodity,
   selectedMetric = 'production',
+  thematicResult,
   onSelectZone,
   onGisVerified,
+  allowDemoData = false,
   className = '',
 }) => {
   const [gisResult, setGisResult] = useState<GisValidationResult | null>(null);
@@ -311,14 +317,26 @@ export const SvgMapContainer: React.FC<SvgMapContainerProps> = ({
             {processedFeatures.map((item) => {
               const isSelected = selectedZoneId === item.zoneId;
               const isHovered = hoveredFeature?.properties.zone_id === item.zoneId;
+              const zid = item.zoneId as CanonicalZoneId;
 
               let fillColor = '#059669'; // Default Emerald
               let fillOpacity = 0.55;
               let strokeColor = '#34d399';
               let strokeWidth = 1.25;
 
-              if (selectedCommodity && item.zoneId) {
-                const metrics = getDemoZoneCommodityMetrics(item.zoneId, selectedCommodity);
+              // Priority 1: Real published thematic dataset
+              if (thematicResult && zid && thematicResult.valuesByZoneId) {
+                const zoneVal = thematicResult.valuesByZoneId[zid];
+                if (zoneVal) {
+                  const colors = getThematicColor(zoneVal.thematicClass, true);
+                  fillColor = colors.legendColor;
+                  fillOpacity = 0.85;
+                  strokeColor = colors.stroke;
+                }
+              }
+              // Priority 2: Demo/synthetic data if explicitly allowed (for Lab regression tests)
+              else if (allowDemoData && selectedCommodity && zid) {
+                const metrics = getDemoZoneCommodityMetrics(zid, selectedCommodity);
                 let rawVal: number | null | undefined = null;
                 if (metrics) {
                   if (selectedMetric === 'production') rawVal = metrics.production?.volumeMT;
@@ -421,8 +439,10 @@ export const SvgMapContainer: React.FC<SvgMapContainerProps> = ({
 
       {/* Hover Floating Tooltip Card */}
       {hoveredFeature && (() => {
-        const zid = hoveredFeature.properties.zone_id;
-        const demoMetrics = selectedCommodity ? getDemoZoneCommodityMetrics(zid, selectedCommodity) : null;
+        const zid = hoveredFeature.properties.zone_id as CanonicalZoneId;
+        const realZoneVal = thematicResult && thematicResult.valuesByZoneId ? thematicResult.valuesByZoneId[zid] : null;
+
+        const demoMetrics = allowDemoData && selectedCommodity ? getDemoZoneCommodityMetrics(zid, selectedCommodity) : null;
         let metricVal: number | null | undefined = null;
         if (demoMetrics) {
           if (selectedMetric === 'production') metricVal = demoMetrics.production?.volumeMT;
@@ -430,7 +450,7 @@ export const SvgMapContainer: React.FC<SvgMapContainerProps> = ({
           else if (selectedMetric === 'investment_potential') metricVal = demoMetrics.investmentPotential?.score;
         }
         const activeMet = (selectedMetric as ThematicMetric) || 'production';
-        const classRes = selectedCommodity
+        const classRes = allowDemoData && selectedCommodity
           ? classifyThematicValue(selectedCommodity, activeMet, metricVal)
           : null;
 
@@ -451,7 +471,32 @@ export const SvgMapContainer: React.FC<SvgMapContainerProps> = ({
               </span>
             </div>
 
-            {selectedCommodity && classRes ? (
+            {realZoneVal ? (
+              <div className="space-y-1 font-mono text-[11px] bg-slate-800/80 p-2 rounded-lg border border-slate-700/80">
+                <div className="flex items-center justify-between text-slate-300">
+                  <span className="text-slate-400 capitalize">{thematicResult!.dataset.commodity} ({thematicResult!.dataset.metric}):</span>
+                  <span className="font-bold text-emerald-300">
+                    {realZoneVal.productionVolume !== null && realZoneVal.productionVolume !== undefined
+                      ? `${realZoneVal.productionVolume.toLocaleString()} ${thematicResult!.dataset.unit || 'MT'}`
+                      : realZoneVal.value !== null && realZoneVal.value !== undefined
+                      ? `${realZoneVal.value} Score`
+                      : 'No Data'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-slate-400">Class:</span>
+                  <span className="font-bold text-amber-300">
+                    {THEMATIC_CLASS_LABELS[realZoneVal.thematicClass]}
+                  </span>
+                </div>
+                {realZoneVal.regionalRank && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-slate-400">Regional Rank:</span>
+                    <span className="font-bold text-emerald-400">#{realZoneVal.regionalRank} of 22</span>
+                  </div>
+                )}
+              </div>
+            ) : selectedCommodity && classRes ? (
               <div className="space-y-1 font-mono text-[11px] bg-slate-800/80 p-2 rounded-lg border border-slate-700/80">
                 <div className="flex items-center justify-between text-slate-300">
                   <span className="text-slate-400 capitalize">{selectedCommodity} ({selectedMetric}):</span>
@@ -465,29 +510,17 @@ export const SvgMapContainer: React.FC<SvgMapContainerProps> = ({
                 </div>
                 <div className="flex items-center justify-between text-[10px]">
                   <span className="text-slate-400">Class:</span>
-                  <span className="font-bold text-amber-300">{classRes.classLabel}</span>
-                </div>
-                <div className="pt-0.5 text-[9px] text-amber-400/90 font-sans font-bold flex items-center justify-end gap-1">
-                  <span>DEMO DATA — NOT OFFICIAL OAB</span>
+                  <span className="font-bold text-amber-300">
+                    {classRes.classLabel}
+                  </span>
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-slate-300 font-mono">
-                <div>
-                  <span className="text-slate-500 font-sans block text-[10px]">Afaan Oromoo</span>
-                  <span className="font-semibold text-slate-200">
-                    {hoveredFeature.properties.name_om || 'N/A'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 font-sans block text-[10px]">Area</span>
-                  <span className="font-semibold text-emerald-300">
-                    {hoveredFeature.properties.area_sqkm?.toLocaleString() || 'N/A'} sq km
-                  </span>
-                </div>
+              <div className="text-slate-400 italic text-[11px]">
+                Click zone to inspect canonical profile.
               </div>
             )}
-
+            {/* Bottom tooltip action hint */}
             <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800 flex items-center gap-1 font-sans">
               <Sparkles className="w-3 h-3 text-emerald-400 shrink-0" />
               <span>Click to view profile</span>

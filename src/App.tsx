@@ -81,6 +81,8 @@ import { AdminSourcesPage } from './pages/admin/investment/AdminSourcesPage';
 import { AdminZoneProfilesPage } from './pages/admin/investment/AdminZoneProfilesPage';
 import { AdminOpportunitiesPage } from './pages/admin/investment/AdminOpportunitiesPage';
 import { AdminInfrastructurePage } from './pages/admin/investment/AdminInfrastructurePage';
+import { AdminFacilityCreatePage } from './pages/admin/investment/AdminFacilityCreatePage';
+import { AdminFacilityDetailPage } from './pages/admin/investment/AdminFacilityDetailPage';
 import { AdminMapConfigPage } from './pages/admin/investment/AdminMapConfigPage';
 import { AdminInvestmentActivityPage } from './pages/admin/investment/AdminInvestmentActivityPage';
 import { AdminInvestmentTestsPage } from './pages/admin/investment/AdminInvestmentTestsPage';
@@ -420,6 +422,9 @@ export default function App() {
                       <Route path="sources" element={<AdminSourcesPage />} />
                       <Route path="opportunities" element={<AdminOpportunitiesPage />} />
                       <Route path="infrastructure" element={<AdminInfrastructurePage />} />
+                      <Route path="infrastructure/new" element={<AdminFacilityCreatePage />} />
+                      <Route path="infrastructure/:facilityId" element={<AdminFacilityDetailPage />} />
+                      <Route path="infrastructure/:facilityId/edit" element={<AdminFacilityDetailPage />} />
                       <Route path="config" element={<AdminMapConfigPage />} />
                       <Route path="activity" element={<AdminInvestmentActivityPage />} />
                       <Route path="tests" element={<AdminInvestmentTestsPage />} />

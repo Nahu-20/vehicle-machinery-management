@@ -24,8 +24,20 @@ export interface TestResult {
   message: string;
 }
 
+export type MutateApiHandler = (action: string, actorUid: string, payload: any, expectedVersion?: number) => Promise<{ status: number; data: any }>;
+
+let customMutateHandler: MutateApiHandler | null = null;
+
+export function setCustomMutateHandler(handler: MutateApiHandler | null) {
+  customMutateHandler = handler;
+}
+
 async function callMutateApi(action: string, actorUid: string, payload: any, expectedVersion?: number): Promise<{ status: number; data: any }> {
-  if (typeof window !== 'undefined') {
+  if (customMutateHandler) {
+    return customMutateHandler(action, actorUid, payload, expectedVersion);
+  }
+
+  try {
     const res = await fetch('/api/investment/mutate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -33,38 +45,9 @@ async function callMutateApi(action: string, actorUid: string, payload: any, exp
     });
     const data = await res.json();
     return { status: res.status, data };
+  } catch (err: any) {
+    return { status: 500, data: { error: err?.message || 'Network request failed' } };
   }
-
-  const http = await import('http');
-  return new Promise((resolve) => {
-    const postData = JSON.stringify({ action, actorUid, payload, expectedVersion });
-    const req = http.request(
-      {
-        hostname: '127.0.0.1',
-        port: 3000,
-        path: '/api/investment/mutate',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(postData),
-        },
-      },
-      (res) => {
-        let body = '';
-        res.on('data', (chunk) => (body += chunk));
-        res.on('end', () => {
-          try {
-            resolve({ status: res.statusCode || 500, data: JSON.parse(body) });
-          } catch {
-            resolve({ status: res.statusCode || 500, data: { raw: body } });
-          }
-        });
-      }
-    );
-    req.on('error', (err) => resolve({ status: 500, data: { error: err.message } }));
-    req.write(postData);
-    req.end();
-  });
 }
 
 export async function runAllInvestmentSecurityTests(): Promise<TestResult[]> {
