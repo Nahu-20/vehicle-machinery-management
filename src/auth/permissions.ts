@@ -42,6 +42,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   'investment.opportunities.manage',
   'investment.config.manage',
   'gis.manage',
+  'attestation.manage',
 ];
 
 export const VALID_STAFF_ROLES: StaffRole[] = [

@@ -31,12 +31,14 @@ import { AchievementsPage } from './pages/AchievementsPage';
 import { AchievementDetailPage } from './pages/AchievementDetailPage';
 import { InvestmentPage } from './pages/InvestmentPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { BlockchainTraceabilityPage } from './pages/BlockchainTraceabilityPage';
 import { ChatLauncher } from './components/chat/ChatLauncher';
 import { ChatPanel } from './components/chat/ChatPanel';
 import { ChatMessage } from './services/chatService';
 
 // Admin Auth & Authorization Guards
 import { AdminSignInPage } from './pages/admin/AdminSignInPage';
+import { AttestationAdminPage } from './pages/admin/attestation/AttestationAdminPage';
 import { ForgotPasswordPage } from './pages/admin/ForgotPasswordPage';
 import { RequireAuthentication } from './components/auth/RequireAuthentication';
 import { RequireStaffAuthorization } from './components/auth/RequireStaffAuthorization';
@@ -365,6 +367,17 @@ export default function App() {
                       }
                     />
                     <Route
+                      path="attestation"
+                      element={
+                        <RequirePermission
+                          requiredPermission="attestation.manage"
+                          moduleTitle="Attestation Management"
+                        >
+                          <AttestationAdminPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
                       path="resources"
                       element={
                         <RequirePermission
@@ -459,6 +472,7 @@ export default function App() {
                     />
                     <Route path="/investment/*" element={<InvestmentPage />} />
                     <Route path="/contact" element={<ContactPage />} />
+                    <Route path="/traceability/scan" element={<BlockchainTraceabilityPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Route>
                 </Routes>

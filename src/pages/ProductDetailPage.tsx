@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Share2, Leaf } from 'lucide-react';
+import { ArrowLeft, Share2, Leaf, ScanLine } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useReducedMotionPreference } from '../hooks/useReducedMotionPreference';
 import { ProductGallery } from '../features/products/components/ProductGallery';
@@ -168,6 +168,20 @@ export const ProductDetailPage: React.FC = () => {
               <p className="text-sm leading-relaxed text-[#56635B] dark:text-emerald-100/70">
                 {t('products_quality_certifications_empty')}
               </p>
+
+              {/* Blockchain Traceability CTA */}
+              <div className="mt-4 p-4 bg-emerald-50 dark:bg-[#081811] border border-emerald-100 dark:border-[#183327] rounded-xl flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="font-bold text-sm text-[#063D2A] dark:text-emerald-50">Blockchain Traceability</h3>
+                  <p className="text-xs text-[#56635B] dark:text-emerald-100/70">Verify the journey of your product.</p>
+                </div>
+                <Link
+                  to="/traceability/scan"
+                  className="flex-shrink-0 inline-flex items-center gap-2 bg-[#087A4B] hover:bg-[#063D2A] dark:bg-[#A3E635] dark:hover:bg-[#92D022] text-white dark:text-[#0A1912] text-xs font-bold py-2 px-4 rounded-full transition-colors shadow-sm"
+                >
+                  <ScanLine className="w-4 h-4" /> Check yours
+                </Link>
+              </div>
             </section>
 
             <section className="space-y-3" aria-labelledby="product-support-heading">

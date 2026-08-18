@@ -60,7 +60,8 @@ export type Permission =
   | 'investment.datasets.manage'
   | 'investment.opportunities.manage'
   | 'investment.config.manage'
-  | 'gis.manage';
+  | 'gis.manage'
+  | 'attestation.manage';
 
 export type StaffAuthorizationStatus =
   | 'loading'

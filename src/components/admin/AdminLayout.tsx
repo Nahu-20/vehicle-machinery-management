@@ -22,6 +22,7 @@ import {
   Info,
   Award,
   Database,
+  QrCode,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useStaffAuthorization } from '../../hooks/useStaffAuthorization';
@@ -115,6 +116,13 @@ export const AdminLayout: React.FC = () => {
       href: '/admin/settings',
       icon: Settings,
       permission: 'settings.manage',
+    },
+    {
+      id: 'attestation',
+      label: 'Blockchain Attestation',
+      href: '/admin/attestation',
+      icon: QrCode,
+      permission: 'attestation.manage',
     },
   ];
 
