@@ -1,28 +1,29 @@
 import React, { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  Building2,
-  LayoutDashboard,
-  FileText,
-  Bell,
-  TrendingUp,
-  FolderDown,
-  Users,
-  Settings,
-  LogOut,
-  Globe,
-  Sun,
-  Moon,
-  Laptop,
-  Menu,
-  X,
-  Shield,
-  ExternalLink,
-  ChevronRight,
-  Info,
   Award,
+  Bell,
+  Building2,
+  ChevronRight,
   Database,
+  ExternalLink,
+  FileText,
+  FolderDown,
+  Globe,
+  Info,
+  Laptop,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Moon,
   QrCode,
+  Settings,
+  Shield,
+  Sun,
+  TrendingUp,
+  Truck,
+  Users,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useStaffAuthorization } from '../../hooks/useStaffAuthorization';
@@ -97,6 +98,13 @@ export const AdminLayout: React.FC = () => {
       permission: 'investment.view',
     },
     {
+      id: 'fleet',
+      label: 'Vehicles & Machinery',
+      href: '/admin/fleet',
+      icon: Truck,
+      permission: 'fleet.view',
+    },
+    {
       id: 'resources',
       label: 'Resources & Manuals',
       href: '/admin/resources',
@@ -146,6 +154,7 @@ export const AdminLayout: React.FC = () => {
     editor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
     marketOfficer: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     advisoryOfficer: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+    fleetOfficer: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
   };
 
   return (

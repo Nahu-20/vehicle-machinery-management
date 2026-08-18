@@ -1,4 +1,4 @@
-import {
+import type {
   NavigationItem,
   AgriculturalAlert,
   Service,
@@ -14,7 +14,7 @@ import {
   ProgramImpact,
   ImpactReport,
   BeforeAfterItem,
-} from '../types';
+} from '../types/index.js';
 
 export const navigationItems: NavigationItem[] = [
   { id: 'nav-home', labelKey: 'nav_home', href: '/' },

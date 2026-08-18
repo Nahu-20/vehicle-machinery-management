@@ -1,5 +1,5 @@
 import React, { useState, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 
 // Lazy-loaded GIS Lab Page
 const InvestmentMapLabPage = lazy(() => import('./pages/InvestmentMapLabPage'));
@@ -47,6 +47,19 @@ import { UnauthorizedPage } from './pages/admin/UnauthorizedPage';
 
 // Admin Layout & Subpages
 import { AdminLayout } from './components/admin/AdminLayout';
+import { FleetAdminLayout } from './pages/admin/fleet/FleetAdminLayout';
+import { AdminFleetDashboardPage } from './pages/admin/fleet/AdminFleetDashboardPage';
+import { AdminFleetRegisterPage } from './pages/admin/fleet/AdminFleetRegisterPage';
+import { AdminFleetAssetFormPage } from './pages/admin/fleet/AdminFleetAssetFormPage';
+import { AdminFleetAssetDetailPage } from './pages/admin/fleet/AdminFleetAssetDetailPage';
+import { AdminFleetDriversPage } from './pages/admin/fleet/AdminFleetDriversPage';
+import { AdminFleetDriverFormPage } from './pages/admin/fleet/AdminFleetDriverFormPage';
+import { AdminFleetDriverDetailPage } from './pages/admin/fleet/AdminFleetDriverDetailPage';
+import { AdminFleetCompliancePage } from './pages/admin/fleet/AdminFleetCompliancePage';
+import { AdminFleetFuelPage } from './pages/admin/fleet/AdminFleetFuelPage';
+import { AdminFleetGaragePage } from './pages/admin/fleet/AdminFleetGaragePage';
+import { AdminFleetReportsPage } from './pages/admin/fleet/AdminFleetReportsPage';
+import { AdminFleetMapPage } from './pages/admin/fleet/AdminFleetMapPage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { ContentManagementPage } from './pages/admin/ContentManagementPage';
 import { AdminNewsListPage } from './pages/admin/news/AdminNewsListPage';
@@ -428,6 +441,40 @@ export default function App() {
                       <Route path="config" element={<AdminMapConfigPage />} />
                       <Route path="activity" element={<AdminInvestmentActivityPage />} />
                       <Route path="tests" element={<AdminInvestmentTestsPage />} />
+                    </Route>
+
+                    {/* Vehicle & Machinery Management */}
+                    <Route
+                      path="fleet"
+                      element={
+                        <RequirePermission
+                          requiredPermission="fleet.view"
+                          moduleTitle="Vehicle & Machinery Management"
+                        >
+                          <FleetAdminLayout />
+                        </RequirePermission>
+                      }
+                    >
+                      <Route index element={<AdminFleetDashboardPage />} />
+                      <Route path="register" element={<AdminFleetRegisterPage />} />
+                      <Route path="register/new" element={<AdminFleetAssetFormPage />} />
+                      <Route path="register/:assetId/edit" element={<AdminFleetAssetFormPage />} />
+                      <Route path="register/:assetId" element={<AdminFleetAssetDetailPage />} />
+                      <Route path="drivers" element={<AdminFleetDriversPage />} />
+                      <Route path="drivers/new" element={<AdminFleetDriverFormPage />} />
+                      <Route path="drivers/:driverId/edit" element={<AdminFleetDriverFormPage />} />
+                      <Route path="drivers/:driverId" element={<AdminFleetDriverDetailPage />} />
+                      <Route path="garage" element={<AdminFleetGaragePage />} />
+                      <Route path="fuel" element={<AdminFleetFuelPage />} />
+                      <Route path="compliance" element={<AdminFleetCompliancePage />} />
+                      <Route path="reports" element={<AdminFleetReportsPage />} />
+                      {/* The map is a view of the register now, not a
+                          destination. Kept so existing links still land
+                          somewhere sensible rather than on a 404. */}
+                      <Route
+                        path="map"
+                        element={<Navigate to="/admin/fleet/register?view=map" replace />}
+                      />
                     </Route>
                     <Route
                       path="settings"

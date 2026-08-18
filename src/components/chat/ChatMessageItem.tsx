@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChatMessage } from '../../services/chatService';
 import { Link } from 'react-router-dom';
-import { Bot, User, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
+import { Bot, User, ExternalLink, RefreshCw, AlertCircle, Languages } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface ChatMessageItemProps {
@@ -38,11 +38,20 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onRet
         >
           <p className="whitespace-pre-wrap">{message.content}</p>
 
+          {/* Machine-translation notice: only Afaan Oromo is mandatory for staff,
+              so Amharic and English answers are often translated from om records. */}
+          {message.wasTranslated && (
+            <p className="mt-2 flex items-start gap-1 text-[10px] italic text-amber-700 dark:text-amber-400">
+              <Languages className="h-3 w-3 shrink-0 mt-px" />
+              <span>{t('chat_machine_translated')}</span>
+            </p>
+          )}
+
           {/* Sources if present */}
           {message.sources && message.sources.length > 0 && (
             <div className="mt-2.5 pt-2 border-t border-gray-100 dark:border-emerald-900/40 space-y-1">
               <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                Related Information:
+                {t('chat_related_info')}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {message.sources.map((src, i) => {

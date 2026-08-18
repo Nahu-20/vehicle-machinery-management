@@ -34,7 +34,7 @@ if (!getApps().length) {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // Global CORS and Preflight handler
   app.use((req, res, next) => {
@@ -77,6 +77,13 @@ async function startServer() {
 
   app.post('/investmentMutate', handleInvestmentRoute);
   app.post('/:project/:region/investmentMutate', handleInvestmentRoute);
+
+  // Public Chatbot Endpoint: grounded retrieval over Bureau content.
+  // Runs server-side so GEMINI_API_KEY is never exposed to the browser.
+  app.post('/api/chat', async (req: Request, res: Response) => {
+    const { handleChat } = await import('./src/server/chat/chatApi.js');
+    return handleChat(req, res);
+  });
 
   // Health check
   app.get('/api/health', (req: Request, res: Response) => {

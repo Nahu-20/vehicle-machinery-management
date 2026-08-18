@@ -47,6 +47,14 @@ const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
   advisoryOfficer: [
     'dashboard.view', 'alerts.manage', 'alert.view', 'alert.create', 'alert.edit', 'alert.review', 'investment.view',
   ],
+  fleetOfficer: [
+    'dashboard.view',
+    'fleet.view',
+    'fleet.asset.manage',
+    'fleet.assign',
+    'fleet.maintenance.manage',
+    'fleet.reports.view',
+  ],
 };
 
 function checkStaffPermission(staffData: any, requiredPermission: Permission): boolean {

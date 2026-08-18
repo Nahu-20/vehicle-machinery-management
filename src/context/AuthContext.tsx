@@ -8,7 +8,7 @@ import {
   User,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { auth, db, isFirebaseDemoMode } from '../lib/firebase';
 import { StaffUser, StaffRole } from '../types/auth';
 import { isFirebaseConfigured as checkFirebaseConfigured } from '../config/env';
 import { clearAllDraftRecoveriesForUser } from '../services/newsDraftRecoveryService';
@@ -49,6 +49,7 @@ const VALID_ROLES: StaffRole[] = [
   'editor',
   'marketOfficer',
   'advisoryOfficer',
+  'fleetOfficer',
 ];
 
 const DEMO_STAFF_USERS: Record<StaffRole, StaffUser> = {
@@ -102,6 +103,16 @@ const DEMO_STAFF_USERS: Record<StaffRole, StaffUser> = {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  fleetOfficer: {
+    uid: 'demo-fleetofficer-001',
+    email: 'fleet@oromiaagri.gov.et',
+    displayName: 'Obbo Tashoomaa Waaqjiraa',
+    role: 'fleetOfficer',
+    active: true,
+    preferredLanguage: 'om',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -115,7 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isFirebaseReady = isFirebaseConfigured && !!auth;
 
   const fetchStaffProfile = async (user: User) => {
-    if (!db) {
+    if (!db || isFirebaseDemoMode) {
       setStaffUser(null);
       setStatus('noProfile');
       setLoading(false);
@@ -127,6 +138,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
+        /*
+         * No staff record: refuse, do not create one.
+         *
+         * This used to auto-provision a document with role 'superAdmin' and
+         * active: true for any authenticated user who lacked one. Combined with
+         * firestore.rules allowing a create against your own uid, and with
+         * Firebase's email/password sign-up being open by default, that meant
+         * anyone who could register an account was handed administrator rights
+         * on the whole portal — no invitation, no approval, no UI needed.
+         *
+         * It reads like a convenience for provisioning the first admin, and that
+         * is what it was. But the first admin only needs provisioning once, in
+         * the Firebase console, and everyone after that is either invited or is
+         * not supposed to be here. Failing closed costs one manual document and
+         * removes a privilege-escalation path.
+         *
+         * Provisioning steps are in StaffManagementPage and the setup docs.
+         */
+        //
+        // Both sides of the merge removed the auto-provisioning independently.
+        // His audit entry is the durable record; the console warning is what a
+        // developer running locally actually sees, since the audit write is
+        // swallowed on failure by design.
         logAuditEvent({
           actorUid: user.uid,
           actorEmail: user.email || '',
@@ -141,6 +175,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           source: 'dashboard_ui',
           reason: `No canonical staff profile found in Firestore at staffUsers/${user.uid}. Self-provisioning denied.`,
         });
+        console.warn(
+          `[AuthContext] ${user.uid} signed in with no staffUsers document. ` +
+            'Access refused. Create the record in Firestore to grant access.'
+        );
         setStaffUser(null);
         setStatus('noProfile');
         setLoading(false);
@@ -278,7 +316,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     setLoading(true);
 
-    if (!auth) {
+    // `auth` is no longer null when Firebase is unconfigured — it points at a
+    // placeholder project so the public site does not blank out. Demo mode has
+    // to be asked about explicitly now, or this falls through to a real sign-in
+    // against a project that does not exist and the admin becomes unreachable.
+    if (!auth || isFirebaseDemoMode) {
       const demoAccount =
         Object.values(DEMO_STAFF_USERS).find(
           (u) => u.email.toLowerCase() === email.toLowerCase()

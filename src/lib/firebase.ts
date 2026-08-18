@@ -15,15 +15,39 @@ let functionsEmulatorConnected = false;
 
 const config = getFirebaseConfig();
 
-if (config) {
+/**
+ * Placeholder project used when no Firebase environment variables are set.
+ *
+ * Without this, `db` stayed null while every consumer called `collection(db, …)`
+ * unchecked — 23 files do — which throws synchronously *during React render* and
+ * unmounts the whole tree, producing a blank page rather than a degraded one.
+ *
+ * A demo app yields a valid Firestore handle whose queries fail asynchronously
+ * over the network instead, which the existing onSnapshot error handlers and the
+ * "offline/cached fallback mode" path below already tolerate. Firebase reserves
+ * the `demo-` project prefix for exactly this local, never-connected use.
+ */
+const DEMO_CONFIG = {
+  apiKey: 'demo-api-key',
+  authDomain: 'demo-oromia-agriculture.firebaseapp.com',
+  projectId: 'demo-oromia-agriculture',
+  firebaseStorageBucket: '',
+  messagingSenderId: '',
+  appId: '1:000000000000:web:demo',
+};
+
+export const isFirebaseDemoMode = config === null;
+
+{
+  const active = config ?? DEMO_CONFIG;
   try {
     const appConfig = {
-      apiKey: config.apiKey,
-      authDomain: config.authDomain,
-      projectId: config.projectId,
-      storageBucket: config.firebaseStorageBucket || undefined,
-      messagingSenderId: config.messagingSenderId,
-      appId: config.appId,
+      apiKey: active.apiKey,
+      authDomain: active.authDomain,
+      projectId: active.projectId,
+      storageBucket: active.firebaseStorageBucket || undefined,
+      messagingSenderId: active.messagingSenderId,
+      appId: active.appId,
     };
 
     app = getApps().length > 0 ? getApp() : initializeApp(appConfig);
@@ -53,7 +77,7 @@ if (config) {
     }
 
     // Initialize Storage safely only if firebaseStorageBucket is configured
-    if (config.firebaseStorageBucket) {
+    if (active.firebaseStorageBucket) {
       try {
         storage = getStorage(app);
 
@@ -85,11 +109,15 @@ if (config) {
   } catch (err) {
     console.error('Failed to initialize Firebase SDK:', err);
   }
-} else {
-  const status = getFirebaseConfigStatus();
-  console.info(
-    `Firebase environment variables not set. Missing: ${status.missingKeys.join(', ')}. Administrative features will run in demonstration mode.`
-  );
+
+  if (isFirebaseDemoMode) {
+    const status = getFirebaseConfigStatus();
+    console.info(
+      `Firebase environment variables not set. Missing: ${status.missingKeys.join(', ')}. ` +
+        'Running against a placeholder project — live content will be unavailable and ' +
+        'administrative features run in demonstration mode.'
+    );
+  }
 }
 
 // Development-only diagnostic for Firebase Storage
