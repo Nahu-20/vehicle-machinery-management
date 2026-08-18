@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Timestamp } from 'firebase/firestore';
-import { Save, ArrowLeft, AlertTriangle, Info } from 'lucide-react';
+import { Save, ArrowLeft, AlertTriangle, Info, LogOut, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
 import { hasPermission } from '../../../lib/permissions';
 import {
@@ -10,16 +10,26 @@ import {
   updateAsset,
   type CreateAssetInput,
 } from '../../../features/fleet/services/fleetService';
-import type { FleetAsset, FleetAssetType, FleetMeterType } from '../../../features/fleet/types/fleet';
+import { issueAsset } from '../../../features/fleet/services/fleetAssignmentService';
+import { listDrivers } from '../../../features/fleet/services/fleetDriverService';
+import type {
+  FleetAsset,
+  FleetAssetType,
+  FleetDriver,
+  FleetMeterType,
+} from '../../../features/fleet/types/fleet';
 import {
   DEFAULT_METER_BY_TYPE,
   FLEET_ASSET_TYPES,
   METER_UNIT_LABEL,
   isRoadVehicle,
+  assessDriverForAsset,
+  licenceState,
 } from '../../../features/fleet/constants/fleetVocabulary';
 import {
   FleetPanel,
   FleetButton,
+  LicencePill,
   INPUT,
   LABEL,
   FleetLoading,
@@ -103,6 +113,25 @@ export function AdminFleetAssetFormPage() {
   const [imageUrl, setImageUrl] = useState('');
   const [notes, setNotes] = useState('');
 
+  /*
+   * Issuing straight away, while adding.
+   *
+   * Optional throughout. Most machines are added to the register long before
+   * anybody takes them out, and a form that insists on a holder would have
+   * people inventing one.
+   *
+   * When it is used it goes through issueAsset like any other sign-out — a real
+   * assignment row, a purpose, a meter reading. Setting a custodian without one
+   * is precisely the inconsistency the first two rounds of this module existed
+   * to remove.
+   */
+  const [drivers, setDrivers] = useState<FleetDriver[]>([]);
+  const [issueNow, setIssueNow] = useState(false);
+  const [driverId, setDriverId] = useState('');
+  const [holderName, setHolderName] = useState('');
+  const [purpose, setPurpose] = useState('');
+  const [dueAt, setDueAt] = useState('');
+
   /** Road vehicles carry documents; farm machinery does not. */
   const roadVehicle = useMemo(() => isRoadVehicle(assetType), [assetType]);
 
@@ -153,11 +182,61 @@ export function AdminFleetAssetFormPage() {
     };
   }, [isEdit, routeAssetId]);
 
+  /** The directory, for the optional sign-out below. Only needed while adding. */
+  useEffect(() => {
+    if (isEdit) return;
+    let cancelled = false;
+    (async () => {
+      // Non-critical: without it the sign-out falls back to a typed name, which
+      // is what the issue form does anyway when somebody is not on the register.
+      const rows = await listDrivers({ status: 'active' }).catch(() => [] as FleetDriver[]);
+      if (!cancelled) setDrivers(rows);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isEdit]);
+
   /** Changing the type re-suggests the meter, but only while adding. */
   useEffect(() => {
     if (isEdit) return;
     setMeterType(DEFAULT_METER_BY_TYPE[assetType]);
   }, [assetType, isEdit]);
+
+  /**
+   * Drivers offered, this asset's zone first.
+   *
+   * The rest still follow rather than being hidden — a machine bought for one
+   * zone is often driven away by somebody from another, and a picker that
+   * silently omits the right person sends the clerk to the free-text box.
+   */
+  const driverOptions = useMemo(() => {
+    const here = drivers.filter((d) => d.zoneId === zoneId);
+    return [...here, ...drivers.filter((d) => d.zoneId !== zoneId)];
+  }, [drivers, zoneId]);
+
+  const chosenDriver = useMemo(
+    () => drivers.find((d) => d.driverId === driverId) ?? null,
+    [drivers, driverId]
+  );
+
+  /**
+   * The licence check, run against the asset being typed rather than a saved one.
+   *
+   * assessDriverForAsset only needs the id and the type, both of which exist in
+   * the form before anything is written — so a lapsed licence on a new pickup is
+   * refused at the point of entry, not after the asset has been created.
+   */
+  const eligibility = useMemo(
+    () =>
+      chosenDriver
+        ? assessDriverForAsset(chosenDriver, {
+            assetId: assetIdField.trim().toUpperCase() || 'this vehicle',
+            assetType,
+          } as FleetAsset)
+        : null,
+    [chosenDriver, assetIdField, assetType]
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,14 +278,71 @@ export function AdminFleetAssetFormPage() {
       notes: notes.trim() ? { en: notes.trim() } : undefined,
     };
 
+    const holder = chosenDriver ? chosenDriver.fullName : holderName.trim();
+    const wantsIssue = !isEdit && issueNow && Boolean(holder);
+
+    if (wantsIssue) {
+      if (!purpose.trim()) {
+        return setError('A purpose is required to sign the machine out — or untick the sign-out.');
+      }
+      // The same verdict issueAsset will reach, said before the round trip.
+      if (eligibility && !eligibility.allowed) {
+        return setError(eligibility.reason ?? 'That driver may not take this machine.');
+      }
+    }
+
     setSaving(true);
     try {
       if (isEdit && routeAssetId) {
         await updateAsset(routeAssetId, payload, version, staffUser);
-      } else {
-        await createAsset(payload, staffUser);
+        navigate('/admin/fleet/register');
+        return;
       }
-      navigate('/admin/fleet/register');
+
+      const created = await createAsset(payload, staffUser);
+
+      if (!wantsIssue) {
+        navigate(`/admin/fleet/register/${created.assetId}`);
+        return;
+      }
+
+      /*
+       * Two writes, and the second can fail on its own.
+       *
+       * If the sign-out is refused — a licence that lapsed between loading the
+       * form and submitting it, say — the vehicle has already been created and
+       * that is fine: it is on the register, available, exactly as if the
+       * sign-out had been left unticked. What is not fine is navigating away as
+       * though everything worked, so the failure is reported against the asset
+       * that now exists rather than as a generic save error.
+       */
+      try {
+        await issueAsset(
+          {
+            assetId: created.assetId,
+            expectedVersion: created.version,
+            assignedToUid: chosenDriver
+              ? `driver:${chosenDriver.driverId}`
+              : `unlinked:${holder}`,
+            assignedToName: holder,
+            driverId: chosenDriver ? chosenDriver.driverId : null,
+            purpose: purpose.trim(),
+            meterOut: meter,
+            dueAt: dueAt ? new Date(`${dueAt}T00:00:00`) : null,
+          },
+          staffUser
+        );
+      } catch (issueErr) {
+        setSaving(false);
+        setError(
+          `${created.assetId} was added to the register, but not signed out: ${
+            issueErr instanceof Error ? issueErr.message : 'the sign-out failed.'
+          } It is available, and can be issued from its page.`
+        );
+        return;
+      }
+
+      navigate(`/admin/fleet/register/${created.assetId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save the asset.');
     } finally {
@@ -495,6 +631,130 @@ export function AdminFleetAssetFormPage() {
         </FleetPanel>
       )}
 
+      {!isEdit && (
+        <FleetPanel
+          title="Sign it out now"
+          description="Optional. Most machines are added to the register before anyone takes them out — leave this alone and the vehicle is simply available."
+        >
+          <div className="p-6 space-y-5">
+            <label className="inline-flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={issueNow}
+                onChange={(e) => {
+                  setIssueNow(e.target.checked);
+                  setError(null);
+                }}
+                className="accent-emerald-600 mt-0.5"
+              />
+              <span className="text-xs text-slate-700 dark:text-slate-200">
+                <strong>Issue this machine to somebody straight away.</strong>
+                <span className="block text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  This records a real sign-out: the vehicle will show as{' '}
+                  <strong>In use</strong> rather than available, appear in the sign-out book, and
+                  stay out until someone records a return.
+                </span>
+              </span>
+            </label>
+
+            {issueNow && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
+                <div>
+                  <label className={LABEL}>Driver</label>
+                  <select
+                    value={driverId}
+                    onChange={(e) => {
+                      setDriverId(e.target.value);
+                      setError(null);
+                    }}
+                    className={INPUT}
+                  >
+                    <option value="">Someone not in the directory…</option>
+                    {driverOptions.map((d) => (
+                      <option key={d.driverId} value={d.driverId}>
+                        {d.fullName} · {d.driverId}
+                        {d.zoneId !== zoneId
+                          ? ` (${CANONICAL_ZONE_METADATA[d.zoneId]?.displayName ?? d.zoneId})`
+                          : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {chosenDriver && (
+                    <div className="mt-2">
+                      <LicencePill state={licenceState(chosenDriver)} />
+                    </div>
+                  )}
+                </div>
+
+                {chosenDriver ? (
+                  <div className="flex items-end">
+                    {eligibility && !eligibility.allowed ? (
+                      <div className="w-full rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-[11px] text-red-700 dark:text-red-300 flex items-start gap-2">
+                        <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>{eligibility.reason}</span>
+                      </div>
+                    ) : eligibility?.warning ? (
+                      <div className="w-full rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>{eligibility.warning}</span>
+                      </div>
+                    ) : (
+                      <div className="w-full rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-[11px] text-emerald-800 dark:text-emerald-300 flex items-start gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>Nothing on record stops this issue.</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <label className={LABEL}>Issued to</label>
+                    <input
+                      value={holderName}
+                      onChange={(e) => setHolderName(e.target.value)}
+                      placeholder="Obbo Girmaa Bekele"
+                      className={INPUT}
+                    />
+                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      A typed name records the sign-out but checks no licence.
+                    </p>
+                  </div>
+                )}
+
+                <div className="md:col-span-2">
+                  <label className={LABEL}>Purpose *</label>
+                  <input
+                    value={purpose}
+                    onChange={(e) => setPurpose(e.target.value)}
+                    placeholder="Ploughing at Boset cooperative"
+                    className={INPUT}
+                  />
+                </div>
+
+                <div>
+                  <label className={LABEL}>
+                    Meter out{' '}
+                    {meterType !== 'none' ? `(${METER_UNIT_LABEL[meterType]})` : ''}
+                  </label>
+                  <input value={currentMeter} disabled className={`${INPUT} opacity-60`} />
+                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                    Taken from the current reading above — it is the same moment.
+                  </p>
+                </div>
+                <div>
+                  <label className={LABEL}>Due back</label>
+                  <input
+                    type="date"
+                    value={dueAt}
+                    onChange={(e) => setDueAt(e.target.value)}
+                    className={INPUT}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </FleetPanel>
+      )}
+
       <FleetPanel
         title="Photograph"
         description="Optional. Paste a link to a photo of this machine; leave it blank and a placeholder is drawn from the asset type."
@@ -542,8 +802,18 @@ export function AdminFleetAssetFormPage() {
         >
           Cancel
         </FleetButton>
-        <FleetButton type="submit" icon={Save} disabled={saving}>
-          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add to register'}
+        <FleetButton
+          type="submit"
+          icon={!isEdit && issueNow ? LogOut : Save}
+          disabled={saving}
+        >
+          {saving
+            ? 'Saving…'
+            : isEdit
+            ? 'Save changes'
+            : issueNow
+            ? 'Add and sign out'
+            : 'Add to register'}
         </FleetButton>
       </div>
     </form>
