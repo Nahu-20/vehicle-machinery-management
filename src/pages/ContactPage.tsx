@@ -1,90 +1,104 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { mockOffices } from '../data/mockData';
 import { FeedbackModal } from '../components/common/FeedbackModal';
-import { PhoneCall, Mail, MapPin, Clock, MessageSquare, Send, Building2 } from 'lucide-react';
+import { ContactHero } from '../components/contact/ContactHero';
+import { EmergencyHotlineBar } from '../components/contact/EmergencyHotlineBar';
+import { DirectChannelsGrid } from '../components/contact/DirectChannelsGrid';
+import { InquiryFormSection } from '../components/contact/InquiryFormSection';
+import { ZonalOfficesDirectory } from '../components/contact/ZonalOfficesDirectory';
+import { BureauLocationMap } from '../components/contact/BureauLocationMap';
+import { ContactFaqSection } from '../components/contact/ContactFaqSection';
+import { MessageSquare, ChevronRight, Home, Headphones } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const ContactPage: React.FC = () => {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
+  const handleJumpToSection = (sectionId: string) => {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
-    <div className="bg-[#F8F7F2] min-h-screen py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-12">
-        <div className="rounded-2xl bg-[#075D3A] text-white p-8 md:p-12 shadow-xl">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#D5A62E]">Oromia Government Contact</span>
-          <h1 className="text-3xl sm:text-4xl font-black mt-1">{t('nav_contact')}</h1>
-          <p className="text-xs sm:text-sm text-emerald-100 mt-2 max-w-2xl">{t('contact_subtitle')}</p>
-        </div>
+    <div className="bg-[#F8F7F2] dark:bg-[#0c120e] min-h-screen py-8 sm:py-12 transition-colors duration-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 sm:space-y-16">
+        {/* Breadcrumb Navigation */}
+        <nav
+          aria-label="Breadcrumb"
+          className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400"
+        >
+          <Link
+            to="/"
+            className="flex items-center gap-1 hover:text-[#075D3A] dark:hover:text-emerald-400 transition-colors"
+          >
+            <Home className="w-3.5 h-3.5" />
+            <span>{language === 'om' ? 'Fuula Duraa' : language === 'am' ? 'ዋና ገጽ' : 'Home'}</span>
+          </Link>
+          <ChevronRight className="w-3 h-3 text-gray-400" />
+          <span className="text-[#075D3A] dark:text-emerald-400 font-bold">
+            {language === 'om' ? 'Qunnamtii & Sarara Deeggarsaa' : language === 'am' ? 'ግንኙነትና ድጋፍ' : 'Contact & Assistance'}
+          </span>
+        </nav>
 
-        {/* Central Bureau Contact Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="rounded-xl bg-white p-6 shadow-xs border space-y-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#EAF5EE] text-[#075D3A]">
-              <PhoneCall className="h-6 w-6 text-[#D5A62E]" />
-            </div>
-            <h3 className="text-base font-bold text-[#17211B]">{t('hotline_label')}</h3>
-            <p className="text-2xl font-black text-[#075D3A]">{t('hotline_number')}</p>
-            <p className="text-xs text-[#5E6B63]">Free advice line for farmers across Oromia</p>
+        {/* Hero Section */}
+        <ContactHero onJumpToSection={handleJumpToSection} />
+
+        {/* Emergency Hotlines & Rapid Response Bar */}
+        <EmergencyHotlineBar />
+
+        {/* Direct Bureau Department Channels Grid */}
+        <DirectChannelsGrid />
+
+        {/* Multi-Category Dispatch & Grievance Submission Form */}
+        <InquiryFormSection />
+
+        {/* Searchable & Filterable Zonal Agricultural Directory (21 Zones) */}
+        <ZonalOfficesDirectory />
+
+        {/* Bureau Headquarters Map & Visiting Guide */}
+        <BureauLocationMap />
+
+        {/* Frequently Asked Questions */}
+        <ContactFaqSection />
+
+        {/* Quick Feedback Banner */}
+        <div className="rounded-3xl bg-gradient-to-r from-[#075D3A] to-[#043320] text-white p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl border border-emerald-700/50">
+          <div className="space-y-1 text-center sm:text-left">
+            <h3 className="text-xl font-black">
+              {language === 'om'
+                ? 'Yaada, Komii ykn Qeeqa Qabduu?'
+                : language === 'am'
+                ? 'አስተያየት፣ ቅሬታ ወይም ጥቆማ አለዎት?'
+                : 'Have Feedback, Suggestions, or General Inquiries?'}
+            </h3>
+            <p className="text-xs sm:text-sm text-emerald-100/90 max-w-xl">
+              {language === 'om'
+                ? 'Tajaajila Biiroo Qonnaa Oromiyaa fooyyessuuf yaanni keessan murteessaadha.'
+                : language === 'am'
+                ? 'የኦሮሚያ ግብርና ቢሮ አገልግሎቶችን ለማሻሻል የእርስዎ አስተያየት ወሳኝ ነው።'
+                : 'Help us improve service delivery across all farmer training centers and regional departments.'}
+            </p>
           </div>
 
-          <div className="rounded-xl bg-white p-6 shadow-xs border space-y-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#EAF5EE] text-[#075D3A]">
-              <Mail className="h-6 w-6" />
-            </div>
-            <h3 className="text-base font-bold text-[#17211B]">Central Email & HQ</h3>
-            <p className="text-sm font-bold text-[#075D3A]">info@oab.gov.et</p>
-            <p className="text-xs text-[#5E6B63]">{t('footer_address')}</p>
-          </div>
-
-          <div className="rounded-xl bg-white p-6 shadow-xs border space-y-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#EAF5EE] text-[#075D3A]">
-              <Clock className="h-6 w-6" />
-            </div>
-            <h3 className="text-base font-bold text-[#17211B]">{t('hours_label')}</h3>
-            <p className="text-sm font-bold text-[#075D3A]">{t('hours_text')}</p>
-            <p className="text-xs text-[#5E6B63]">Closed on weekends and public holidays</p>
-          </div>
-        </div>
-
-        {/* Action Button & Zonal Directory */}
-        <div className="rounded-2xl bg-white p-8 shadow-xs border space-y-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b pb-4">
-            <div>
-              <h2 className="text-xl font-bold text-[#075D3A]">Regional Zonal Bureau Directory</h2>
-              <p className="text-xs text-[#5E6B63]">Contact details for Oromia Agricultural Bureau zonal headquarters</p>
-            </div>
-            <button
-              onClick={() => setIsFeedbackOpen(true)}
-              className="flex items-center gap-2 rounded-xl bg-[#075D3A] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#14804A]"
-            >
-              <MessageSquare className="h-4 w-4 text-[#D5A62E]" />
-              <span>{t('feedback_btn')}</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {mockOffices.map((office) => (
-              <div key={office.id} className="rounded-xl border p-5 space-y-3 bg-[#F8F7F2]">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-[#075D3A] text-sm">{office.zoneKey}</span>
-                  <Building2 className="h-4 w-4 text-[#14804A]" />
-                </div>
-                <h3 className="text-base font-bold text-[#17211B]">{office.nameKey}</h3>
-                <p className="text-xs text-[#5E6B63]">Zonal Director: <strong>{office.headName}</strong></p>
-
-                <div className="pt-2 border-t text-xs space-y-1 text-[#5E6B63]">
-                  <p>📍 {office.address}</p>
-                  <p>📞 {office.phone}</p>
-                  <p>✉️ {office.email}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsFeedbackOpen(true)}
+            className="shrink-0 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#D5A62E] hover:bg-[#c49826] text-black font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 cursor-pointer"
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>{t('feedback_btn')}</span>
+          </button>
         </div>
       </div>
 
-      <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
+      {/* Interactive Farmer Feedback Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+      />
     </div>
   );
 };
