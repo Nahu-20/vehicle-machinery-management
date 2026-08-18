@@ -51,10 +51,10 @@ async function callMutateApi(action: string, actorUid: string, payload: any, exp
 }
 
 export async function runAllInvestmentSecurityTests(): Promise<TestResult[]> {
-  const { enableInvestmentApiTestMode, resetInvestmentDbForTesting } = await import('../server/investmentApi');
-  process.env.INVESTMENT_ALLOW_TEST_AUTH = 'true';
-  enableInvestmentApiTestMode(true);
-  resetInvestmentDbForTesting();
+  // Do NOT import ../server/investmentApi here — that pulls firebase-admin into the
+  // Vite client bundle (AdminInvestmentTestsPage → this module → investmentApi).
+  // CLI runners (runSecurityTestsCli) enable test mode and setCustomMutateHandler.
+  // In the browser, callMutateApi uses fetch('/api/investment/mutate').
 
   const results: TestResult[] = [];
   let testId = 1;

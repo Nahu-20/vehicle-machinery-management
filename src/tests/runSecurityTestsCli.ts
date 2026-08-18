@@ -1,8 +1,13 @@
 import { runAllInvestmentSecurityTests, setCustomMutateHandler } from './investmentSecurityTests';
-import { enableInvestmentApiTestMode, handleInvestmentMutation } from '../server/investmentApi';
+import {
+  enableInvestmentApiTestMode,
+  handleInvestmentMutation,
+  resetInvestmentDbForTesting,
+} from '../server/investmentApi';
 
 process.env.INVESTMENT_ALLOW_TEST_AUTH = 'true';
 enableInvestmentApiTestMode(true);
+resetInvestmentDbForTesting();
 
 setCustomMutateHandler(async (action, actorUid, payload, expectedVersion) => {
   let statusCode = 200;
