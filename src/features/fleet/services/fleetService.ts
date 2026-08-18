@@ -436,10 +436,17 @@ export async function setAssetStatus(
 export async function retireAsset(
   assetId: string,
   expectedVersion: number,
-  actor: StaffUser
+  actor: StaffUser,
+  reason?: string
 ): Promise<void> {
+  // The reason is what makes a retirement legible a year later. It was
+  // hardcoded to a phrase that restated the status and said nothing else,
+  // which went unnoticed because nothing called this — there was no caller to
+  // supply one. 'Sold at auction' and 'written off after the Bale rollover'
+  // are different facts about the same status.
+  const why = reason?.trim();
   await setAssetStatus(assetId, 'disposed', expectedVersion, actor, {
-    reason: 'Retired from the register',
+    reason: why || 'Retired from the register',
   });
 }
 

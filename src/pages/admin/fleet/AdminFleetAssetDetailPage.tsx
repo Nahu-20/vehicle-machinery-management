@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
   Droplets,
   Fuel,
   ShieldAlert,
+  Archive,
 } from 'lucide-react';
 import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
 import { hasPermission } from '../../../lib/permissions';
@@ -22,6 +23,7 @@ import {
   listStatusEvents,
   listServiceRecords,
   recordService,
+  retireAsset,
 } from '../../../features/fleet/services/fleetService';
 import {
   issueAsset,
@@ -110,6 +112,9 @@ function summarise(outcome: ChangeAssetStatusResult): string {
 }
 
 
+/** The forms on this page. Exactly one may be open at a time. */
+type PanelName = 'issue' | 'return' | 'fault' | 'status' | 'retire' | 'fuel' | 'service' | null;
+
 export function AdminFleetAssetDetailPage() {
   const { assetId } = useParams<{ assetId: string }>();
   const navigate = useNavigate();
@@ -119,6 +124,10 @@ export function AdminFleetAssetDetailPage() {
   const canAssign = hasPermission(staffUser, 'fleet.assign');
   const canMaintain = hasPermission(staffUser, 'fleet.maintenance.manage');
   const canFuel = hasPermission(staffUser, 'fleet.fuel.record');
+  // Held by superAdmin alone. firestore.rules enforces the same thing server
+  // side by refusing any write that sets the status to 'disposed' from anyone
+  // else, so hiding the button is courtesy rather than the control itself.
+  const canRetire = hasPermission(staffUser, 'fleet.asset.retire');
 
   const [asset, setAsset] = useState<FleetAsset | null>(null);
   const [assignments, setAssignments] = useState<FleetAssignment[]>([]);
@@ -126,8 +135,35 @@ export function AdminFleetAssetDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const [showIssue, setShowIssue] = useState(false);
-  const [showReturn, setShowReturn] = useState(false);
+  /*
+   * Which panel is open, as one value rather than seven booleans.
+   *
+   * They were independent, so nothing stopped three being open at once, and a
+   * form renders where it sits in the markup rather than next to the button
+   * that opens it — the fault form is most of a screen below its toolbar
+   * button, which reads as the button doing nothing at all.
+   *
+   * One at a time, and the open one scrolls itself into view.
+   */
+  const [activePanel, setActivePanel] = useState<PanelName>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  const togglePanel = useCallback(
+    (name: Exclude<PanelName, null>) => setActivePanel((cur) => (cur === name ? null : name)),
+    []
+  );
+  const closePanel = useCallback(() => setActivePanel(null), []);
+
+  useEffect(() => {
+    if (!activePanel) return;
+    // The panel mounts in the same commit, so the node exists by the time this
+    // runs. 'nearest' rather than 'start': a form already on screen should not
+    // scroll the header away for no reason.
+    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [activePanel]);
+
+  const showIssue = activePanel === 'issue';
+  const showReturn = activePanel === 'return';
 
   const [holderName, setHolderName] = useState('');
   const [holderRef, setHolderRef] = useState('');
@@ -139,15 +175,22 @@ export function AdminFleetAssetDetailPage() {
   const [returnFaulty, setReturnFaulty] = useState(false);
 
   const [workOrders, setWorkOrders] = useState<FleetWorkOrder[]>([]);
-  const [showFault, setShowFault] = useState(false);
+  const showFault = activePanel === 'fault';
   const [faultText, setFaultText] = useState('');
   const [severity, setSeverity] = useState<FleetFaultSeverity>('medium');
 
   const [statusEvents, setStatusEvents] = useState<FleetStatusEvent[]>([]);
-  const [showStatus, setShowStatus] = useState(false);
+  const showStatus = activePanel === 'status';
   const [nextStatus, setNextStatus] = useState<FleetAssetStatus>('available');
   const [statusReason, setStatusReason] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Retirement. The confirm box is not decoration: this is the one action in
+  // the module with no way back, and the asset id has to be typed rather than
+  // clicked so that retiring the wrong machine takes a deliberate mistake.
+  const showRetire = activePanel === 'retire';
+  const [retireReason, setRetireReason] = useState('');
+  const [retireConfirm, setRetireConfirm] = useState('');
 
   // The directory, loaded once with the page. A few hundred rows at most, and
   // fetching it per keystroke would be slower than holding it.
@@ -155,7 +198,7 @@ export function AdminFleetAssetDetailPage() {
   const [driverId, setDriverId] = useState('');
 
   const [fuelLogs, setFuelLogs] = useState<FleetFuelLog[]>([]);
-  const [showFuel, setShowFuel] = useState(false);
+  const showFuel = activePanel === 'fuel';
   const [fuelDate, setFuelDate] = useState('');
   const [fuelLitres, setFuelLitres] = useState('');
   const [fuelPrice, setFuelPrice] = useState('');
@@ -166,7 +209,7 @@ export function AdminFleetAssetDetailPage() {
   const [fuelRef, setFuelRef] = useState('');
 
   const [serviceRecords, setServiceRecords] = useState<FleetServiceRecord[]>([]);
-  const [showService, setShowService] = useState(false);
+  const showService = activePanel === 'service';
   const [serviceMeter, setServiceMeter] = useState('');
   const [serviceDate, setServiceDate] = useState('');
   const [serviceNote, setServiceNote] = useState('');
@@ -301,7 +344,7 @@ export function AdminFleetAssetDetailPage() {
         },
         staffUser
       );
-      setShowIssue(false);
+      closePanel();
       setHolderName('');
       setHolderRef('');
       setDriverId('');
@@ -337,7 +380,7 @@ export function AdminFleetAssetDetailPage() {
         },
         staffUser
       );
-      setShowReturn(false);
+      closePanel();
       setReturnFaulty(false);
       await load();
     } catch (err) {
@@ -384,7 +427,7 @@ export function AdminFleetAssetDetailPage() {
         },
         staffUser
       );
-      setShowFuel(false);
+      closePanel();
       setFuelLitres('');
       setFuelTotal('');
       setFuelRef('');
@@ -425,7 +468,7 @@ export function AdminFleetAssetDetailPage() {
         },
         staffUser
       );
-      setShowService(false);
+      closePanel();
       setServiceNote('');
       setServiceCost('');
       setNotice(
@@ -458,7 +501,7 @@ export function AdminFleetAssetDetailPage() {
         },
         staffUser
       );
-      setShowStatus(false);
+      closePanel();
       setStatusReason('');
       // Say what else moved. A status change that quietly closed someone's
       // sign-out or opened a garage job should not be silent about it.
@@ -466,6 +509,44 @@ export function AdminFleetAssetDetailPage() {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not change the status.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Retire the machine.
+   *
+   * The only irreversible act in the module: 'disposed' is a terminal status,
+   * there is no path back from it, and every page filters disposed assets out.
+   * So this asks for two things a misclick cannot supply — a reason, which the
+   * timeline keeps, and the asset id typed out.
+   *
+   * firestore.rules refuses a 'disposed' write from anyone but a super admin
+   * regardless of what this page shows, so a fleet officer who reached this
+   * form would still be stopped at the server.
+   */
+  const handleRetire = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!asset || !staffUser || busy) return;
+    if (!retireReason.trim()) {
+      return setError('Say why it is being retired — the register keeps the reason.');
+    }
+    if (retireConfirm.trim() !== asset.assetId) {
+      return setError(`Type ${asset.assetId} to confirm.`);
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      await retireAsset(asset.assetId, asset.version, staffUser, retireReason.trim());
+      closePanel();
+      setRetireReason('');
+      setRetireConfirm('');
+      setNotice(`${asset.assetId} is retired. It stays in the register, out of service.`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not retire the asset.');
     } finally {
       setBusy(false);
     }
@@ -483,7 +564,7 @@ export function AdminFleetAssetDetailPage() {
         { assetId: asset.assetId, faultDescription: faultText.trim(), severity },
         staffUser
       );
-      setShowFault(false);
+      closePanel();
       setFaultText('');
       setSeverity('medium');
       await load();
@@ -534,17 +615,17 @@ export function AdminFleetAssetDetailPage() {
 
         <div className="flex items-center gap-2">
           {canAssign && isIssuable(asset) && (
-            <FleetButton icon={LogOut} onClick={() => setShowIssue((v) => !v)}>
+            <FleetButton icon={LogOut} onClick={() => togglePanel('issue')}>
               Issue
             </FleetButton>
           )}
           {canAssign && asset.status === 'assigned' && activeAssignment && (
-            <FleetButton icon={LogIn} onClick={() => setShowReturn((v) => !v)}>
+            <FleetButton icon={LogIn} onClick={() => togglePanel('return')}>
               Receive back
             </FleetButton>
           )}
           {asset.status !== 'disposed' && (
-            <FleetButton variant="secondary" icon={Wrench} onClick={() => setShowFault((v) => !v)}>
+            <FleetButton variant="secondary" icon={Wrench} onClick={() => togglePanel('fault')}>
               Report fault
             </FleetButton>
           )}
@@ -552,7 +633,7 @@ export function AdminFleetAssetDetailPage() {
             <FleetButton
               variant="secondary"
               icon={Fuel}
-              onClick={() => setShowFuel((v) => !v)}
+              onClick={() => togglePanel('fuel')}
             >
               Record fill
             </FleetButton>
@@ -561,7 +642,7 @@ export function AdminFleetAssetDetailPage() {
             <FleetButton
               variant="secondary"
               icon={Droplets}
-              onClick={() => setShowService((v) => !v)}
+              onClick={() => togglePanel('service')}
             >
               Record service
             </FleetButton>
@@ -570,7 +651,7 @@ export function AdminFleetAssetDetailPage() {
             <FleetButton
               variant="secondary"
               icon={ArrowRightLeft}
-              onClick={() => setShowStatus((v) => !v)}
+              onClick={() => togglePanel('status')}
             >
               Change status
             </FleetButton>
@@ -581,6 +662,15 @@ export function AdminFleetAssetDetailPage() {
                 Edit
               </FleetButton>
             </Link>
+          )}
+          {canRetire && asset.status !== 'disposed' && (
+            <FleetButton
+              variant="danger"
+              icon={Archive}
+              onClick={() => togglePanel('retire')}
+            >
+              Retire
+            </FleetButton>
           )}
         </div>
       </div>
@@ -746,6 +836,7 @@ export function AdminFleetAssetDetailPage() {
 
       {/* Issue */}
       {showIssue && (
+        <div ref={panelRef}>
         <FleetPanel
           title="Issue this asset"
           description="The meter reading is taken now, at the counter — it is what every later calculation rests on."
@@ -867,7 +958,7 @@ export function AdminFleetAssetDetailPage() {
               />
             </div>
             <div className="md:col-span-2 flex justify-end gap-3">
-              <FleetButton type="button" variant="secondary" onClick={() => setShowIssue(false)}>
+              <FleetButton type="button" variant="secondary" onClick={() => closePanel()}>
                 Cancel
               </FleetButton>
               <FleetButton type="submit" icon={LogOut} disabled={busy}>
@@ -876,10 +967,12 @@ export function AdminFleetAssetDetailPage() {
             </div>
           </form>
         </FleetPanel>
+        </div>
       )}
 
       {/* Return */}
       {showReturn && activeAssignment && (
+        <div ref={panelRef}>
         <FleetPanel
           title="Receive this asset back"
           description={`Issued to ${activeAssignment.assignedToName} at ${formatMeter(
@@ -912,7 +1005,7 @@ export function AdminFleetAssetDetailPage() {
               </label>
             </div>
             <div className="md:col-span-2 flex justify-end gap-3">
-              <FleetButton type="button" variant="secondary" onClick={() => setShowReturn(false)}>
+              <FleetButton type="button" variant="secondary" onClick={() => closePanel()}>
                 Cancel
               </FleetButton>
               <FleetButton type="submit" icon={LogIn} disabled={busy}>
@@ -921,9 +1014,11 @@ export function AdminFleetAssetDetailPage() {
             </div>
           </form>
         </FleetPanel>
+        </div>
       )}
 
       {showFuel && (
+        <div ref={panelRef}>
         <FleetPanel
           title="Record a fill"
           description="From the slip. Consumption is measured between two full tanks, so whether this one filled the tank matters as much as the litres."
@@ -1032,7 +1127,7 @@ export function AdminFleetAssetDetailPage() {
             </div>
 
             <div className="md:col-span-3 flex justify-end gap-3">
-              <FleetButton type="button" variant="secondary" onClick={() => setShowFuel(false)}>
+              <FleetButton type="button" variant="secondary" onClick={() => closePanel()}>
                 Cancel
               </FleetButton>
               <FleetButton type="submit" icon={Fuel} disabled={busy}>
@@ -1041,9 +1136,11 @@ export function AdminFleetAssetDetailPage() {
             </div>
           </form>
         </FleetPanel>
+        </div>
       )}
 
       {showService && (
+        <div ref={panelRef}>
         <FleetPanel
           title="Record service"
           description="Logs the work and moves the last-service reading, which is what clears this machine from the service-due list."
@@ -1098,7 +1195,7 @@ export function AdminFleetAssetDetailPage() {
               </p>
             </div>
             <div className="md:col-span-2 flex justify-end gap-3">
-              <FleetButton type="button" variant="secondary" onClick={() => setShowService(false)}>
+              <FleetButton type="button" variant="secondary" onClick={() => closePanel()}>
                 Cancel
               </FleetButton>
               <FleetButton type="submit" icon={Droplets} disabled={busy}>
@@ -1107,9 +1204,62 @@ export function AdminFleetAssetDetailPage() {
             </div>
           </form>
         </FleetPanel>
+        </div>
+      )}
+
+      {showRetire && (
+        <div ref={panelRef}>
+        <FleetPanel
+          title="Retire this machine"
+          description="The Bureau no longer owns it — sold, scrapped or written off. The record stays; nothing comes back from this status."
+        >
+          <form onSubmit={handleRetire} className="p-6 space-y-5">
+            <FleetBanner tone="error" icon={ShieldAlert}>
+              <span>
+                Retiring is permanent. {asset.assetId} will drop out of the garage, the map
+                and the fuel pages, and cannot be issued to anyone again. If it is only
+                unusable for now, use <strong>Change status</strong> and pick Out of service
+                instead.
+              </span>
+            </FleetBanner>
+            <div>
+              <label className={LABEL}>Why is it being retired? *</label>
+              <input
+                value={retireReason}
+                onChange={(e) => setRetireReason(e.target.value)}
+                placeholder="Sold at auction, 12 Aug / Written off after the Bale rollover"
+                className={INPUT}
+              />
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                Kept on the timeline. In a year this is the only thing that explains the
+                status.
+              </p>
+            </div>
+            <div>
+              <label className={LABEL}>Type {asset.assetId} to confirm *</label>
+              <input
+                value={retireConfirm}
+                onChange={(e) => setRetireConfirm(e.target.value)}
+                placeholder={asset.assetId}
+                className={INPUT}
+                autoComplete="off"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <FleetButton type="button" variant="secondary" onClick={() => closePanel()}>
+                Cancel
+              </FleetButton>
+              <FleetButton type="submit" variant="danger" icon={Archive} disabled={busy}>
+                {busy ? 'Retiring…' : 'Retire permanently'}
+              </FleetButton>
+            </div>
+          </form>
+        </FleetPanel>
+        </div>
       )}
 
       {showStatus && (
+        <div ref={panelRef}>
         <FleetPanel
           title="Change status"
           description="Moves the machine and the paperwork together — sending it to the garage raises a job there, and bringing it back closes the open ones."
@@ -1131,7 +1281,7 @@ export function AdminFleetAssetDetailPage() {
               <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
                 Assigned is not here: issuing records who has the machine and on what
                 reading, which a dropdown cannot. Retiring is not here either — it is
-                irreversible and sits with a super admin.
+                irreversible, so it has its own button and its own confirmation.
               </p>
             </div>
             <div>
@@ -1147,7 +1297,7 @@ export function AdminFleetAssetDetailPage() {
               </p>
             </div>
             <div className="md:col-span-2 flex justify-end gap-3">
-              <FleetButton type="button" variant="secondary" onClick={() => setShowStatus(false)}>
+              <FleetButton type="button" variant="secondary" onClick={() => closePanel()}>
                 Cancel
               </FleetButton>
               <FleetButton type="submit" icon={ArrowRightLeft} disabled={busy}>
@@ -1156,6 +1306,7 @@ export function AdminFleetAssetDetailPage() {
             </div>
           </form>
         </FleetPanel>
+        </div>
       )}
 
       <FleetPanel
@@ -1173,6 +1324,7 @@ export function AdminFleetAssetDetailPage() {
       </FleetPanel>
 
       {showFault && (
+        <div ref={panelRef}>
         <FleetPanel
           title="Report a fault"
           description="Anyone may report; only the garage moves the job along. A grounded fault takes the machine out of service immediately."
@@ -1208,7 +1360,7 @@ export function AdminFleetAssetDetailPage() {
                 )}
               </div>
               <div className="flex gap-3">
-                <FleetButton type="button" variant="secondary" onClick={() => setShowFault(false)}>
+                <FleetButton type="button" variant="secondary" onClick={() => closePanel()}>
                   Cancel
                 </FleetButton>
                 <FleetButton type="submit" icon={Wrench} disabled={busy}>
@@ -1218,6 +1370,7 @@ export function AdminFleetAssetDetailPage() {
             </div>
           </form>
         </FleetPanel>
+        </div>
       )}
 
       <FleetPanel
