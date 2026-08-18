@@ -11,6 +11,29 @@ import { getStorage } from 'firebase-admin/storage';
 import { networkInterfaces } from 'os';
 import { handleInvestmentMutation } from './src/server/investmentApi';
 
+// Missing ADC must not kill the web server. Investment mutations fall back to user-token writes.
+function isMissingAdcError(reason: unknown): boolean {
+  const msg = reason instanceof Error ? reason.message : String(reason || '');
+  return /Could not load the default credentials|Unable to detect a Project Id|NO_ADC_FOUND|MetadataLookupWarning/i.test(msg);
+}
+
+process.on('unhandledRejection', (reason) => {
+  if (isMissingAdcError(reason)) {
+    console.warn('[Firebase Admin] ADC unavailable (non-fatal):', reason instanceof Error ? reason.message : reason);
+    return;
+  }
+  console.error('[unhandledRejection]', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  if (isMissingAdcError(err)) {
+    console.warn('[Firebase Admin] ADC unavailable (non-fatal):', err.message);
+    return;
+  }
+  console.error('[uncaughtException]', err);
+  process.exit(1);
+});
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MiB limit
@@ -61,11 +84,39 @@ async function startServer() {
 
   // Trusted Backend Endpoint: Investment CMS Mutations via Firebase Functions HTTPS Callable protocol
   const handleInvestmentRoute = async (req: Request, res: Response) => {
+    // Unwrap Firebase callable envelope: { data: { action, payload, ... } }
+    if (req.body?.data && typeof req.body.data === 'object' && !req.body.action) {
+      req.body = { ...req.body, ...req.body.data };
+    }
+
+    const originalStatus = res.status.bind(res);
+    const originalJson = res.json.bind(res);
+    let statusCode = 200;
+
+    res.status = ((code: number) => {
+      statusCode = code;
+      return res;
+    }) as typeof res.status;
+
+    // Callable clients expect HTTP 200 with { result } or { error }
+    res.json = ((body: any) => {
+      if (statusCode >= 400) {
+        return originalJson({
+          error: {
+            message: body?.error || body?.message || 'Investment mutation failed',
+            status: statusCode === 401 ? 'UNAUTHENTICATED' : statusCode === 403 ? 'PERMISSION_DENIED' : 'INVALID_ARGUMENT',
+            details: body,
+          },
+        });
+      }
+      return originalJson({ result: body });
+    }) as typeof res.json;
+
     try {
       return await handleInvestmentMutation(req, res);
     } catch (err: any) {
       console.error('[InvestmentMutateEndpoint] Error processing mutation:', err);
-      return res.status(500).json({
+      return originalStatus(200).json({
         error: {
           message: err?.message || 'Internal server error processing investment mutation',
           status: 'INTERNAL',
@@ -83,6 +134,20 @@ async function startServer() {
   app.post('/api/chat', async (req: Request, res: Response) => {
     const { handleChat } = await import('./src/server/chat/chatApi.js');
     return handleChat(req, res);
+  });
+
+  // Flat REST mutate path (tests / direct clients) — no callable envelope
+  app.post('/api/investment/mutate', async (req: Request, res: Response) => {
+    try {
+      return await handleInvestmentMutation(req, res);
+    } catch (err: any) {
+      console.error('[InvestmentMutateApi] Error:', err);
+      return res.status(500).json({
+        success: false,
+        code: 'INTERNAL_ERROR',
+        error: err?.message || 'Internal server error',
+      });
+    }
   });
 
   // Health check

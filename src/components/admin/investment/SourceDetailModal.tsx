@@ -1,29 +1,27 @@
 import React from 'react';
 import { InvestmentSource } from '../../../types/investment';
-import { FileText, X, ExternalLink, Calendar, Building, ShieldCheck, Tag } from 'lucide-react';
+import { FileText, X, ExternalLink, Calendar, Building, ShieldCheck, Tag, Pencil, Trash2 } from 'lucide-react';
 
 interface SourceDetailModalProps {
   source: InvestmentSource | null;
   onClose: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export function SourceDetailModal({ source, onClose }: SourceDetailModalProps) {
+export function SourceDetailModal({ source, onClose, onEdit, onDelete }: SourceDetailModalProps) {
   if (!source) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-xl w-full p-6 space-y-5 text-xs">
-        {/* Header */}
         <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
           <div>
             <span className="text-[10px] font-mono text-purple-700 dark:text-purple-400 font-bold uppercase tracking-wider block">
               Source ID: {source.sourceId}
             </span>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mt-1">
-              {source.title}
-            </h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mt-1">{source.title}</h3>
           </div>
-
           <button
             type="button"
             onClick={onClose}
@@ -33,19 +31,22 @@ export function SourceDetailModal({ source, onClose }: SourceDetailModalProps) {
           </button>
         </div>
 
-        {/* Verification Status Badge */}
-        <div className="flex items-center gap-2">
-          <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
-            source.verificationStatus === 'verified'
-              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-          }`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+              source.verificationStatus === 'verified'
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+            }`}
+          >
             <ShieldCheck className="w-3.5 h-3.5" />
-            Verification Status: <span className="capitalize">{source.verificationStatus}</span>
+            <span className="capitalize">{source.verificationStatus}</span>
+          </span>
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 uppercase">
+            {source.status || 'unknown'}
           </span>
         </div>
 
-        {/* Metadata Grid */}
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-bold uppercase text-slate-400 block flex items-center gap-1">
@@ -55,7 +56,6 @@ export function SourceDetailModal({ source, onClose }: SourceDetailModalProps) {
               {source.organization || 'Not provided'}
             </span>
           </div>
-
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-bold uppercase text-slate-400 block flex items-center gap-1">
               <Calendar className="w-3 h-3 text-purple-600" /> Reference Period
@@ -64,7 +64,6 @@ export function SourceDetailModal({ source, onClose }: SourceDetailModalProps) {
               {source.referencePeriod || 'Not provided'}
             </span>
           </div>
-
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-bold uppercase text-slate-400 block flex items-center gap-1">
               <FileText className="w-3 h-3 text-purple-600" /> Document Title
@@ -73,7 +72,6 @@ export function SourceDetailModal({ source, onClose }: SourceDetailModalProps) {
               {source.documentTitle || 'Not provided'}
             </span>
           </div>
-
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-bold uppercase text-slate-400 block flex items-center gap-1">
               <Tag className="w-3 h-3 text-purple-600" /> License
@@ -84,12 +82,20 @@ export function SourceDetailModal({ source, onClose }: SourceDetailModalProps) {
           </div>
         </div>
 
-        {/* URL / Reference Link */}
+        {source.publicationDate && (
+          <p className="text-slate-600 dark:text-slate-400">
+            <span className="font-semibold text-slate-800 dark:text-slate-200">Published: </span>
+            {source.publicationDate}
+          </p>
+        )}
+
         {source.url && (
-          <div className="p-3 rounded-lg bg-purple-50/50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900 flex items-center justify-between">
-            <div>
-              <span className="text-[10px] font-bold uppercase text-purple-800 dark:text-purple-300 block">External Document URL</span>
-              <span className="font-mono text-[11px] text-purple-900 dark:text-purple-200 truncate block max-w-md">
+          <div className="p-3 rounded-lg bg-purple-50/50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase text-purple-800 dark:text-purple-300 block">
+                External Document URL
+              </span>
+              <span className="font-mono text-[11px] text-purple-900 dark:text-purple-200 truncate block">
                 {source.url}
               </span>
             </div>
@@ -97,24 +103,43 @@ export function SourceDetailModal({ source, onClose }: SourceDetailModalProps) {
               href={source.url}
               target="_blank"
               rel="noreferrer"
-              className="p-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+              className="p-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors shrink-0"
             >
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>
         )}
 
-        {/* Methodology Notes */}
         {source.methodologyNotes && (
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-1">
             <span className="text-[10px] font-bold uppercase text-slate-400 block">Methodology & Collector Notes</span>
-            <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-              {source.methodologyNotes}
-            </p>
+            <p className="text-slate-700 dark:text-slate-300 leading-relaxed">{source.methodologyNotes}</p>
           </div>
         )}
 
-        <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            {onEdit && (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-purple-700 hover:bg-purple-800 text-white"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
+              </button>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}

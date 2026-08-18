@@ -6,7 +6,7 @@ export interface InvestmentMutationRequest {
   action: string;
   payload?: any;
   expectedVersion?: number;
-  actorUid?: string; // Optional context, server authoritative auth overrides this
+  actorUid?: string;
 }
 
 export interface InvestmentMutationResponse<T = any> {
@@ -17,6 +17,7 @@ export interface InvestmentMutationResponse<T = any> {
   newVersion?: number;
   code?: string;
   error?: string;
+  message?: string;
 }
 
 export class InvestmentMutationError extends Error {
@@ -31,10 +32,23 @@ export class InvestmentMutationError extends Error {
   }
 }
 
+function unwrapCallablePayload<T>(raw: any): InvestmentMutationResponse<T> {
+  // Only unwrap if the SDK somehow left the callable envelope intact
+  if (
+    raw &&
+    typeof raw === 'object' &&
+    raw.result &&
+    typeof raw.result === 'object' &&
+    ('success' in raw.result || 'error' in raw.result || 'code' in raw.result)
+  ) {
+    return raw.result as InvestmentMutationResponse<T>;
+  }
+  return raw as InvestmentMutationResponse<T>;
+}
+
 /**
  * Executes a typed, server-authoritative investment mutation via Firebase HTTPS Callable Function.
- * Uses Firebase Functions SDK (`httpsCallable`), ensuring caller authentication is automatically
- * attached without manual header manipulation.
+ * Locally, Functions emulator is pointed at the Express host (`server.ts` /investmentMutate).
  */
 export async function callInvestmentCallable<T = any>(
   action: string,
@@ -50,7 +64,7 @@ export async function callInvestmentCallable<T = any>(
     );
   }
 
-  const callable = httpsCallable<InvestmentMutationRequest, InvestmentMutationResponse<T>>(
+  const callable = httpsCallable<InvestmentMutationRequest, InvestmentMutationResponse<T> | { result: InvestmentMutationResponse<T> }>(
     functions,
     'investmentMutate'
   );
@@ -63,12 +77,12 @@ export async function callInvestmentCallable<T = any>(
       actorUid: actor?.uid,
     });
 
-    const result = res.data;
-    if (result && !result.success && result.error) {
+    const result = unwrapCallablePayload<T>(res.data);
+    if (result && result.success === false && (result.error || result.code)) {
       throw new InvestmentMutationError(
-        result.error,
+        result.error || result.message || 'Investment mutation failed',
         result.code || 'MUTATION_FAILED',
-        result.code === 'VERSION_CONFLICT' ? 409 : 400
+        result.code === 'VERSION_CONFLICT' ? 409 : result.code === 'FIRESTORE_UNAVAILABLE' ? 503 : 400
       );
     }
 
@@ -78,7 +92,6 @@ export async function callInvestmentCallable<T = any>(
       throw err;
     }
 
-    // Unpack HttpsError from Firebase Functions SDK
     const message = err.message || err.details?.message || 'Investment mutation failed';
     const code = err.details?.code || err.code || 'MUTATION_ERROR';
     const statusCode = code === 'VERSION_CONFLICT' || code === 'already-exists' ? 409 : 400;

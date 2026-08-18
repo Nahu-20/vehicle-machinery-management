@@ -12,7 +12,9 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test:chat": "tsx src/tests/runChatTestsCli.ts",
-    "test:fleet": "tsx src/tests/runFleetTestsCli.ts"
+    "test:fleet": "tsx src/tests/runFleetTestsCli.ts",
+    "seed:investment-prototype": "tsx scripts/seed-investment-prototype.ts",
+    "seed:resources-prototype": "tsx scripts/seed-resources-prototype.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

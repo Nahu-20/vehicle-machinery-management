@@ -2,6 +2,7 @@ import React from 'react';
 import { Publication } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
 import { useToast } from '../../context/ToastContext';
+import { openResourceDownload } from '../../services/resourceService';
 import {
   Download,
   Eye,
@@ -25,12 +26,15 @@ export const FeaturedResourceSpotlight: React.FC<FeaturedResourceSpotlightProps>
   const { t } = useLanguage();
   const { showToast } = useToast();
 
-  const handleDownload = (e: React.MouseEvent) => {
+  const handleDownload = async (e: React.MouseEvent) => {
     e.preventDefault();
     const title = t(publication.titleKey) || publication.defaultTitle || 'Publication';
+    const opened = await openResourceDownload(publication.id, publication.downloadUrl);
     showToast(
-      t('demo_download_notice') || 'Downloading official document...',
-      'success',
+      opened
+        ? t('demo_download_notice') || 'Opening official document…'
+        : 'Download link is not available yet for this item.',
+      opened ? 'success' : 'info',
       title
     );
   };

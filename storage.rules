@@ -78,6 +78,41 @@ service firebase.storage {
       allow read, write: if false;
     }
 
+    function hasResourcesManage() {
+      return isActiveStaff()
+        && staffProfile().keys().hasAll(['permissions'])
+        && staffProfile().permissions.hasAny(['resources.manage']);
+    }
+
+    function isContentAdminRole() {
+      return isActiveStaff()
+        && (staffProfile().role == 'superAdmin' || staffProfile().role == 'contentAdmin');
+    }
+
+    function isValidResourceFile() {
+      return request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 80 * 1024 * 1024
+        && (
+          request.resource.contentType == 'application/pdf'
+          || request.resource.contentType == 'application/msword'
+          || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          || request.resource.contentType == 'application/vnd.ms-excel'
+          || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          || request.resource.contentType == 'application/zip'
+          || request.resource.contentType == 'application/x-zip-compressed'
+          || request.resource.contentType == 'video/mp4'
+        );
+    }
+
+    // Public Resources & Manuals files (open download; staff write only)
+    match /resources/files/{resourceId}/{fileId} {
+      allow read: if true;
+      allow create, update: if (isContentAdminRole() || hasResourcesManage())
+        && isValidResourceFile();
+      allow delete: if isContentAdminRole() || hasResourcesManage();
+    }
+
     // Catch-all default deny
     match /{allPaths=**} {
       allow get, list, create, update, delete: if false;

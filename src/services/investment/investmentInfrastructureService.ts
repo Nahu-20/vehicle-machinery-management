@@ -79,7 +79,7 @@ export async function returnFacilityToDraft(
   expectedVersion?: number
 ): Promise<InvestmentFacility> {
   const res = await callInvestmentCallable<InvestmentFacility>(
-    'return_facility_draft',
+    'return_facility_to_draft',
     { facilityId },
     expectedVersion,
     actor
@@ -199,8 +199,8 @@ export async function deleteFacility(
   expectedVersion?: number
 ): Promise<{ success: boolean; deletedId: string }> {
   const res = await callInvestmentCallable<{ deletedId: string }>(
-    'delete_facility',
-    { facilityId },
+    'delete_entity',
+    { entityType: 'facility', entityId: facilityId },
     expectedVersion,
     actor
   );

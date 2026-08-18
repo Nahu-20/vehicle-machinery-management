@@ -90,6 +90,7 @@ export const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
     'investment.view',
     'investment.edit',
     'investment.publish',
+    'investment.verify',
     'investment.sources.manage',
     'investment.datasets.manage',
     'investment.opportunities.manage',

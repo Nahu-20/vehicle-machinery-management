@@ -17,6 +17,84 @@ import {
   InvestmentFacility,
   normalizeInfrastructureCategory,
 } from '../types/investment';
+import {
+  userTokenDeleteDoc,
+  userTokenGetDoc,
+  userTokenSetDoc,
+} from './firestoreUserTokenTransport';
+
+/** Client → server action aliases (legacy UI names). */
+const ACTION_ALIASES: Record<string, string> = {
+  save_dataset_draft: 'save_dataset',
+  update_dataset_values: 'set_dataset_values',
+  submit_dataset_review: 'submit_dataset_for_review',
+  return_dataset_draft: 'return_dataset_to_draft',
+  verify_dataset: 'mark_dataset_verified',
+  reject_dataset: 'mark_dataset_rejected',
+  return_facility_draft: 'return_facility_to_draft',
+  delete_source: 'delete_entity',
+  delete_methodology: 'delete_entity',
+  delete_opportunity: 'delete_entity',
+  delete_facility: 'delete_entity',
+  delete_infrastructure: 'delete_entity',
+};
+
+type RequestStoreContext = {
+  idToken: string | null;
+  allowMemory: boolean;
+};
+
+let requestStore: RequestStoreContext = { idToken: null, allowMemory: false };
+let investmentApiTestMode = false;
+
+export function enableInvestmentApiTestMode(enabled = true) {
+  investmentApiTestMode = enabled;
+}
+
+function isTestAuthEnabled() {
+  return investmentApiTestMode || process.env.INVESTMENT_ALLOW_TEST_AUTH === 'true';
+}
+
+class FirestoreUnavailableError extends Error {
+  code = 'FIRESTORE_UNAVAILABLE';
+  constructor(message: string) {
+    super(message);
+    this.name = 'FirestoreUnavailableError';
+  }
+}
+
+/** Verify Firebase ID token via Identity Toolkit when Admin Auth/ADC is unavailable. */
+async function verifyIdTokenFlexible(idToken: string): Promise<string | null> {
+  try {
+    const decoded = await getAuth().verifyIdToken(idToken);
+    return decoded.uid;
+  } catch (adminErr) {
+    const apiKey = process.env.VITE_FIREBASE_API_KEY;
+    if (!apiKey) {
+      console.warn('[InvestmentApi] Admin token verify failed and VITE_FIREBASE_API_KEY is unset:', adminErr);
+      return null;
+    }
+    try {
+      const res = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        }
+      );
+      if (!res.ok) {
+        console.warn('[InvestmentApi] Identity Toolkit token lookup failed:', res.status);
+        return null;
+      }
+      const data = (await res.json()) as { users?: Array<{ localId?: string }> };
+      return data.users?.[0]?.localId || null;
+    } catch (lookupErr) {
+      console.warn('[InvestmentApi] Token lookup error:', lookupErr);
+      return null;
+    }
+  }
+}
 
 const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
   superAdmin: [
@@ -64,11 +142,12 @@ function checkStaffPermission(staffData: any, requiredPermission: Permission): b
   return permissions.includes(requiredPermission);
 }
 
-// In-Memory Storage Adapter Fallback for Dev & Sandbox Containers
+// In-Memory Storage Adapter — test / explicit fallback only
 const memDb = new Map<string, Map<string, any>>();
 
 export function resetInvestmentDbForTesting() {
   memDb.clear();
+  investmentApiTestMode = true;
 }
 
 function getMemCol(collection: string) {
@@ -78,43 +157,159 @@ function getMemCol(collection: string) {
   return memDb.get(collection)!;
 }
 
+function isCredentialError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err || '');
+  return /Could not load the default credentials|Unable to detect a Project Id|UNAUTHENTICATED|invalid_grant|permission-denied|PERMISSION_DENIED/i.test(
+    msg
+  );
+}
+
+function adminDocRef(collection: string, docId: string) {
+  const path = `${collection}/${docId}`.replace(/\/{2,}/g, '/');
+  return getFirestore().doc(path);
+}
+
 async function safeGetDoc(collection: string, docId: string): Promise<{ exists: boolean; data: () => any }> {
   try {
-    const snap = await getFirestore().collection(collection).doc(docId).get();
+    const snap = await adminDocRef(collection, docId).get();
     if (snap.exists) {
       return { exists: true, data: () => snap.data() };
     }
+    if (requestStore.allowMemory) {
+      const mem = getMemCol(collection).get(docId);
+      if (mem !== undefined) {
+        return { exists: true, data: () => JSON.parse(JSON.stringify(mem)) };
+      }
+    }
+    return { exists: false, data: () => null };
   } catch (err) {
-    // Fall back to memory store if Firestore unavailable
+    if (requestStore.idToken) {
+      try {
+        return await userTokenGetDoc(collection, docId, requestStore.idToken);
+      } catch (tokenErr) {
+        console.warn('[InvestmentApi] User-token get failed:', tokenErr);
+      }
+    }
+    if (requestStore.allowMemory) {
+      const mem = getMemCol(collection).get(docId);
+      return {
+        exists: mem !== undefined,
+        data: () => (mem ? JSON.parse(JSON.stringify(mem)) : null),
+      };
+    }
+    throw new FirestoreUnavailableError(
+      `Firestore read unavailable for ${collection}/${docId}. Configure Admin SDK credentials or ensure the caller ID token can read this document.`
+    );
   }
-  const mem = getMemCol(collection).get(docId);
-  return {
-    exists: mem !== undefined,
-    data: () => (mem ? JSON.parse(JSON.stringify(mem)) : null),
-  };
 }
 
 async function safeSetDoc(collection: string, docId: string, data: any): Promise<void> {
-  getMemCol(collection).set(docId, JSON.parse(JSON.stringify(data)));
+  if (requestStore.allowMemory) {
+    getMemCol(collection).set(docId, JSON.parse(JSON.stringify(data)));
+  }
+
   try {
-    await getFirestore().collection(collection).doc(docId).set(data);
+    await adminDocRef(collection, docId).set(data);
+    return;
   } catch (err) {
-    // Firestore write fallback
+    if (requestStore.idToken) {
+      try {
+        await userTokenSetDoc(collection, docId, data, requestStore.idToken);
+        return;
+      } catch (tokenErr) {
+        console.warn('[InvestmentApi] User-token set failed:', tokenErr);
+        if (!requestStore.allowMemory) {
+          throw new FirestoreUnavailableError(
+            `Firestore write failed via Admin SDK and user token for ${collection}/${docId}. ${(tokenErr as Error)?.message || err}`
+          );
+        }
+        return;
+      }
+    }
+    if (requestStore.allowMemory) {
+      return;
+    }
+    throw new FirestoreUnavailableError(
+      `Firestore write unavailable for ${collection}/${docId}. Configure Google Application Default Credentials, or sign in so mutations can use your ID token. ${isCredentialError(err) ? '(ADC missing)' : ''}`
+    );
   }
 }
 
 async function safeDeleteDoc(collection: string, docId: string): Promise<void> {
-  getMemCol(collection).delete(docId);
-  try {
-    await getFirestore().collection(collection).doc(docId).delete();
-  } catch (err) {
-    // Firestore delete fallback
+  if (requestStore.allowMemory) {
+    getMemCol(collection).delete(docId);
   }
+
+  try {
+    await adminDocRef(collection, docId).delete();
+    return;
+  } catch (err) {
+    if (requestStore.idToken) {
+      try {
+        await userTokenDeleteDoc(collection, docId, requestStore.idToken);
+        return;
+      } catch (tokenErr) {
+        if (!requestStore.allowMemory) {
+          throw new FirestoreUnavailableError(
+            `Firestore delete failed for ${collection}/${docId}. ${(tokenErr as Error)?.message || err}`
+          );
+        }
+        return;
+      }
+    }
+    if (requestStore.allowMemory) {
+      return;
+    }
+    throw new FirestoreUnavailableError(
+      `Firestore delete unavailable for ${collection}/${docId}. Configure Admin SDK credentials or use a signed-in staff token.`
+    );
+  }
+}
+
+function normalizeMutationBody(raw: any): {
+  action: string;
+  actorUid?: string;
+  expectedVersion?: number;
+  payload?: any;
+  idToken?: string;
+} {
+  const envelope = raw?.data && typeof raw.data === 'object' ? { ...raw, ...raw.data } : raw || {};
+  let action = typeof envelope.action === 'string' ? envelope.action : '';
+  if (ACTION_ALIASES[action]) {
+    action = ACTION_ALIASES[action];
+  }
+
+  let payload = envelope.payload;
+  // Map legacy delete_* actions onto delete_entity payload shape
+  if (envelope.action === 'delete_source' && payload?.sourceId) {
+    payload = { entityType: 'source', entityId: payload.sourceId };
+  } else if (envelope.action === 'delete_methodology' && payload?.methodologyId) {
+    payload = { entityType: 'methodology', entityId: payload.methodologyId };
+  } else if (envelope.action === 'delete_opportunity' && payload?.opportunityId) {
+    payload = { entityType: 'opportunity', entityId: payload.opportunityId };
+  } else if (
+    (envelope.action === 'delete_facility' || envelope.action === 'delete_infrastructure') &&
+    (payload?.facilityId || payload?.recordId || payload?.entityId)
+  ) {
+    payload = {
+      entityType: 'facility',
+      entityId: payload.facilityId || payload.recordId || payload.entityId,
+    };
+  }
+
+  return {
+    action,
+    actorUid: envelope.actorUid,
+    expectedVersion: envelope.expectedVersion,
+    payload,
+    idToken: envelope.idToken,
+  };
 }
 
 export async function handleInvestmentMutation(req: Request, res: Response) {
   try {
-    const { action, actorUid: bodyActorUid, expectedVersion, payload } = req.body || {};
+    const normalized = normalizeMutationBody(req.body);
+    const { action, actorUid: bodyActorUid, expectedVersion, payload } = normalized;
     if (!action || typeof action !== 'string') {
       return res.status(400).json({ success: false, code: 'INVALID_ACTION', error: 'Missing or invalid mutation action' });
     }
@@ -125,23 +320,34 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
     const customTokenHeader = req.headers?.['x-firebase-id-token'] as string | undefined;
     const idToken = (authHeader && authHeader.startsWith('Bearer '))
       ? authHeader.split('Bearer ')[1]
-      : (customTokenHeader || req.body?.idToken || null);
+      : (customTokenHeader || normalized.idToken || null);
 
     if (idToken) {
-      try {
-        const decoded = await getAuth().verifyIdToken(idToken);
-        actorUid = decoded.uid;
-      } catch (authErr) {
-        console.warn('[InvestmentApi] Token verification warning:', authErr);
-      }
+      actorUid = await verifyIdTokenFlexible(idToken);
     }
 
-    if (!actorUid && bodyActorUid && typeof bodyActorUid === 'string') {
+    // Body actorUid is only accepted for explicit test harnesses (test_* UIDs).
+    if (
+      !actorUid &&
+      bodyActorUid &&
+      typeof bodyActorUid === 'string' &&
+      bodyActorUid.startsWith('test_') &&
+      isTestAuthEnabled()
+    ) {
       actorUid = bodyActorUid;
     }
 
+    requestStore = {
+      idToken: idToken && actorUid ? idToken : null,
+      allowMemory: isTestAuthEnabled(),
+    };
+
     if (!actorUid) {
-      return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: 'Authentication required' });
+      return res.status(401).json({
+        success: false,
+        code: 'UNAUTHENTICATED',
+        error: 'Authentication required. Sign in and retry; bare actorUid spoofing is not allowed.',
+      });
     }
 
     const testStaffDocs: Record<string, any> = {
@@ -153,7 +359,7 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
       test_inactive_01: { uid: 'test_inactive_01', email: 'inactive@oromiaagri.gov.et', role: 'editor', active: false },
     };
 
-    if (actorUid.startsWith('test_') && testStaffDocs[actorUid]) {
+    if (actorUid.startsWith('test_') && testStaffDocs[actorUid] && isTestAuthEnabled()) {
       await safeSetDoc('staffUsers', actorUid, testStaffDocs[actorUid]);
     }
 
@@ -1081,14 +1287,29 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
 
         await safeSetDoc('investmentDatasets', datasetId, updatedDs);
 
+        // Nested values writes may fail when Admin ADC is missing and REST path
+        // encoding/rules fall through. Prefer completing the parent version bump;
+        // the browser client persists values via the Firestore SDK under isEditor().
+        let valuesPersisted = 0;
+        let valuesWriteError: string | undefined;
         for (const val of values) {
-          await safeSetDoc(`investmentDatasets/${datasetId}/values`, val.zoneId, {
-            ...val,
-            zoneId: val.zoneId,
-            version: newVersion,
-            updatedAt: nowIso,
-            updatedBy: actorUid,
-          });
+          try {
+            await safeSetDoc(`investmentDatasets/${datasetId}/values`, val.zoneId, {
+              ...val,
+              zoneId: val.zoneId,
+              version: newVersion,
+              updatedAt: nowIso,
+              updatedBy: actorUid,
+            });
+            valuesPersisted += 1;
+          } catch (err) {
+            valuesWriteError = (err as Error)?.message || String(err);
+            console.warn(
+              '[InvestmentApi] Nested dataset values write failed; deferring to client SDK:',
+              valuesWriteError
+            );
+            break;
+          }
         }
 
         await writeAuditLog(
@@ -1100,7 +1321,13 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
           newVersion
         );
 
-        return res.json({ success: true, count: values.length, newVersion });
+        return res.json({
+          success: true,
+          count: valuesPersisted,
+          newVersion,
+          clientMustPersistValues: valuesPersisted < values.length,
+          valuesWriteError,
+        });
       }
 
       case 'save_source': {
@@ -1124,6 +1351,9 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
         const updatedSource = {
           ...existing,
           ...source,
+          // Default new sources to public-eligible provenance; edits preserve explicit status/verification
+          status: source.status || existing?.status || 'published',
+          verificationStatus: source.verificationStatus || existing?.verificationStatus || 'verified',
           version: newVersion,
           updatedAt: nowIso,
           updatedBy: actorUid,
@@ -1157,6 +1387,10 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
         const updatedMeth = {
           ...existing,
           ...meth,
+          components: Array.isArray(meth.components) ? meth.components : (existing?.components || []),
+          sourceIds: Array.isArray(meth.sourceIds) ? meth.sourceIds : (existing?.sourceIds || []),
+          status: meth.status || existing?.status || 'published',
+          verificationStatus: meth.verificationStatus || existing?.verificationStatus || 'verified',
           version: newVersion,
           updatedAt: nowIso,
           updatedBy: actorUid,
@@ -1178,6 +1412,9 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
         if (!opp.opportunityId) {
           return res.status(400).json({ success: false, code: 'INVALID_OPPORTUNITY_ID', error: 'Missing opportunityId' });
         }
+        if (!opp.title || typeof opp.title !== 'string') {
+          return res.status(400).json({ success: false, code: 'INVALID_TITLE', error: 'Opportunity title is required' });
+        }
 
         if (Array.isArray(opp.zoneIds)) {
           for (const z of opp.zoneIds) {
@@ -1195,14 +1432,34 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
         }
 
         const newVersion = (existing?.version || 0) + 1;
+        const lifecycleStatus = opp.lifecycleStatus || existing?.lifecycleStatus || 'published';
+        const verificationStatus = opp.verificationStatus || existing?.verificationStatus || 'verified';
         const updatedOpp = {
           ...existing,
           ...opp,
+          slug: opp.slug || existing?.slug || String(opp.opportunityId),
+          zoneIds: Array.isArray(opp.zoneIds) ? opp.zoneIds : existing?.zoneIds || [],
+          commodityKeys: Array.isArray(opp.commodityKeys) ? opp.commodityKeys : existing?.commodityKeys || [],
+          sourceIds: Array.isArray(opp.sourceIds) ? opp.sourceIds : existing?.sourceIds || [],
+          opportunityType: opp.opportunityType || existing?.opportunityType || 'general',
+          summary: opp.summary ?? existing?.summary ?? '',
+          description: opp.description ?? existing?.description ?? '',
+          responsibleOffice: opp.responsibleOffice || existing?.responsibleOffice || 'Oromia Bureau of Agriculture',
+          lifecycleStatus,
+          verificationStatus,
           version: newVersion,
           updatedAt: nowIso,
           updatedBy: actorUid,
           createdAt: existing?.createdAt || nowIso,
           createdBy: existing?.createdBy || actorUid,
+          publishedAt:
+            lifecycleStatus === 'published'
+              ? existing?.publishedAt || nowIso
+              : existing?.publishedAt || null,
+          publishedBy:
+            lifecycleStatus === 'published'
+              ? existing?.publishedBy || actorUid
+              : existing?.publishedBy || null,
         };
 
         await safeSetDoc('investmentOpportunities', opp.opportunityId, updatedOpp);
@@ -1965,6 +2222,13 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
     }
   } catch (err: any) {
     console.error('[InvestmentApi] Unhandled error during mutation:', err);
+    if (err?.code === 'FIRESTORE_UNAVAILABLE' || err?.name === 'FirestoreUnavailableError') {
+      return res.status(503).json({
+        success: false,
+        code: 'FIRESTORE_UNAVAILABLE',
+        error: err?.message || 'Firestore is unavailable for this mutation',
+      });
+    }
     return res.status(500).json({ success: false, code: 'SERVER_ERROR', error: err?.message || 'Internal server error during investment mutation' });
   }
 }

@@ -18,7 +18,8 @@ import { fetchPublicFacilities } from '../../services/investment/publicInfrastru
 import { InfrastructureFilterControls } from '../../features/investment-map/components/InfrastructureFilterControls';
 import { PublicFacilityListPanel } from '../../features/investment-map/components/PublicFacilityListPanel';
 import { FacilityDetailCard } from '../../features/investment-map/components/FacilityDetailCard';
-import { Compass, ShieldCheck, Building2, MapPin } from 'lucide-react';
+import { Building2, MapPin } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 const SUPPORTED_MAP_COMMODITIES: CommodityKey[] = ['coffee', 'wheat', 'maize'];
 const SUPPORTED_METRICS: ThematicMetric[] = ['production', 'suitability', 'investment_potential'];
@@ -40,6 +41,7 @@ function parseMetric(value: string | null): ThematicMetric {
 }
 
 export const PublicInvestmentMapShell: React.FC = () => {
+  const { t } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const zoneParam = searchParams.get('zone');
   const commodityParam = searchParams.get('commodity');
@@ -57,24 +59,21 @@ export const PublicInvestmentMapShell: React.FC = () => {
     parseMetric(metricParam)
   );
 
-  // Real verified published thematic dataset state
   const [thematicResult, setThematicResult] = useState<PublicThematicDatasetResult | null>(null);
   const [isLoadingThematic, setIsLoadingThematic] = useState<boolean>(false);
 
-  // Public Infrastructure Facilities State
   const [facilities, setFacilities] = useState<PublicInvestmentFacility[]>([]);
   const [isLoadingFacilities, setIsLoadingFacilities] = useState<boolean>(true);
   const [infrastructureError, setInfrastructureError] = useState<string | null>(null);
   const [showInfrastructure, setShowInfrastructure] = useState<boolean>(
     () => (infraParam === '0' || infraParam === 'false' ? false : true)
   );
-  const [selectedFacilityCategory, setSelectedFacilityCategory] = useState<InfrastructureCategory | 'all'>(
-    () => (infraCategoryParam as InfrastructureCategory) || 'all'
-  );
+  const [selectedFacilityCategory, setSelectedFacilityCategory] = useState<
+    InfrastructureCategory | 'all'
+  >(() => (infraCategoryParam as InfrastructureCategory) || 'all');
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(facilityParam);
   const [activeSideTab, setActiveSideTab] = useState<'zone' | 'facilities'>('zone');
 
-  // Load published facilities from authoritative public service
   useEffect(() => {
     let isCancelled = false;
     setIsLoadingFacilities(true);
@@ -82,28 +81,26 @@ export const PublicInvestmentMapShell: React.FC = () => {
 
     fetchPublicFacilities()
       .then((data) => {
-        if (!isCancelled) {
-          setFacilities(data);
-        }
+        if (!isCancelled) setFacilities(data);
       })
       .catch((err) => {
         console.error('[PublicInvestmentMapShell] Failed to load infrastructure facilities:', err);
         if (!isCancelled) {
-          setInfrastructureError('Unable to load infrastructure facilities. Thematic map data remains available.');
+          setInfrastructureError(
+            t('investment_map_infra_error') ||
+              'Infrastructure layer unavailable. Thematic zone data still works.'
+          );
         }
       })
       .finally(() => {
-        if (!isCancelled) {
-          setIsLoadingFacilities(false);
-        }
+        if (!isCancelled) setIsLoadingFacilities(false);
       });
 
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [t]);
 
-  // Load published thematic dataset whenever commodity or metric changes
   useEffect(() => {
     let isCancelled = false;
     if (!selectedCommodity) {
@@ -114,20 +111,14 @@ export const PublicInvestmentMapShell: React.FC = () => {
     setIsLoadingThematic(true);
     fetchPublicThematicDataset(selectedCommodity, selectedMetric)
       .then((result) => {
-        if (!isCancelled) {
-          setThematicResult(result);
-        }
+        if (!isCancelled) setThematicResult(result);
       })
       .catch((err) => {
         console.error('[PublicInvestmentMapShell] Failed to load thematic dataset:', err);
-        if (!isCancelled) {
-          setThematicResult(null);
-        }
+        if (!isCancelled) setThematicResult(null);
       })
       .finally(() => {
-        if (!isCancelled) {
-          setIsLoadingThematic(false);
-        }
+        if (!isCancelled) setIsLoadingThematic(false);
       });
 
     return () => {
@@ -135,24 +126,17 @@ export const PublicInvestmentMapShell: React.FC = () => {
     };
   }, [selectedCommodity, selectedMetric]);
 
-  // Sync selectedZoneId when URL search parameter changes
   useEffect(() => {
-    if (zoneParam !== selectedZoneId) {
-      setSelectedZoneId(zoneParam);
-    }
+    if (zoneParam !== selectedZoneId) setSelectedZoneId(zoneParam);
   }, [zoneParam]);
 
-  // Sync selectedFacilityId from URL
   useEffect(() => {
     if (facilityParam !== selectedFacilityId) {
       setSelectedFacilityId(facilityParam);
-      if (facilityParam) {
-        setActiveSideTab('facilities');
-      }
+      if (facilityParam) setActiveSideTab('facilities');
     }
   }, [facilityParam]);
 
-  // Sync commodity / metric from URL (product deep-links)
   useEffect(() => {
     const nextCommodity = parseCommodity(commodityParam);
     if (nextCommodity && nextCommodity !== selectedCommodity) {
@@ -162,9 +146,7 @@ export const PublicInvestmentMapShell: React.FC = () => {
 
   useEffect(() => {
     const nextMetric = parseMetric(metricParam);
-    if (nextMetric !== selectedMetric) {
-      setSelectedMetric(nextMetric);
-    }
+    if (nextMetric !== selectedMetric) setSelectedMetric(nextMetric);
   }, [metricParam]);
 
   const syncSearchParams = useCallback(
@@ -183,7 +165,8 @@ export const PublicInvestmentMapShell: React.FC = () => {
       const metric = next.metric !== undefined ? next.metric : selectedMetric;
       const facility = next.facility !== undefined ? next.facility : selectedFacilityId;
       const infra = next.infrastructure !== undefined ? next.infrastructure : showInfrastructure;
-      const infraCat = next.infraCategory !== undefined ? next.infraCategory : selectedFacilityCategory;
+      const infraCat =
+        next.infraCategory !== undefined ? next.infraCategory : selectedFacilityCategory;
 
       if (zone) params.set('zone', zone);
       else params.delete('zone');
@@ -205,7 +188,16 @@ export const PublicInvestmentMapShell: React.FC = () => {
 
       setSearchParams(params, { replace: true });
     },
-    [searchParams, selectedZoneId, selectedCommodity, selectedMetric, selectedFacilityId, showInfrastructure, selectedFacilityCategory, setSearchParams]
+    [
+      searchParams,
+      selectedZoneId,
+      selectedCommodity,
+      selectedMetric,
+      selectedFacilityId,
+      showInfrastructure,
+      selectedFacilityCategory,
+      setSearchParams,
+    ]
   );
 
   const handleGisVerified = useCallback((res: GisValidationResult) => {
@@ -216,9 +208,7 @@ export const PublicInvestmentMapShell: React.FC = () => {
     (zoneId: string | null) => {
       setSelectedZoneId(zoneId);
       syncSearchParams({ zone: zoneId });
-      if (zoneId) {
-        setActiveSideTab('zone');
-      }
+      if (zoneId) setActiveSideTab('zone');
     },
     [syncSearchParams]
   );
@@ -229,7 +219,6 @@ export const PublicInvestmentMapShell: React.FC = () => {
       syncSearchParams({ facility: facilityId });
       if (facilityId) {
         setActiveSideTab('facilities');
-        // Auto-select the zone containing the facility if not already set
         const matched = facilities.find((f) => f.facilityId === facilityId);
         if (matched && matched.zoneId && matched.zoneId !== selectedZoneId) {
           setSelectedZoneId(matched.zoneId);
@@ -251,7 +240,6 @@ export const PublicInvestmentMapShell: React.FC = () => {
   const handleSelectCategory = useCallback(
     (category: InfrastructureCategory | 'all') => {
       setSelectedFacilityCategory(category);
-      // Clear facility selection if the currently selected facility is no longer eligible under the new category
       let nextFacilityId = selectedFacilityId;
       if (selectedFacilityId && category !== 'all') {
         const curFac = facilities.find((f) => f.facilityId === selectedFacilityId);
@@ -287,58 +275,47 @@ export const PublicInvestmentMapShell: React.FC = () => {
 
   const selectedFeature = getZoneFeatureById(gisResult?.data, selectedZoneId);
 
-  // Selected Facility DTO
   const selectedFacility = useMemo(() => {
     if (!selectedFacilityId) return null;
     return facilities.find((f) => f.facilityId === selectedFacilityId) || null;
   }, [facilities, selectedFacilityId]);
 
   return (
-    <div className="space-y-6">
-      {/* MAP TITLE & SUBTITLE */}
-      <div className="bg-white dark:bg-[#0E241B] rounded-3xl p-6 sm:p-8 border border-[#063D2A]/10 dark:border-emerald-800/30 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1.5 max-w-3xl">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#347622] dark:text-[#A3E635]">
-            <Compass className="w-4 h-4 shrink-0" />
-            <span>Interactive Oromia GIS & Infrastructure Portal</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#063D2A] dark:text-white tracking-tight">
-            Official Public Investment Map
+    <div className="space-y-4 sm:space-y-5">
+      {/* Compact intro — no card chrome */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 pb-1">
+        <div className="max-w-2xl">
+          <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#063D2A] dark:text-white">
+            {t('investment_map_shell_title') || 'Public investment map'}
           </h2>
-          <p className="text-sm text-[#4E5E53] dark:text-emerald-100/80 leading-relaxed">
-            Explore Oromia's 22 administrative zones, verified agricultural commodity production zones, and verified infrastructure facilities (agro-industrial parks, warehouses, power substations, dry ports, and irrigation networks).
+          <p className="mt-1.5 text-sm text-[#4E5E53] dark:text-emerald-100/70 leading-relaxed">
+            {t('investment_map_shell_desc') ||
+              'Select a commodity and metric, then click a zone. Toggle facilities to see verified warehouses, cold storage, and processing sites.'}
           </p>
         </div>
-
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 shrink-0">
-          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-[#FAF9F5] dark:bg-[#081811] border border-[#063D2A]/10 dark:border-emerald-800/40 text-xs font-semibold text-[#063D2A] dark:text-emerald-200">
-            <ShieldCheck className="w-4 h-4 text-[#347622] dark:text-[#A3E635]" />
-            <span>Official GIS (22 Administrative Zones)</span>
-          </div>
-          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800/40 text-xs font-semibold text-blue-800 dark:text-blue-200">
-            <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span>{facilities.length} Verified Facilities</span>
-          </div>
-        </div>
+        <p className="text-xs font-semibold text-[#5A6B61] dark:text-emerald-200/50 shrink-0 tabular-nums">
+          {isLoadingFacilities
+            ? t('investment_map_loading_facilities') || 'Loading facilities…'
+            : `${facilities.length} ${t('investment_map_facilities_count') || 'verified facilities'}`}
+        </p>
       </div>
 
-      {/* AGRICULTURAL POTENTIAL THEMATIC SELECTOR BAR */}
       <ThematicSelectorBar
         selectedCommodity={selectedCommodity}
         selectedMetric={selectedMetric}
         onSelectCommodity={handleSelectCommodity}
         onSelectMetric={handleSelectMetric}
-        titleEyebrow="AGRICULTURAL POTENTIAL MAP"
+        titleEyebrow={t('investment_map_thematic_eyebrow') || 'COMMODITY LAYER'}
+        isPublic
+        isThematicActive={Boolean(selectedCommodity && thematicResult && !isLoadingThematic)}
       />
 
-      {/* INFRASTRUCTURE ERROR ALERT (IF ANY) */}
       {infrastructureError && (
-        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between">
-          <span>{infrastructureError}</span>
-        </div>
+        <p className="text-xs text-amber-800 dark:text-amber-200/90 border-l-2 border-amber-500 pl-3 py-1">
+          {infrastructureError}
+        </p>
       )}
 
-      {/* INFRASTRUCTURE CONTROLS BAR */}
       <InfrastructureFilterControls
         showInfrastructure={showInfrastructure}
         onToggleShowInfrastructure={handleToggleShowInfrastructure}
@@ -348,12 +325,10 @@ export const PublicInvestmentMapShell: React.FC = () => {
         isLoading={isLoadingFacilities}
       />
 
-      {/* MAP & SIDE PANEL GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* MAP CONTAINER (LEFT / TOP - 7 OR 8 COLS) */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-start">
+        <div className="lg:col-span-8 xl:col-span-9">
           <UnifiedMapContainer
-            height="640px"
+            height="min(72vh, 720px)"
             selectedZoneId={selectedZoneId}
             selectedCommodity={selectedCommodity}
             selectedMetric={selectedMetric}
@@ -368,41 +343,48 @@ export const PublicInvestmentMapShell: React.FC = () => {
             onSelectFacility={handleSelectFacility}
             onGisVerified={handleGisVerified}
             allowDemoData={false}
-            className="rounded-3xl overflow-hidden shadow-sm border border-[#063D2A]/10 dark:border-emerald-800/30"
+            className="overflow-hidden border border-[#063D2A]/12 dark:border-emerald-800/30"
           />
         </div>
 
-        {/* SIDE PANELS (RIGHT / BOTTOM - 5 OR 4 COLS) */}
-        <div className="lg:col-span-5 xl:col-span-4 space-y-4">
-          {/* Side Tab Switcher */}
-          <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
+        <aside className="lg:col-span-4 xl:col-span-3 space-y-3 lg:sticky lg:top-36">
+          <div
+            className="flex border-b border-[#063D2A]/10 dark:border-emerald-900/40"
+            role="tablist"
+            aria-label="Map detail panels"
+          >
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeSideTab === 'zone'}
               onClick={() => setActiveSideTab('zone')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-colors ${
                 activeSideTab === 'zone'
-                  ? 'bg-white dark:bg-slate-900 text-emerald-800 dark:text-emerald-300 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'text-[#063D2A] dark:text-[#A3E635] border-b-2 border-[#347622] dark:border-[#A3E635] -mb-px'
+                  : 'text-[#5A6B61] dark:text-emerald-100/50 hover:text-[#063D2A] dark:hover:text-emerald-100'
               }`}
             >
               <MapPin className="w-3.5 h-3.5" />
-              <span>Zone Profile {selectedZoneId ? `(${selectedZoneId})` : ''}</span>
+              {t('investment_map_panel_zone') || 'Zone'}
             </button>
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeSideTab === 'facilities'}
               onClick={() => setActiveSideTab('facilities')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-colors ${
                 activeSideTab === 'facilities'
-                  ? 'bg-white dark:bg-slate-900 text-blue-800 dark:text-blue-300 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'text-[#063D2A] dark:text-[#A3E635] border-b-2 border-[#347622] dark:border-[#A3E635] -mb-px'
+                  : 'text-[#5A6B61] dark:text-emerald-100/50 hover:text-[#063D2A] dark:hover:text-emerald-100'
               }`}
             >
               <Building2 className="w-3.5 h-3.5" />
-              <span>Facilities ({facilities.length})</span>
+              {t('investment_map_panel_facilities') || 'Facilities'}
             </button>
           </div>
 
-          {/* Active Tab View */}
           {activeSideTab === 'zone' ? (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <ZoneProfilePanel
                 selectedFeature={selectedFeature}
                 selectedCommodity={selectedCommodity}
@@ -411,29 +393,21 @@ export const PublicInvestmentMapShell: React.FC = () => {
                 onClearSelection={handleClearSelection}
                 isPublic={true}
               />
-
-              {/* Quick Facility Card under Zone if a facility is selected in this zone */}
               {selectedFacility && (
-                <div className="space-y-2">
-                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Selected Facility in this Zone
-                  </div>
-                  <FacilityDetailCard
-                    facility={selectedFacility}
-                    onClose={() => handleSelectFacility(null)}
-                  />
-                </div>
+                <FacilityDetailCard
+                  facility={selectedFacility}
+                  onClose={() => handleSelectFacility(null)}
+                />
               )}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {selectedFacility ? (
                 <FacilityDetailCard
                   facility={selectedFacility}
                   onClose={() => handleSelectFacility(null)}
                 />
               ) : null}
-
               <PublicFacilityListPanel
                 facilities={facilities}
                 selectedFacilityId={selectedFacilityId}
@@ -444,9 +418,8 @@ export const PublicInvestmentMapShell: React.FC = () => {
               />
             </div>
           )}
-        </div>
+        </aside>
       </div>
     </div>
   );
 };
-

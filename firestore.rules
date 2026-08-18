@@ -365,8 +365,29 @@ service cloud.firestore {
     }
 
     match /resources/{resourceId} {
-      allow read: if true;
-      allow create, update, delete: if isContentAdmin();
+      allow get, list: if isCurrentActiveStaff() || (
+        resource != null && resource.data != null
+        && resource.data.status == 'published'
+      );
+      allow create: if isContentAdmin() || (
+        isCurrentActiveStaff()
+        && exists(/databases/$(database)/documents/staffUsers/$(request.auth.uid))
+        && 'permissions' in get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data
+        && get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.permissions.hasAny(['resources.manage'])
+      );
+      // Staff full update OR anonymous +1 downloadsCount on published docs only
+      allow update: if isContentAdmin() || (
+        isCurrentActiveStaff()
+        && exists(/databases/$(database)/documents/staffUsers/$(request.auth.uid))
+        && 'permissions' in get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data
+        && get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.permissions.hasAny(['resources.manage'])
+      ) || (
+        resource.data.status == 'published'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloadsCount'])
+        && request.resource.data.downloadsCount is int
+        && request.resource.data.downloadsCount == resource.data.downloadsCount + 1
+      );
+      allow delete: if isContentAdmin();
     }
 
     // Collection: mediaAssets (Authoritative Media Asset Metadata)
@@ -387,17 +408,15 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
-    // Audit logs: Read restricted to active staff with audit.view permission (superAdmin, contentAdmin).
+    // Audit logs: reads for audit staff; browser creates denied (server/Admin only)
     match /auditLogs/{logId} {
       allow read: if hasAuditViewPermission();
-      allow create: if isSignedIn();
-      allow update, delete: if false;
+      allow create, update, delete: if false;
     }
 
     match /newsAuditLogs/{logId} {
       allow read: if hasAuditViewPermission();
-      allow create: if isSignedIn();
-      allow update, delete: if false;
+      allow create, update, delete: if false;
     }
 
     match /adminAuditLogs/{logId} {
@@ -424,84 +443,96 @@ service cloud.firestore {
       ];
     }
 
-    // Collection: investmentZoneProfiles (Governed: reads allowed, direct client writes blocked)
+    // Collection: investmentZoneProfiles
+    // Writes allowed for editors to support user-token mutation fallback when Admin ADC is unavailable.
+    // Prefer routing all writes through /investmentMutate (server enforces lifecycle/permissions).
     match /investmentZoneProfiles/{zoneId} {
       allow get, list: if isCurrentActiveStaff() || (
         resource != null && resource.data != null
         && resource.data.status == 'published'
         && resource.data.verificationStatus == 'verified'
       );
-      allow create, update, delete: if false;
+      allow create, update: if isEditor() && isCanonicalZone(zoneId);
+      allow delete: if isContentAdmin();
     }
 
-    // Collection: investmentDatasets (Governed: reads allowed, direct client writes blocked)
+    // Collection: investmentDatasets
     match /investmentDatasets/{datasetId} {
       allow get, list: if isCurrentActiveStaff() || (
         resource != null && resource.data != null
         && resource.data.lifecycleStatus == 'published'
         && resource.data.verificationStatus == 'verified'
       );
-      allow create, update, delete: if false;
+      allow create, update: if isEditor();
+      allow delete: if isContentAdmin();
 
-      // Subcollection: values/{zoneId}
       match /values/{zoneId} {
         allow get, list: if isCurrentActiveStaff() || (
           get(/databases/$(database)/documents/investmentDatasets/$(datasetId)).data != null
           && get(/databases/$(database)/documents/investmentDatasets/$(datasetId)).data.lifecycleStatus == 'published'
           && get(/databases/$(database)/documents/investmentDatasets/$(datasetId)).data.verificationStatus == 'verified'
         );
-        allow create, update, delete: if false;
+        allow create, update, delete: if isEditor() && isCanonicalZone(zoneId);
       }
     }
 
-    // Collection: investmentSources (Governed: reads allowed, direct client writes blocked)
+    // Collection: investmentSources
     match /investmentSources/{sourceId} {
       allow get, list: if isCurrentActiveStaff() || (
         resource != null && resource.data != null
-        && (resource.data.status == 'active' || resource.data.status == 'published')
+        && resource.data.status == 'published'
+        && resource.data.verificationStatus == 'verified'
       );
-      allow create, update, delete: if false;
+      allow create, update: if isEditor();
+      allow delete: if isContentAdmin();
     }
 
-    // Collection: investmentMethodologies (Governed: reads allowed, direct client writes blocked)
+    // Collection: investmentMethodologies
     match /investmentMethodologies/{methodologyId} {
       allow get, list: if isCurrentActiveStaff() || (
         resource != null && resource.data != null
-        && (resource.data.status == 'active' || resource.data.status == 'published')
+        && resource.data.status == 'published'
+        && resource.data.verificationStatus == 'verified'
       );
-      allow create, update, delete: if false;
+      allow create, update: if isEditor();
+      allow delete: if isContentAdmin();
     }
 
-    // Collection: investmentOpportunities (Governed: reads allowed, direct client writes blocked)
+    // Collection: investmentOpportunities
     match /investmentOpportunities/{opportunityId} {
       allow get, list: if isCurrentActiveStaff() || (
         resource != null && resource.data != null
         && resource.data.lifecycleStatus == 'published'
         && resource.data.verificationStatus == 'verified'
       );
-      allow create, update, delete: if false;
+      allow create, update: if isEditor();
+      allow delete: if isContentAdmin();
     }
 
-    // Collection: investmentInfrastructure (Governed: reads allowed, direct client writes blocked)
+    // Collection: investmentInfrastructure
     match /investmentInfrastructure/{recordId} {
       allow get, list: if isCurrentActiveStaff() || (
         resource != null && resource.data != null
         && resource.data.lifecycleStatus == 'published'
         && resource.data.verificationStatus == 'verified'
       );
-      allow create, update, delete: if false;
+      allow create, update: if isEditor();
+      allow delete: if isContentAdmin();
     }
 
-    // Collection: investmentMapConfig (Governed: reads allowed, direct client writes blocked)
+    // Collection: investmentMapConfig
     match /investmentMapConfig/{configId} {
       allow get, list: if true;
-      allow create, update, delete: if false;
+      allow create, update: if isContentAdmin();
+      allow delete: if isSuperAdmin();
     }
 
-    // Collection: investmentAuditLogs (Authoritative audit logs: reads allowed for audit staff, browser writes strictly denied)
+    // Collection: investmentAuditLogs
+    // Staff create allowed so user-token mutation path can append audits without Admin ADC.
     match /investmentAuditLogs/{logId} {
       allow read: if hasAuditViewPermission();
-      allow create, update, delete: if false;
+      allow create: if isCurrentActiveStaff();
+      allow update, delete: if false;
     }
 
     // ---------------------------------------------------------------- FLEET

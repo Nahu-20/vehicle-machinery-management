@@ -91,6 +91,7 @@ import { AdminDatasetCreatePage } from './pages/admin/investment/AdminDatasetCre
 import { AdminDatasetDetailPage } from './pages/admin/investment/AdminDatasetDetailPage';
 import { AdminDatasetPreviewPage } from './pages/admin/investment/AdminDatasetPreviewPage';
 import { AdminSourcesPage } from './pages/admin/investment/AdminSourcesPage';
+import { AdminMethodologiesPage } from './pages/admin/investment/AdminMethodologiesPage';
 import { AdminZoneProfilesPage } from './pages/admin/investment/AdminZoneProfilesPage';
 import { AdminOpportunitiesPage } from './pages/admin/investment/AdminOpportunitiesPage';
 import { AdminInfrastructurePage } from './pages/admin/investment/AdminInfrastructurePage';
@@ -433,6 +434,7 @@ export default function App() {
                       <Route path="datasets/:datasetId" element={<AdminDatasetDetailPage />} />
                       <Route path="datasets/:datasetId/preview" element={<AdminDatasetPreviewPage />} />
                       <Route path="sources" element={<AdminSourcesPage />} />
+                      <Route path="methodologies" element={<AdminMethodologiesPage />} />
                       <Route path="opportunities" element={<AdminOpportunitiesPage />} />
                       <Route path="infrastructure" element={<AdminInfrastructurePage />} />
                       <Route path="infrastructure/new" element={<AdminFacilityCreatePage />} />

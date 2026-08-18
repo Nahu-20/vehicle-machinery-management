@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { Publication } from '../types';
-import { comprehensivePublications } from '../data/resourcesData';
+import { getPrototypeResourcePublications } from '../data/resourcePrototypeSeedData';
+import { listPublishedResources, resourceToPublication } from '../services/resourceService';
 import { ResourcesHero } from '../components/resources/ResourcesHero';
 import { ResourcesStatsBanner } from '../components/resources/ResourcesStatsBanner';
 import { FeaturedResourceSpotlight } from '../components/resources/FeaturedResourceSpotlight';
@@ -18,16 +19,15 @@ import {
   LayoutGrid,
   List,
   RotateCcw,
-  SlidersHorizontal,
   ArrowUpDown,
-  BookOpen,
-  Sparkles,
 } from 'lucide-react';
 
 export const ResourcesPage: React.FC = () => {
   const { t } = useLanguage();
 
-  // Search & Filter State
+  const [catalog, setCatalog] = useState<Publication[]>(() => getPrototypeResourcePublications());
+  const [catalogLoading, setCatalogLoading] = useState(true);
+
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedFormat, setSelectedFormat] = useState<string>('all');
@@ -35,22 +35,40 @@ export const ResourcesPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'downloads' | 'newest' | 'title'>('downloads');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Modals state
   const [selectedDocModal, setSelectedDocModal] = useState<Publication | null>(null);
   const [selectedVideoModal, setSelectedVideoModal] = useState<Publication | null>(null);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState<boolean>(false);
 
-  // Spotlit resource (first featured item)
-  const spotlightDoc = useMemo(() => {
-    return (
-      comprehensivePublications.find((p) => p.featured && p.format === 'PDF') ||
-      comprehensivePublications[0]
-    );
+  useEffect(() => {
+    let cancelled = false;
+    setCatalogLoading(true);
+    listPublishedResources()
+      .then((rows) => {
+        if (cancelled) return;
+        if (rows.length > 0) {
+          setCatalog(rows.map(resourceToPublication));
+        } else {
+          setCatalog(getPrototypeResourcePublications());
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCatalog(getPrototypeResourcePublications());
+      })
+      .finally(() => {
+        if (!cancelled) setCatalogLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Filtered and sorted resources list
+  const spotlightDoc = useMemo(() => {
+    return catalog.find((p) => p.featured && p.format === 'PDF') || catalog[0] || null;
+  }, [catalog]);
+
   const filteredPublications = useMemo(() => {
-    return comprehensivePublications
+    return catalog
       .filter((pub) => {
         const title = (t(pub.titleKey) || pub.defaultTitle || '').toLowerCase();
         const desc = (t(pub.descriptionKey) || pub.defaultDescription || '').toLowerCase();
@@ -93,7 +111,7 @@ export const ResourcesPage: React.FC = () => {
         }
         return 0;
       });
-  }, [searchQuery, selectedCategory, selectedFormat, selectedLanguage, sortBy, t]);
+  }, [catalog, searchQuery, selectedCategory, selectedFormat, selectedLanguage, sortBy, t]);
 
   const handleResetFilters = () => {
     setSearchQuery('');
@@ -105,7 +123,6 @@ export const ResourcesPage: React.FC = () => {
 
   return (
     <div className="bg-[#F6F7F3] dark:bg-[#0A110D] min-h-screen text-[#111310] dark:text-white transition-colors duration-200 overflow-x-hidden">
-      {/* 1. Master Emerald Hero with Live Filter Header */}
       <ResourcesHero
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -116,15 +133,13 @@ export const ResourcesPage: React.FC = () => {
         selectedLanguage={selectedLanguage}
         onSelectLanguage={setSelectedLanguage}
         totalFiltered={filteredPublications.length}
-        totalAll={comprehensivePublications.length}
+        totalAll={catalog.length}
         onRequestOpen={() => setIsRequestModalOpen(true)}
       />
 
-      {/* 2. Key Operational Proof & Capabilities Banner */}
       <ResourcesStatsBanner />
 
-      {/* 3. Featured Season Spotlight (Visible when no specific query active) */}
-      {!searchQuery && selectedCategory === 'all' && (
+      {!searchQuery && selectedCategory === 'all' && spotlightDoc && (
         <section className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 pt-12">
           <FeaturedResourceSpotlight
             publication={spotlightDoc}
@@ -133,21 +148,20 @@ export const ResourcesPage: React.FC = () => {
         </section>
       )}
 
-      {/* 4. Main Publications & Library Grid */}
       <section id="publications-grid" className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Results Header Bar with Sorting and View Mode toggles */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="space-y-1">
             <h2 className="text-2xl sm:text-3xl font-black text-[#0A1912] dark:text-white tracking-tight">
               Official Extension Documents & Manuals
             </h2>
             <p className="text-xs sm:text-sm text-[#56635B] dark:text-white/70">
-              Showing {filteredPublications.length} verified publications available for open download
+              {catalogLoading
+                ? 'Loading verified publications…'
+                : `Showing ${filteredPublications.length} verified publications available for open download`}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
-            {/* Sorting Dropdown */}
             <div className="flex items-center gap-1.5 bg-white dark:bg-white/5 border border-[#D5E8D0] dark:border-white/10 px-3 py-2 rounded-xl text-xs shadow-2xs">
               <ArrowUpDown className="h-3.5 w-3.5 text-[#075B36] dark:text-[#A3E635]" />
               <select
@@ -167,7 +181,6 @@ export const ResourcesPage: React.FC = () => {
               </select>
             </div>
 
-            {/* View Mode (Grid vs List) */}
             <div className="hidden sm:flex items-center gap-1 bg-white dark:bg-white/5 border border-[#D5E8D0] dark:border-white/10 p-1 rounded-xl shadow-2xs">
               <button
                 onClick={() => setViewMode('grid')}
@@ -208,7 +221,6 @@ export const ResourcesPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Publications List / Grid */}
         {filteredPublications.length === 0 ? (
           <div className="rounded-3xl border border-[#E2EFE0] dark:border-white/10 bg-white dark:bg-[#111813] p-12 sm:p-16 text-center space-y-4 shadow-sm">
             <div className="inline-flex p-4 rounded-2xl bg-[#F0F7EE] dark:bg-white/10 text-[#075B36] dark:text-[#A3E635]">
@@ -249,19 +261,11 @@ export const ResourcesPage: React.FC = () => {
         )}
       </section>
 
-      {/* 5. Bundled Farmer & Extension Toolkits (ZIP Archives) */}
       <FarmerToolkitDownloads />
-
-      {/* 6. 8844 Toll-Free SMS & Offline USSD Knowledge Dispatch */}
       <ResourcesSMSKnowledgeHub />
-
-      {/* 7. Public Documentation FAQ Accordion */}
       <ResourcesFAQ />
-
-      {/* 8. Call to Action Banner & Print Dispatch */}
       <ResourcesCTA onRequestOpen={() => setIsRequestModalOpen(true)} />
 
-      {/* Interactive Modals */}
       <ResourceDetailModal
         publication={selectedDocModal}
         onClose={() => setSelectedDocModal(null)}

@@ -51,6 +51,11 @@ async function callMutateApi(action: string, actorUid: string, payload: any, exp
 }
 
 export async function runAllInvestmentSecurityTests(): Promise<TestResult[]> {
+  const { enableInvestmentApiTestMode, resetInvestmentDbForTesting } = await import('../server/investmentApi');
+  process.env.INVESTMENT_ALLOW_TEST_AUTH = 'true';
+  enableInvestmentApiTestMode(true);
+  resetInvestmentDbForTesting();
+
   const results: TestResult[] = [];
   let testId = 1;
 

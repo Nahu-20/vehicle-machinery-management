@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Publication } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
 import { useToast } from '../../context/ToastContext';
+import { openResourceDownload } from '../../services/resourceService';
 import {
   X,
   Download,
@@ -39,17 +40,21 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
   const title = t(publication.titleKey) || publication.defaultTitle || 'Publication Dossier';
   const description = t(publication.descriptionKey) || publication.defaultDescription;
 
-  const handleDownload = (e: React.MouseEvent) => {
+  const handleDownload = async (e: React.MouseEvent) => {
     e.preventDefault();
     setDownloading(true);
-    setTimeout(() => {
-      setDownloading(false);
+    try {
+      const opened = await openResourceDownload(publication.id, publication.downloadUrl);
       showToast(
-        t('demo_download_notice') || 'File downloaded successfully to your device.',
-        'success',
+        opened
+          ? t('demo_download_notice') || 'File opened in a new tab.'
+          : 'Download link is not available yet for this item.',
+        opened ? 'success' : 'info',
         title
       );
-    }, 1200);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const handleShare = () => {

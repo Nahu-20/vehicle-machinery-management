@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  writeBatch,
 } from 'firebase/firestore';
 import {
   InvestmentDataset,
@@ -12,7 +13,7 @@ import {
 } from '../../types/investment';
 import { StaffUser } from '../../types/auth';
 import { CANONICAL_ZONE_IDS, CanonicalZoneId } from '../../features/investment-map/constants/canonicalZones';
-import { callInvestmentCallable } from './investmentMutationClient';
+import { callInvestmentCallable, InvestmentMutationError } from './investmentMutationClient';
 
 export async function getDataset(datasetId: string): Promise<InvestmentDataset | null> {
   if (!db) return null;
@@ -78,7 +79,7 @@ export async function createDataset(
   >
 ): Promise<InvestmentDataset> {
   const res = await callInvestmentCallable<InvestmentDataset>(
-    'save_dataset_draft',
+    'save_dataset',
     input,
     undefined,
     actor
@@ -89,6 +90,36 @@ export async function createDataset(
   return res.data;
 }
 
+async function persistZoneValuesClientSide(
+  actor: StaffUser,
+  datasetId: string,
+  values: InvestmentZoneValue[],
+  newVersion: number
+): Promise<void> {
+  if (!db) {
+    throw new InvestmentMutationError(
+      'Firestore client is not initialized; cannot persist zone values.',
+      'FIRESTORE_UNAVAILABLE',
+      503
+    );
+  }
+
+  const nowIso = new Date().toISOString();
+  // Firestore batches are capped at 500 ops; canonical zone set is 22.
+  const batch = writeBatch(db);
+  for (const val of values) {
+    const ref = doc(db, 'investmentDatasets', datasetId, 'values', val.zoneId);
+    batch.set(ref, {
+      ...val,
+      zoneId: val.zoneId,
+      version: newVersion,
+      updatedAt: nowIso,
+      updatedBy: actor.uid,
+    });
+  }
+  await batch.commit();
+}
+
 export async function setZoneValues(
   actor: StaffUser,
   datasetId: string,
@@ -96,16 +127,23 @@ export async function setZoneValues(
   expectedVersion?: number,
   requestId?: string
 ): Promise<{ success: boolean; count: number; newVersion: number }> {
-  const res = await callInvestmentCallable<{ count: number; newVersion: number }>(
-    'update_dataset_values',
-    { datasetId, values, requestId },
-    expectedVersion,
-    actor
-  );
+  const res = await callInvestmentCallable<{
+    count: number;
+    newVersion: number;
+    clientMustPersistValues?: boolean;
+  }>('set_dataset_values', { datasetId, values, requestId }, expectedVersion, actor);
+
+  const newVersion =
+    res.newVersion || res.data?.newVersion || (expectedVersion || 0) + 1;
+
+  // Persist nested values with the browser Firestore SDK. This avoids Admin ADC /
+  // user-token REST nested-path failures while still using staff security rules.
+  await persistZoneValuesClientSide(actor, datasetId, values, newVersion);
+
   return {
-    success: res.success,
-    count: res.count || res.data?.count || values.length,
-    newVersion: res.newVersion || res.data?.newVersion || (expectedVersion || 1) + 1,
+    success: true,
+    count: values.length,
+    newVersion,
   };
 }
 
@@ -133,7 +171,7 @@ export async function submitDatasetForReview(
   expectedVersion: number
 ): Promise<InvestmentDataset> {
   const res = await callInvestmentCallable<InvestmentDataset>(
-    'submit_dataset_review',
+    'submit_dataset_for_review',
     { datasetId },
     expectedVersion,
     actor
@@ -150,7 +188,7 @@ export async function returnDatasetToDraft(
   expectedVersion: number
 ): Promise<InvestmentDataset> {
   const res = await callInvestmentCallable<InvestmentDataset>(
-    'return_dataset_draft',
+    'return_dataset_to_draft',
     { datasetId },
     expectedVersion,
     actor
@@ -185,7 +223,7 @@ export async function verifyDataset(
   notes?: string
 ): Promise<InvestmentDataset> {
   const res = await callInvestmentCallable<InvestmentDataset>(
-    'verify_dataset',
+    'mark_dataset_verified',
     { datasetId, notes },
     expectedVersion,
     actor
@@ -203,7 +241,7 @@ export async function rejectDataset(
   notes?: string
 ): Promise<InvestmentDataset> {
   const res = await callInvestmentCallable<InvestmentDataset>(
-    'reject_dataset',
+    'mark_dataset_rejected',
     { datasetId, reason: notes, notes },
     expectedVersion,
     actor
@@ -227,7 +265,7 @@ export async function attachSourceToDataset(
     currentSources.push(sourceId);
   }
   const res = await callInvestmentCallable<InvestmentDataset>(
-    'save_dataset_draft',
+    'save_dataset',
     { ...current, sourceIds: currentSources },
     expectedVersion ?? current.version,
     actor
@@ -248,7 +286,7 @@ export async function removeSourceFromDataset(
     (s) => s !== sourceId
   );
   const res = await callInvestmentCallable<InvestmentDataset>(
-    'save_dataset_draft',
+    'save_dataset',
     { ...current, sourceIds: currentSources },
     expectedVersion ?? current.version,
     actor
@@ -266,7 +304,7 @@ export async function attachMethodologyToDataset(
   const current = await getDataset(datasetId);
   if (!current) throw new Error(`Dataset "${datasetId}" not found`);
   const res = await callInvestmentCallable<InvestmentDataset>(
-    'save_dataset_draft',
+    'save_dataset',
     { ...current, methodologyId },
     expectedVersion ?? current.version,
     actor
@@ -284,7 +322,7 @@ export async function removeMethodologyFromDataset(
   if (!current) throw new Error(`Dataset "${datasetId}" not found`);
   const { methodologyId: _removed, ...rest } = current;
   const res = await callInvestmentCallable<InvestmentDataset>(
-    'save_dataset_draft',
+    'save_dataset',
     rest,
     expectedVersion ?? current.version,
     actor

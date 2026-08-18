@@ -42,8 +42,8 @@ export async function deleteMethodology(
   expectedVersion?: number
 ): Promise<{ success: boolean; deletedId: string }> {
   const res = await callInvestmentCallable<{ deletedId: string }>(
-    'delete_methodology',
-    { methodologyId },
+    'delete_entity',
+    { entityType: 'methodology', entityId: methodologyId },
     expectedVersion,
     actor
   );

@@ -5,6 +5,7 @@ import {
   MapPin,
   Database,
   FileText,
+  BookOpen,
   Sparkles,
   Layers,
   Settings,
@@ -53,6 +54,14 @@ export function InvestmentAdminLayout() {
       to: '/admin/investment/sources',
       end: false,
       icon: FileText,
+      visible: canView,
+    },
+    {
+      id: 'methodologies',
+      label: 'Methodologies',
+      to: '/admin/investment/methodologies',
+      end: false,
+      icon: BookOpen,
       visible: canView,
     },
     {
