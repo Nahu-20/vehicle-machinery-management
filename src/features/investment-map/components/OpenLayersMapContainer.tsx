@@ -6,22 +6,31 @@ import VectorLayer from 'ol/layer/Vector.js';
 import VectorSource from 'ol/source/Vector.js';
 import { Fill, Stroke, Style, Text } from 'ol/style.js';
 import { defaults as defaultControls } from 'ol/control/defaults.js';
-import { FeatureLike } from 'ol/Feature.js';
+import Feature, { FeatureLike } from 'ol/Feature.js';
 import Polygon from 'ol/geom/Polygon.js';
 import MultiPolygon from 'ol/geom/MultiPolygon.js';
 import Point from 'ol/geom/Point.js';
+import { fromLonLat } from 'ol/proj.js';
 import 'ol/ol.css';
 
 import { useTheme } from '../../../context/ThemeContext';
 import { loadAndValidateOromiaGeoJSON } from '../services/gisLoader';
-import { GisValidationResult } from '../types/gis';
-import { isCanonicalZoneId } from '../constants/canonicalZones';
+import { GisValidationResult, OromiaGeoJSONCollection } from '../types/gis';
+import { CanonicalZoneId, isCanonicalZoneId } from '../constants/canonicalZones';
 import { CommodityKey, ThematicMetric } from '../types/thematic';
 import {
   getDemoZoneCommodityMetrics,
   classifyThematicValue,
   getThematicColor,
+  THEMATIC_CLASS_LABELS,
 } from '../services/thematicService';
+import { PublicThematicDatasetResult } from '../services/publicThematicInvestmentService';
+import {
+  PublicInvestmentFacility,
+  InfrastructureCategory,
+} from '../../../types/investment';
+import { getFacilityFeatureStyle } from '../services/facilityStyleService';
+import { getZoneCentroidPoint } from '../services/facilitySpatialService';
 import {
   ZoomIn,
   ZoomOut,
@@ -29,6 +38,7 @@ import {
   CheckCircle2,
   Loader2,
   AlertTriangle,
+  Building,
 } from 'lucide-react';
 
 interface OpenLayersMapContainerProps {
@@ -36,7 +46,15 @@ interface OpenLayersMapContainerProps {
   selectedZoneId?: string | null;
   selectedCommodity?: CommodityKey | null;
   selectedMetric?: ThematicMetric;
+  thematicResult?: PublicThematicDatasetResult | null;
+  isLoadingThematic?: boolean;
+  facilities?: PublicInvestmentFacility[];
+  showInfrastructure?: boolean;
+  selectedFacilityId?: string | null;
+  selectedCategory?: InfrastructureCategory | 'all';
+  isLoadingFacilities?: boolean;
   onSelectZone?: (zoneId: string) => void;
+  onSelectFacility?: (facilityId: string) => void;
   onGisVerified?: (result: GisValidationResult) => void;
   onError?: () => void;
   allowDemoData?: boolean;
@@ -76,22 +94,33 @@ function getZoneStyle(
   feature: FeatureLike,
   selectedZoneId: string | null | undefined,
   isDark: boolean,
+  thematicResult?: PublicThematicDatasetResult | null,
   selectedCommodity?: CommodityKey | null,
   selectedMetric: ThematicMetric = 'production',
   allowDemoData: boolean = false
 ): Style[] {
-  const zid = feature.get('zone_id');
+  const zid = feature.get('zone_id') as CanonicalZoneId;
   const isSelected = zid === selectedZoneId;
   const rawName = feature.get('name_en') || '';
   const nameEn = rawName.replace(' (OR)', '');
   const labelPoint = getLabelPoint(feature);
 
-  // Determine thematic fill & stroke color
+  // Default Base Neutral Colors
   let fillColor = isDark ? 'rgba(6, 78, 59, 0.65)' : 'rgba(209, 250, 229, 0.85)';
   let strokeColor = isDark ? '#34d399' : '#15803d';
   let strokeWidth = 1.5;
 
-  if (allowDemoData && selectedCommodity && zid) {
+  // 1. Real published thematic dataset join (Priority)
+  if (thematicResult && zid && thematicResult.valuesByZoneId) {
+    const zoneVal = thematicResult.valuesByZoneId[zid];
+    if (zoneVal) {
+      const thematicColors = getThematicColor(zoneVal.thematicClass, isDark);
+      fillColor = thematicColors.fill;
+      strokeColor = thematicColors.stroke;
+    }
+  }
+  // 2. Fallback to demo/synthetic fixtures for MapLab regression testing ONLY if explicitly allowed
+  else if (allowDemoData && selectedCommodity && zid) {
     const metrics = getDemoZoneCommodityMetrics(zid, selectedCommodity);
     let rawVal: number | null | undefined = null;
     if (metrics) {
@@ -164,7 +193,15 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
   selectedZoneId,
   selectedCommodity,
   selectedMetric = 'production',
+  thematicResult,
+  isLoadingThematic = false,
+  facilities = [],
+  showInfrastructure = false,
+  selectedFacilityId,
+  selectedCategory = 'all',
+  isLoadingFacilities = false,
   onSelectZone,
+  onSelectFacility,
   onGisVerified,
   onError,
   allowDemoData = false,
@@ -175,6 +212,8 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
   const mapInstanceRef = useRef<Map | null>(null);
   const vectorSourceRef = useRef<VectorSource | null>(null);
   const vectorLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const facilitySourceRef = useRef<VectorSource | null>(null);
+  const facilityLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
   const onGisVerifiedRef = useRef(onGisVerified);
   onGisVerifiedRef.current = onGisVerified;
@@ -185,19 +224,32 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
   const onSelectZoneRef = useRef(onSelectZone);
   onSelectZoneRef.current = onSelectZone;
 
+  const onSelectFacilityRef = useRef(onSelectFacility);
+  onSelectFacilityRef.current = onSelectFacility;
+
   const selectedCommodityRef = useRef(selectedCommodity);
   selectedCommodityRef.current = selectedCommodity;
 
   const selectedMetricRef = useRef(selectedMetric);
   selectedMetricRef.current = selectedMetric;
 
+  const thematicResultRef = useRef(thematicResult);
+  thematicResultRef.current = thematicResult;
+
   const allowDemoDataRef = useRef(allowDemoData);
   allowDemoDataRef.current = allowDemoData;
+
+  const showInfrastructureRef = useRef(showInfrastructure);
+  showInfrastructureRef.current = showInfrastructure;
+
+  const selectedFacilityIdRef = useRef(selectedFacilityId);
+  selectedFacilityIdRef.current = selectedFacilityId;
 
   const [gisResult, setGisResult] = useState<GisValidationResult | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [hoveredZoneName, setHoveredZoneName] = useState<string | null>(null);
+  const [hoveredText, setHoveredText] = useState<string | null>(null);
+  const [hoveredFacilityId, setHoveredFacilityId] = useState<string | null>(null);
 
   // 1. Fetch & Validate Candidate GeoJSON (runs once on mount)
   useEffect(() => {
@@ -261,17 +313,40 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
             f,
             selectedZoneId,
             isDark,
+            thematicResultRef.current,
             selectedCommodityRef.current,
             selectedMetricRef.current,
             allowDemoDataRef.current
           ),
+        zIndex: 1,
       });
       vectorLayerRef.current = vectorLayer;
 
-      // Initialize OpenLayers Map
+      // Facility Vector Source & Layer (Admin/Public Facilities)
+      const facilitySource = new VectorSource();
+      facilitySourceRef.current = facilitySource;
+
+      const facilityLayer = new VectorLayer({
+        source: facilitySource,
+        visible: showInfrastructureRef.current,
+        style: (f) => {
+          const fId = f.get('facilityId');
+          const isSelected = fId === selectedFacilityIdRef.current;
+          const isHovered = fId === hoveredFacilityId;
+          return getFacilityFeatureStyle(f, {
+            isSelected,
+            isHovered,
+            isDark,
+          });
+        },
+        zIndex: 50,
+      });
+      facilityLayerRef.current = facilityLayer;
+
+      // Initialize OpenLayers Map with both layers
       const map = new Map({
         target: mapElementRef.current,
-        layers: [vectorLayer],
+        layers: [vectorLayer, facilityLayer],
         controls: defaultControls({ zoom: false, rotate: false, attribution: false }),
         view: new View({
           projection: 'EPSG:3857',
@@ -301,8 +376,36 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
 
       // Feature Click Interaction
       map.on('singleclick', (evt) => {
+        let clickedFacilityId: string | null = null;
         let clickedZoneId: string | null = null;
 
+        // 1. Check facility marker click first (top layer)
+        if (facilityLayerRef.current && showInfrastructureRef.current) {
+          map.forEachFeatureAtPixel(
+            evt.pixel,
+            (feat) => {
+              const fId = feat.get('facilityId');
+              if (fId) {
+                clickedFacilityId = fId;
+                return true; // Stop iteration
+              }
+              return false;
+            },
+            {
+              layerFilter: (l) => l === facilityLayerRef.current,
+              hitTolerance: 8,
+            }
+          );
+        }
+
+        if (clickedFacilityId) {
+          if (onSelectFacilityRef.current) {
+            onSelectFacilityRef.current(clickedFacilityId);
+          }
+          return;
+        }
+
+        // 2. Fall back to Zone polygon click
         map.forEachFeatureAtPixel(
           evt.pixel,
           (feature) => {
@@ -327,34 +430,93 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
       map.on('pointermove', (evt) => {
         if (evt.dragging) return;
         const pixel = map.getEventPixel(evt.originalEvent);
-        let foundName: string | null = null;
+        let foundFacilityLabel: string | null = null;
+        let foundFacilityId: string | null = null;
+        let foundZoneName: string | null = null;
 
-        const hit = map.hasFeatureAtPixel(pixel, {
+        // 1. Check Facility marker hover
+        if (facilityLayerRef.current && showInfrastructureRef.current) {
+          map.forEachFeatureAtPixel(
+            pixel,
+            (feat) => {
+              const fId = feat.get('facilityId');
+              if (fId) {
+                foundFacilityId = fId;
+                const prec = feat.get('locationPrecision');
+                const title = feat.get('title');
+                const titleStr =
+                  typeof title === 'object' && title !== null
+                    ? title.en || title.om || title.am || fId
+                    : String(title || fId);
+                const precLabel =
+                  prec === 'zone_centroid'
+                    ? ' (Zone Centroid)'
+                    : prec === 'approximate'
+                    ? ' (Approximate)'
+                    : '';
+                foundFacilityLabel = `🏢 ${titleStr}${precLabel}`;
+                return true;
+              }
+              return false;
+            },
+            {
+              layerFilter: (l) => l === facilityLayerRef.current,
+              hitTolerance: 8,
+            }
+          );
+        }
+
+        if (foundFacilityId && foundFacilityLabel) {
+          setHoveredFacilityId(foundFacilityId);
+          setHoveredText(foundFacilityLabel);
+          const targetEl = map.getTargetElement();
+          if (targetEl) targetEl.style.cursor = 'pointer';
+          return;
+        } else {
+          setHoveredFacilityId(null);
+        }
+
+        // 2. Check Zone polygon hover
+        const hitZone = map.hasFeatureAtPixel(pixel, {
           layerFilter: (l) => l === vectorLayer,
         });
 
-        if (hit) {
+        if (hitZone) {
           map.forEachFeatureAtPixel(
             pixel,
             (feature) => {
-              const name = feature.get('name_en') || '';
-              const zid = feature.get('zone_id');
-              const activeComm = selectedCommodityRef.current;
-              const activeMet = selectedMetricRef.current;
+              const rawName = feature.get('name_en') || '';
+              const name = rawName.replace(' (OR)', '');
+              const zid = feature.get('zone_id') as CanonicalZoneId;
+              const activeThematic = thematicResultRef.current;
 
-              if (allowDemoDataRef.current && activeComm && zid) {
-                const metrics = getDemoZoneCommodityMetrics(zid, activeComm);
+              if (activeThematic && zid && activeThematic.valuesByZoneId) {
+                const zVal = activeThematic.valuesByZoneId[zid];
+                if (zVal && !zVal.isNoData) {
+                  const valStr =
+                    zVal.productionVolume !== null && zVal.productionVolume !== undefined
+                      ? `${zVal.productionVolume.toLocaleString()} ${activeThematic.dataset.unit || 'MT'}`
+                      : zVal.value !== null && zVal.value !== undefined
+                      ? `${zVal.value} Score`
+                      : 'No Data';
+                  const classLabel = THEMATIC_CLASS_LABELS[zVal.thematicClass];
+                  foundZoneName = `${name} • ${valStr} (${classLabel})`;
+                } else {
+                  foundZoneName = `${name} • No Data`;
+                }
+              } else if (allowDemoDataRef.current && selectedCommodityRef.current && zid) {
+                const metrics = getDemoZoneCommodityMetrics(zid, selectedCommodityRef.current);
                 let val: number | null | undefined = null;
                 if (metrics) {
-                  if (activeMet === 'production') val = metrics.production?.volumeMT;
-                  else if (activeMet === 'suitability') val = metrics.suitability?.score;
-                  else if (activeMet === 'investment_potential') val = metrics.investmentPotential?.score;
+                  if (selectedMetricRef.current === 'production') val = metrics.production?.volumeMT;
+                  else if (selectedMetricRef.current === 'suitability') val = metrics.suitability?.score;
+                  else if (selectedMetricRef.current === 'investment_potential') val = metrics.investmentPotential?.score;
                 }
-                const classRes = classifyThematicValue(activeComm, activeMet || 'production', val);
+                const classRes = classifyThematicValue(selectedCommodityRef.current, selectedMetricRef.current || 'production', val);
                 const valStr = val === null || val === undefined ? 'No Data' : val.toLocaleString();
-                foundName = `${name} • ${valStr} (${classRes.classLabel}) [DEMO]`;
+                foundZoneName = `${name} • ${valStr} (${classRes.classLabel}) [DEMO]`;
               } else {
-                foundName = name;
+                foundZoneName = name;
               }
               return true;
             },
@@ -364,9 +526,9 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
 
         const targetEl = map.getTargetElement();
         if (targetEl) {
-          targetEl.style.cursor = hit ? 'pointer' : '';
+          targetEl.style.cursor = hitZone ? 'pointer' : '';
         }
-        setHoveredZoneName(foundName);
+        setHoveredText(foundZoneName);
       });
 
       // Resize observer to auto-trigger map.updateSize()
@@ -386,6 +548,8 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
         mapInstanceRef.current = null;
         vectorSourceRef.current = null;
         vectorLayerRef.current = null;
+        facilitySourceRef.current = null;
+        facilityLayerRef.current = null;
       };
     } catch (err) {
       console.error('[OpenLayers Initialization Error]', err);
@@ -394,7 +558,77 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
     }
   }, [gisResult]);
 
-  // 3. Update Styles dynamically on theme, selectedZoneId, or thematic selection changes
+  // 3. Update Facility Layer Features when facilities, selectedCategory, or gisResult change
+  useEffect(() => {
+    if (!facilitySourceRef.current) return;
+    facilitySourceRef.current.clear();
+
+    if (!showInfrastructure || !Array.isArray(facilities) || facilities.length === 0) {
+      return;
+    }
+
+    const newFeatures: Feature<Point>[] = [];
+
+    for (const fac of facilities) {
+      if (selectedCategory !== 'all' && fac.category !== selectedCategory) {
+        continue;
+      }
+
+      let pointCoords: [number, number] | null = null;
+
+      // Handle zone_centroid or missing explicit coordinates
+      if (fac.locationPrecision === 'zone_centroid' || !fac.coordinates) {
+        const centroid = getZoneCentroidPoint(
+          fac.zoneId as CanonicalZoneId,
+          gisResult?.data || null
+        );
+        if (centroid) {
+          pointCoords = [centroid.lng, centroid.lat];
+        }
+      } else if (
+        fac.coordinates &&
+        Number.isFinite(fac.coordinates.lng) &&
+        Number.isFinite(fac.coordinates.lat)
+      ) {
+        pointCoords = [fac.coordinates.lng, fac.coordinates.lat];
+      }
+
+      if (pointCoords) {
+        const feat = new Feature({
+          geometry: new Point(fromLonLat(pointCoords)),
+          facilityId: fac.facilityId,
+          category: fac.category,
+          locationPrecision: fac.locationPrecision,
+          title: fac.title,
+          zoneId: fac.zoneId,
+          operationalStatus: fac.operationalStatus,
+        });
+        newFeatures.push(feat);
+      }
+    }
+
+    facilitySourceRef.current.addFeatures(newFeatures);
+  }, [facilities, selectedCategory, showInfrastructure, gisResult]);
+
+  // 4. Update Layer Visibility and Styles dynamically
+  useEffect(() => {
+    if (facilityLayerRef.current) {
+      facilityLayerRef.current.setVisible(showInfrastructure);
+      const isDark = resolvedTheme === 'dark';
+      facilityLayerRef.current.setStyle((f) => {
+        const fId = f.get('facilityId');
+        const isSelected = fId === selectedFacilityId;
+        const isHovered = fId === hoveredFacilityId;
+        return getFacilityFeatureStyle(f, {
+          isSelected,
+          isHovered,
+          isDark,
+        });
+      });
+    }
+  }, [showInfrastructure, selectedFacilityId, hoveredFacilityId, resolvedTheme]);
+
+  // 5. Update Zone Styles dynamically on theme, selectedZoneId, thematicResult or thematic selection changes
   useEffect(() => {
     if (!vectorLayerRef.current) return;
     const isDark = resolvedTheme === 'dark';
@@ -403,12 +637,13 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
         feature,
         selectedZoneId,
         isDark,
+        thematicResult,
         selectedCommodity,
         (selectedMetric as ThematicMetric) || 'production',
         allowDemoData
       )
     );
-  }, [selectedZoneId, selectedCommodity, selectedMetric, resolvedTheme, allowDemoData]);
+  }, [selectedZoneId, selectedCommodity, selectedMetric, thematicResult, resolvedTheme, allowDemoData]);
 
   // Map Navigation Handlers
   const handleZoomIn = () => {
@@ -457,9 +692,23 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
           </div>
         )}
 
-        {hoveredZoneName && (
+        {thematicResult && (
+          <div className="bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-950 backdrop-blur-md rounded-xl px-3 py-1.5 shadow-md text-xs font-mono font-bold flex items-center gap-1.5 animate-fadeIn">
+            <span className="w-2 h-2 rounded-full bg-white dark:bg-slate-950 animate-ping" />
+            <span>Verified: {thematicResult.dataset.referencePeriod.label}</span>
+          </div>
+        )}
+
+        {showInfrastructure && (
+          <div className="bg-blue-600 text-white dark:bg-blue-500 dark:text-slate-950 backdrop-blur-md rounded-xl px-3 py-1.5 shadow-md text-xs font-mono font-bold flex items-center gap-1.5 animate-fadeIn">
+            <Building className="w-3.5 h-3.5" />
+            <span>Facilities: {facilities.length} Active</span>
+          </div>
+        )}
+
+        {hoveredText && (
           <div className="bg-slate-900/90 text-amber-300 backdrop-blur-md border border-amber-500/40 rounded-xl px-3 py-1.5 shadow-md text-xs font-mono font-bold animate-fadeIn">
-            {hoveredZoneName}
+            {hoveredText}
           </div>
         )}
       </div>
@@ -490,12 +739,24 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
       </div>
 
       {/* Loading Overlay */}
-      {loading && (
+      {(loading || isLoadingThematic || isLoadingFacilities) && (
         <div className="absolute inset-0 z-30 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-white">
           <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
           <div className="text-center">
-            <p className="text-sm font-bold">Initializing OpenLayers GIS View...</p>
-            <p className="text-xs text-slate-400 mt-0.5">Reading 22 candidate ADM2 features (EPSG:4326 → EPSG:3857)</p>
+            <p className="text-sm font-bold">
+              {isLoadingFacilities
+                ? 'Loading Verified Infrastructure Layer...'
+                : isLoadingThematic
+                ? 'Loading Verified Thematic Layer...'
+                : 'Initializing OpenLayers GIS View...'}
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {isLoadingFacilities
+                ? 'Fetching published facilities from secure repository'
+                : isLoadingThematic
+                ? 'Joining canonical zone attributes with published dataset'
+                : 'Reading 22 candidate ADM2 features (EPSG:4326 → EPSG:3857)'}
+            </p>
           </div>
         </div>
       )}
@@ -520,6 +781,12 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
             <span className="w-3 h-3 rounded bg-emerald-500 border border-amber-500" />
             <span className="text-amber-800 dark:text-amber-300 font-semibold">Selected Zone</span>
           </div>
+          {showInfrastructure && (
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-700">
+              <span className="w-3 h-3 rounded-full bg-blue-600 border border-white dark:border-slate-900" />
+              <span className="text-blue-800 dark:text-blue-300 font-semibold">Facility Marker</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 font-mono text-[11px]">
@@ -533,3 +800,4 @@ export const OpenLayersMapContainer: React.FC<OpenLayersMapContainerProps> = ({
     </div>
   );
 };
+

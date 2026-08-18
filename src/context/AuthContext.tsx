@@ -156,6 +156,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
          *
          * Provisioning steps are in StaffManagementPage and the setup docs.
          */
+        //
+        // Both sides of the merge removed the auto-provisioning independently.
+        // His audit entry is the durable record; the console warning is what a
+        // developer running locally actually sees, since the audit write is
+        // swallowed on failure by design.
+        logAuditEvent({
+          actorUid: user.uid,
+          actorEmail: user.email || '',
+          actorDisplayName: user.displayName || 'Unregistered User',
+          actorRole: 'unknown',
+          module: 'authentication',
+          action: 'authorization_denied',
+          result: 'denied',
+          targetType: 'staff_account',
+          targetId: user.uid,
+          targetLabel: user.displayName || 'Unregistered User',
+          source: 'dashboard_ui',
+          reason: `No canonical staff profile found in Firestore at staffUsers/${user.uid}. Self-provisioning denied.`,
+        });
         console.warn(
           `[AuthContext] ${user.uid} signed in with no staffUsers document. ` +
             'Access refused. Create the record in Firestore to grant access.'

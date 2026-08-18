@@ -1,5 +1,6 @@
 import { PRODUCT_CATALOG } from '../data/productCatalog';
 import type { AgriculturalProduct, ProductCategory, ProductStatistics } from '../types/product';
+import { getPublishedProductStatistics as getStatsFromAdapter } from './productStatisticsService';
 
 /**
  * Product access layer — UI should call this service, not raw catalog arrays.
@@ -46,15 +47,16 @@ export async function searchPublishedProducts(query: string): Promise<Agricultur
 }
 
 /**
- * Future CMS hook — returns null until verified published statistics exist.
- * Do NOT invent substitute numbers.
+ * Product Statistics Adapter hook — resolves published + verified dataset statistics.
+ * Returns null if no eligible dataset exists.
  */
 export async function getPublishedProductStatistics(
-  _productId: string
+  productId: string
 ): Promise<ProductStatistics | null> {
-  return null;
+  return getStatsFromAdapter(productId);
 }
 
 export function getProductCategories(): ProductCategory[] {
   return ['cereal', 'cash_crop', 'oilseed', 'horticulture', 'livestock', 'dairy'];
 }
+

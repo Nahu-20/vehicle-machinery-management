@@ -180,7 +180,11 @@ export const ProductDetailPage: React.FC = () => {
             </section>
 
             <ProductRelatedServices relatedServiceIds={product.relatedServiceIds} />
-            <ProductSourceCard />
+            <ProductSourceCard
+              sources={statistics?.sources}
+              datasetTitle={statistics?.datasetTitle}
+              referencePeriodLabel={statistics?.referencePeriod?.label}
+            />
 
             <div className="rounded-2xl bg-[#063D2A] px-5 py-6 text-white dark:bg-emerald-950">
               <p className="text-sm font-semibold mb-3">{t('products_contact_cta_copy')}</p>

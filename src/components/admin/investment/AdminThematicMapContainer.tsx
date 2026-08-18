@@ -108,24 +108,27 @@ export function AdminThematicMapContainer({
   // Map zone values into a lookup table by zoneId
   const valueMap = React.useMemo(() => {
     const map = new Map<string, InvestmentZoneValue>();
-    zoneValues.forEach((v) => {
-      map.set(v.zoneId, v);
+    (zoneValues || []).forEach((v) => {
+      if (v && v.zoneId) {
+        map.set(v.zoneId, v);
+      }
     });
     return map;
   }, [zoneValues]);
 
   // Extract non-null numeric values across all zones
   const numericValues = React.useMemo(() => {
-    const isProd = dataset.metric === 'production';
+    const isProd = dataset?.metric === 'production';
     const vals: number[] = [];
-    zoneValues.forEach((v) => {
+    (zoneValues || []).forEach((v) => {
+      if (!v) return;
       const raw = isProd ? v.productionVolume : v.value;
       if (raw !== null && raw !== undefined && typeof raw === 'number' && !isNaN(raw)) {
         vals.push(raw);
       }
     });
     return vals.sort((a, b) => a - b);
-  }, [zoneValues, dataset.metric]);
+  }, [zoneValues, dataset?.metric]);
 
   // Calculate quantiles for production or general numeric distribution
   const quantiles = React.useMemo(() => {

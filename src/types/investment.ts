@@ -1,6 +1,8 @@
 import { CanonicalZoneId, CANONICAL_ZONE_IDS, isCanonicalZoneId } from '../features/investment-map/constants/canonicalZones';
 import { StaffRole } from './auth';
 
+export type { CanonicalZoneId };
+
 // ---------------------------------------------------------------------------
 // Legacy M6A Prototype Compatibility Types
 // ---------------------------------------------------------------------------
@@ -54,6 +56,7 @@ export type ValidationResult = InvestmentValidationResult;
 export type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected';
 
 export type LifecycleStatus = 'draft' | 'review' | 'published' | 'unpublished' | 'archived';
+export type InvestmentLifecycleStatus = LifecycleStatus;
 
 export type DatasetCategory =
   | 'production'
@@ -263,28 +266,124 @@ export interface InvestmentOpportunity {
 
 export type InfrastructureCategory =
   | 'road'
-  | 'irrigation'
   | 'electricity'
+  | 'irrigation'
   | 'warehouse'
-  | 'cold-storage'
+  | 'cold_storage'
   | 'processing'
+  | 'collection_center'
   | 'market'
-  | 'logistics';
+  | 'livestock_market'
+  | 'laboratory'
+  | 'veterinary'
+  | 'input_distribution'
+  | 'logistics'
+  | 'other';
 
-export interface InvestmentInfrastructure {
-  recordId: string;
+export type FacilityOperationalStatus =
+  | 'operational'
+  | 'under_construction'
+  | 'planned'
+  | 'temporarily_closed'
+  | 'inactive';
+
+export type FacilityOwnership =
+  | 'government'
+  | 'cooperative'
+  | 'private'
+  | 'ppp'
+  | 'ngo_development_partner'
+  | 'other';
+
+export type InfrastructureUnit =
+  | 'MT'
+  | 'tonnes'
+  | 'tonnes_per_day'
+  | 'm3'
+  | 'hectares'
+  | 'MW'
+  | 'kW'
+  | 'km'
+  | 'count'
+  | 'percent';
+
+export interface FacilityCapacity {
+  metricKey: string;
+  label?: MultilingualString;
+  numericValue: number | null;
+  unit: InfrastructureUnit | null;
+  referencePeriod?: string | null;
+}
+
+export type CapacityMetric = FacilityCapacity;
+
+export type LocationPrecision = 'exact' | 'approximate' | 'zone_centroid';
+
+export interface InvestmentFacility {
+  facilityId: string;
   zoneId: CanonicalZoneId;
   category: InfrastructureCategory;
-  title: string;
-  status: 'operational' | 'under_construction' | 'planned' | 'degraded';
-  capacity?: string;
-  locationNotes?: string;
+  title: MultilingualString;
+  description?: MultilingualString;
+  locationDescription?: MultilingualString;
+  coordinates: {
+    lat: number;
+    lng: number;
+  } | null;
+  locationPrecision: LocationPrecision;
+  operationalStatus: FacilityOperationalStatus;
+  ownership?: FacilityOwnership;
+  operatorName?: string;
+  capacities: FacilityCapacity[];
+  commodityKeys?: CommodityKey[];
+  commissioningYear?: number | null;
+  assessmentDate?: string | null;
+  referencePeriod?: string | null;
+  sourceIds: string[];
+  lifecycleStatus: InvestmentLifecycleStatus;
   verificationStatus: VerificationStatus;
+  internalNotes?: string;
+  rejectionReason?: string;
   version: number;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
   updatedBy: string;
+  submittedForReviewAt?: string;
+  submittedForReviewBy?: string;
+  verifiedAt?: string;
+  verifiedBy?: string;
+  publishedAt?: string;
+  publishedBy?: string;
+}
+
+// Backward compatibility alias for legacy code
+export type InvestmentInfrastructure = InvestmentFacility;
+
+export function normalizeInfrastructureCategory(rawCategory: string): InfrastructureCategory {
+  if (rawCategory === 'cold-storage') {
+    return 'cold_storage';
+  }
+  const validCategories: InfrastructureCategory[] = [
+    'road',
+    'electricity',
+    'irrigation',
+    'warehouse',
+    'cold_storage',
+    'processing',
+    'collection_center',
+    'market',
+    'livestock_market',
+    'laboratory',
+    'veterinary',
+    'input_distribution',
+    'logistics',
+    'other',
+  ];
+  if (validCategories.includes(rawCategory as InfrastructureCategory)) {
+    return rawCategory as InfrastructureCategory;
+  }
+  return 'other';
 }
 
 // ---------------------------------------------------------------------------
@@ -405,6 +504,30 @@ export interface PublicInvestmentOpportunity {
   estimatedInvestmentRange?: InvestmentOpportunityRange;
   landInformation?: InvestmentOpportunityLandInfo;
   responsibleOffice: string;
+  publishedAt: string;
+}
+
+export interface PublicInvestmentFacility {
+  facilityId: string;
+  zoneId: CanonicalZoneId;
+  category: InfrastructureCategory;
+  title: MultilingualString;
+  description?: MultilingualString;
+  locationDescription?: MultilingualString;
+  coordinates: {
+    lat: number;
+    lng: number;
+  } | null;
+  locationPrecision: LocationPrecision;
+  operationalStatus: FacilityOperationalStatus;
+  ownership?: FacilityOwnership;
+  operatorName?: string;
+  capacities: FacilityCapacity[];
+  commodityKeys?: CommodityKey[];
+  commissioningYear?: number | null;
+  assessmentDate?: string | null;
+  referencePeriod?: string | null;
+  sourceIds: string[];
   publishedAt: string;
 }
 
@@ -608,3 +731,59 @@ export function toPublicOpportunity(opp: InvestmentOpportunity): PublicInvestmen
     publishedAt: opp.publishedAt || opp.updatedAt,
   };
 }
+
+export function toPublicFacility(facility: InvestmentFacility): PublicInvestmentFacility | null {
+  if (facility.lifecycleStatus !== 'published' || facility.verificationStatus !== 'verified') {
+    return null;
+  }
+
+  // Location precision privacy enforcement:
+  // - exact: exposes approved exact lat/lng
+  // - approximate: exposes approved approximate lat/lng
+  // - zone_centroid: does NOT expose private exact coordinates, sets coordinates to null
+  let publicCoordinates: { lat: number; lng: number } | null = null;
+  if (facility.locationPrecision === 'exact' || facility.locationPrecision === 'approximate') {
+    if (
+      facility.coordinates &&
+      Number.isFinite(facility.coordinates.lat) &&
+      Number.isFinite(facility.coordinates.lng)
+    ) {
+      publicCoordinates = {
+        lat: facility.coordinates.lat,
+        lng: facility.coordinates.lng,
+      };
+    }
+  } else if (facility.locationPrecision === 'zone_centroid') {
+    publicCoordinates = null;
+  }
+
+  return {
+    facilityId: facility.facilityId,
+    zoneId: facility.zoneId,
+    category: facility.category,
+    title: facility.title,
+    description: facility.description,
+    locationDescription: facility.locationDescription,
+    coordinates: publicCoordinates,
+    locationPrecision: facility.locationPrecision,
+    operationalStatus: facility.operationalStatus,
+    ownership: facility.ownership,
+    operatorName: facility.operatorName,
+    capacities: Array.isArray(facility.capacities)
+      ? facility.capacities.map((c) => ({
+          metricKey: c.metricKey,
+          label: c.label,
+          numericValue: c.numericValue !== undefined && c.numericValue !== null ? c.numericValue : null,
+          unit: c.unit || null,
+          referencePeriod: c.referencePeriod || null,
+        }))
+      : [],
+    commodityKeys: facility.commodityKeys,
+    commissioningYear: facility.commissioningYear ?? null,
+    assessmentDate: facility.assessmentDate ?? null,
+    referencePeriod: facility.referencePeriod ?? null,
+    sourceIds: Array.isArray(facility.sourceIds) ? [...facility.sourceIds] : [],
+    publishedAt: facility.publishedAt || facility.updatedAt,
+  };
+}
+
