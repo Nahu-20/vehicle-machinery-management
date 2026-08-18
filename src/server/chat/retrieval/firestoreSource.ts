@@ -153,8 +153,24 @@ async function fetchAchievements(limit: number): Promise<Draft[]> {
 }
 
 async function fetchInvestment(limit: number): Promise<Draft[]> {
+  /*
+   * Both filters, because the rule requires both.
+   *
+   * The bot reads signed out, and firestore.rules grants anonymous access to
+   * these documents only where lifecycleStatus is published AND
+   * verificationStatus is verified. A list rule is evaluated against every
+   * document the query returns, so a query constrained on only the first
+   * sweeps in unverified rows and the whole query is refused — not filtered,
+   * refused. It failed with permission-denied on every request regardless of
+   * what the collection held, and Promise.allSettled upstream turned that into
+   * silence rather than an error.
+   *
+   * Verified against the live project: adding this line turns the same
+   * anonymous query from permission-denied into a result.
+   */
   const rows = await fetchDocs('investmentOpportunities', [
     where('lifecycleStatus', '==', 'published'),
+    where('verificationStatus', '==', 'verified'),
     fsLimit(limit),
   ]);
 
