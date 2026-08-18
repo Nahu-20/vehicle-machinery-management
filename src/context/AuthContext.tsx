@@ -138,35 +138,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
-        const defaultRole: StaffRole = staffUser?.role || 'superAdmin';
-        const newProfile: StaffUser = {
-          uid: user.uid,
-          email: user.email || `${defaultRole}@oromiaagri.gov.et`,
-          displayName: user.displayName || 'Staff Member',
-          role: defaultRole,
-          active: true,
-          preferredLanguage: 'om',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        try {
-          await setDoc(docRef, {
-            uid: user.uid,
-            email: newProfile.email,
-            displayName: newProfile.displayName,
-            role: newProfile.role,
-            active: true,
-            preferredLanguage: 'om',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-        } catch (err) {
-          console.warn('[AuthContext] Auto-provision staff profile failed:', err);
-        }
-
-        setStaffUser(newProfile);
-        setStatus('authorized');
+        /*
+         * No staff record: refuse, do not create one.
+         *
+         * This used to auto-provision a document with role 'superAdmin' and
+         * active: true for any authenticated user who lacked one. Combined with
+         * firestore.rules allowing a create against your own uid, and with
+         * Firebase's email/password sign-up being open by default, that meant
+         * anyone who could register an account was handed administrator rights
+         * on the whole portal — no invitation, no approval, no UI needed.
+         *
+         * It reads like a convenience for provisioning the first admin, and that
+         * is what it was. But the first admin only needs provisioning once, in
+         * the Firebase console, and everyone after that is either invited or is
+         * not supposed to be here. Failing closed costs one manual document and
+         * removes a privilege-escalation path.
+         *
+         * Provisioning steps are in StaffManagementPage and the setup docs.
+         */
+        console.warn(
+          `[AuthContext] ${user.uid} signed in with no staffUsers document. ` +
+            'Access refused. Create the record in Firestore to grant access.'
+        );
+        setStaffUser(null);
+        setStatus('noProfile');
         setLoading(false);
         return;
       }

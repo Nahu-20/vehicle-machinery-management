@@ -149,12 +149,20 @@ export function validateStaffProfile(
 
   // Validate role
   const role = data.role;
+  // Must stay in step with the StaffRole union above. fleetOfficer was missing
+  // from this list for four rounds: present in the union, in AuthContext's
+  // VALID_ROLES, in both permission tables, in firestore.rules and in the demo
+  // accounts — everywhere except the one function that gates real sign-in. A
+  // staff document with that role was rejected as 'unknownRole' and bounced to
+  // /admin/unauthorized. Demo mode never reaches this check, which is why it
+  // survived. fleetConsistencyTests asserts the two agree.
   const validRoles: StaffRole[] = [
     'superAdmin',
     'contentAdmin',
     'editor',
     'marketOfficer',
     'advisoryOfficer',
+    'fleetOfficer',
   ];
 
   if (typeof role !== 'string' || !validRoles.includes(role as StaffRole)) {

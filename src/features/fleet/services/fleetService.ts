@@ -140,21 +140,35 @@ export async function listAssets(filters: FleetAssetFilters = {}): Promise<Fleet
 
   const database = requireDb();
 
-  const constraints: QueryConstraint[] = [];
-  if (filters.zoneId && filters.zoneId !== 'all') {
-    constraints.push(where('zoneId', '==', filters.zoneId));
-  }
-  if (filters.status && filters.status !== 'all') {
-    constraints.push(where('status', '==', filters.status));
-  }
-  if (filters.assetType && filters.assetType !== 'all') {
-    constraints.push(where('assetType', '==', filters.assetType));
-  }
-  constraints.push(orderBy('assetId'));
-  constraints.push(fsLimit(1000));
+  /*
+   * Fetched whole, filtered here.
+   *
+   * The three filters used to be `where` clauses. Combined with orderBy(assetId)
+   * that needs a composite index per combination — seven of them — and none were
+   * declared, so picking any dropdown on the register threw failed-precondition.
+   * Adding seven indexes to filter a list this size is the wrong trade: a bureau
+   * register is tens to low hundreds of rows, and listDrivers already made the
+   * same call deliberately for the same reason.
+   *
+   * applyClientFilters below was already doing exactly this for search and
+   * service-due, which Firestore cannot express at all. The zone, status and
+   * type filters simply join them.
+   */
+  const snap = await getDocs(
+    query(collection(database, FLEET_ASSETS_COLLECTION), orderBy('assetId'), fsLimit(1000))
+  );
 
-  const snap = await getDocs(query(collection(database, FLEET_ASSETS_COLLECTION), ...constraints));
-  return applyClientFilters(snap.docs.map((d) => mapAsset(d.id, d.data())), filters);
+  return applyClientFilters(
+    snap.docs
+      .map((d) => mapAsset(d.id, d.data()))
+      .filter(
+        (a) =>
+          (!filters.zoneId || filters.zoneId === 'all' || a.zoneId === filters.zoneId) &&
+          (!filters.status || filters.status === 'all' || a.status === filters.status) &&
+          (!filters.assetType || filters.assetType === 'all' || a.assetType === filters.assetType)
+      ),
+    filters
+  );
 }
 
 /** Filters Firestore cannot express: substring search and derived service-due. */
@@ -366,8 +380,15 @@ export async function setAssetStatus(
         status: next,
         // Clearing rather than leaving stale: a returned asset showing its last
         // holder reads as still being out.
+        //
+        // custodianDriverId was missing from this list. The demo store cleared
+        // it (demoStore.demoSetStatus) and the live path did not, so a released
+        // machine kept a driver id pointing at whoever last had it — invisible
+        // on screen, because the name beside it was correctly blank, and
+        // invisible in demo mode, because demo mode does not run this code.
         custodianUid: next === 'assigned' ? extra.custodianUid : null,
         custodianName: next === 'assigned' ? extra.custodianName : null,
+        custodianDriverId: next === 'assigned' ? current.custodianDriverId ?? null : null,
         version: current.version + 1,
         updatedAt: serverTimestamp(),
         updatedByUid: actor.uid,

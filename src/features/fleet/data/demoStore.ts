@@ -134,8 +134,8 @@ export function demoSetStatus(
     status: next,
     // A machine that is no longer assigned must not keep showing a holder, or
     // the register reads as though somebody still has it.
-    custodianUid: next === 'assigned' ? current.custodianUid : undefined,
-    custodianName: next === 'assigned' ? current.custodianName : undefined,
+    custodianUid: next === 'assigned' ? current.custodianUid : null,
+    custodianName: next === 'assigned' ? current.custodianName : null,
     custodianDriverId: next === 'assigned' ? current.custodianDriverId : null,
   });
   notify();
@@ -202,8 +202,10 @@ export function demoReturnAsset(
     });
     mutateAsset(assignment.assetId, {
       status: next,
-      custodianUid: undefined,
-      custodianName: undefined,
+      // null, not undefined: the live path writes null, and in Firestore that is
+      // a stored value rather than an absent key.
+      custodianUid: null,
+      custodianName: null,
       custodianDriverId: null,
       currentMeter: asset.meterType === 'none' ? asset.currentMeter : meterIn,
     });
@@ -229,8 +231,10 @@ export function demoReportFault(workOrder: Omit<FleetWorkOrder, 'workOrderId'>):
       });
       mutateAsset(workOrder.assetId, {
         status: 'in_maintenance',
-        custodianUid: undefined,
-        custodianName: undefined,
+        custodianUid: null,
+        custodianName: null,
+        // A grounded machine is no longer with its driver either.
+        custodianDriverId: null,
       });
     }
   }

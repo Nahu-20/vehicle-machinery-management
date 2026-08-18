@@ -1046,6 +1046,40 @@ export function runFleetConsistencyTests(): TestResult[] {
     };
   });
 
+  check('Every StaffRole can actually sign in', 'Rules', () => {
+    /*
+     * validateStaffProfile (src/types/auth.ts) checks the role against a
+     * hard-coded array. fleetOfficer was missing from it for four rounds —
+     * present in the StaffRole union, in AuthContext's VALID_ROLES, in both
+     * permission tables, in firestore.rules and in the demo accounts, and
+     * absent from the one list that gates real sign-in. Any fleet officer would
+     * have been rejected as 'unknownRole' and bounced to /admin/unauthorized.
+     *
+     * Demo mode short-circuits before this check, which is exactly why nobody
+     * saw it. Read the array out of the source so the two cannot drift again.
+     */
+    const src = (() => {
+      try {
+        return readFileSync('src/types/auth.ts', 'utf8');
+      } catch {
+        return '';
+      }
+    })();
+    const block = src.match(/const validRoles: StaffRole\[\] = \[([\s\S]*?)\];/);
+    const listed = [...(block?.[1] ?? '').matchAll(/'([a-zA-Z]+)'/g)].map((m) => m[1]);
+    const known = Object.keys(ROLE_PERMISSIONS_MAP);
+    const missing = known.filter((r) => !listed.includes(r));
+
+    return {
+      passed: block !== null && missing.length === 0,
+      message:
+        missing.length === 0
+          ? 'Every role in ROLE_PERMISSIONS_MAP can pass profile validation.'
+          : 'A role exists in the permission table but cannot sign in — it will be rejected as unknownRole.',
+      details: { listed, missing },
+    };
+  });
+
   check('No rule guards a collection with no code behind it', 'Rules', () => {
     // fleetMeterReadings had a full rule block, a type, and nothing else — no
     // collection constant, no service, no query, no writer. A rule for something

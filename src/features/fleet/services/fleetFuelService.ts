@@ -9,7 +9,6 @@ import {
   runTransaction,
   serverTimestamp,
   Timestamp,
-  updateDoc,
   type QueryConstraint,
 } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
@@ -250,12 +249,36 @@ export async function voidFuelFill(
   }
 
   const database = requireDb();
-  // Only these three fields, matching what firestore.rules will accept on an
-  // existing slip. Anything else here would be rejected at the server.
-  await updateDoc(doc(database, FLEET_FUEL_LOGS_COLLECTION, fuelLogId), {
-    voidedAt: serverTimestamp(),
-    voidedByUid: actor.uid,
-    voidReason: why,
+  const ref = doc(database, FLEET_FUEL_LOGS_COLLECTION, fuelLogId);
+
+  /*
+   * Read before writing.
+   *
+   * This was a bare updateDoc. It would happily void a slip that was already
+   * voided, overwriting the original reason and the name of whoever voided it —
+   * losing the only record of why the correction happened. It would also turn a
+   * mistyped id into a raw Firestore not-found rather than a sentence anybody
+   * could act on. The demo path refused both; the live path did neither.
+   *
+   * A transaction rather than a get-then-write, so two clerks voiding the same
+   * slip cannot both pass the check.
+   */
+  await runTransaction(database, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error(`Fuel record ${fuelLogId} was not found.`);
+
+    const current = snap.data() as FleetFuelLog;
+    if (current.voidedAt) {
+      throw new Error('That fuel record is already voided.');
+    }
+
+    // Only these three fields, matching what firestore.rules accepts on an
+    // existing slip. Anything else here would be rejected at the server.
+    tx.update(ref, {
+      voidedAt: serverTimestamp(),
+      voidedByUid: actor.uid,
+      voidReason: why,
+    });
   });
 
   await logAuditEvent({

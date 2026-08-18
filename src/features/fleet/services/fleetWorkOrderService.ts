@@ -130,6 +130,9 @@ export async function reportFault(
         status: 'in_maintenance',
         custodianUid: null,
         custodianName: null,
+        // A grounded machine is no longer with its driver either. Omitting this
+        // left a driver id pointing at whoever last held it.
+        custodianDriverId: null,
         version: asset.version + 1,
         updatedAt: serverTimestamp(),
         updatedByUid: actor.uid,
