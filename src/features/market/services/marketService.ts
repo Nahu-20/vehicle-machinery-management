@@ -20,7 +20,12 @@ import {
   MARKET_COMMODITY_BY_KEY,
   type MarketUnitKey,
 } from '../constants/marketCommodities';
-import { latestPerSeries, toCanonicalUnit } from '../constants/marketVocabulary';
+import {
+  assessPriceEntry,
+  isLive,
+  latestPerSeries,
+  toCanonicalUnit,
+} from '../constants/marketVocabulary';
 
 /**
  * Recording what a commodity cost, and reading it back.
@@ -35,6 +40,26 @@ import { latestPerSeries, toCanonicalUnit } from '../constants/marketVocabulary'
 export const MARKET_PRICES_COLLECTION = 'marketPrices';
 
 export const isDemoMarket = (): boolean => isFirebaseDemoMode || !db;
+
+/**
+ * A price far enough from the last one that somebody should look again.
+ *
+ * Its own class rather than a plain Error so the page can offer to record it
+ * anyway instead of just refusing. The point is a pause, not a prohibition: the
+ * price may well be right, and a guard that cannot be overridden is a guard
+ * people route around by entering the wrong thing somewhere else.
+ */
+export class MarketPriceOutlierError extends Error {
+  constructor(
+    message: string,
+    public readonly price: number,
+    public readonly previousPrice: number,
+    public readonly deviationPercent: number
+  ) {
+    super(message);
+    this.name = 'MarketPriceOutlierError';
+  }
+}
 
 /** Firestore rejects undefined; optional fields must be dropped, not passed through. */
 function stripUndefined<T extends Record<string, any>>(obj: T): T {
@@ -102,6 +127,32 @@ export interface RecordPriceInput {
   unitKey: MarketUnitKey;
   /** The day it was seen at the market, not the day it was typed. */
   observedAt: Date;
+  /**
+   * Set once the officer has been shown an unusual-move warning and stands by
+   * the figure. Defaults false, so the warning cannot be skipped by accident.
+   */
+  confirmUnusual?: boolean;
+}
+
+/**
+ * The newest live price in a series, or null if this is the first.
+ *
+ * Filtered in memory off the recent observations rather than queried per
+ * series. A regional bureau records tens of series a week, so the newest few
+ * hundred rows always contain the last price for anything currently tracked,
+ * and it avoids making price entry depend on a composite index existing —
+ * which, on a project where the rules and indexes are edited by hand, is a
+ * dependency worth not having.
+ */
+export async function previousPriceFor(
+  commodityKey: string,
+  marketId: string
+): Promise<number | null> {
+  const observations = await listObservations();
+  const series = observations
+    .filter((o) => o.commodityKey === commodityKey && o.marketId === marketId && isLive(o))
+    .sort((a, b) => b.observedAt.toMillis() - a.observedAt.toMillis());
+  return series.length ? series[0].priceETB : null;
 }
 
 /**
@@ -157,6 +208,22 @@ export async function recordPrice(input: RecordPriceInput, actor: StaffUser): Pr
   const { priceETB, unitKey } = validatePrice(input);
   const market = MARKET_CENTRE_BY_ID[input.marketId];
 
+  // Compared after conversion, deliberately. The whole point is to catch the
+  // order-of-magnitude slip, and entering 92,000 per quintal and 920 per
+  // kilogram are the same mistake wearing different clothes.
+  if (!input.confirmUnusual) {
+    const previous = await previousPriceFor(input.commodityKey, input.marketId);
+    const verdict = assessPriceEntry(priceETB, previous);
+    if (!verdict.usual && previous != null && verdict.deviationPercent != null) {
+      throw new MarketPriceOutlierError(
+        verdict.message ?? 'That price is a long way from the last one.',
+        priceETB,
+        previous,
+        verdict.deviationPercent
+      );
+    }
+  }
+
   if (isDemoMarket()) {
     const id = `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     demoObservations.push({
@@ -208,6 +275,9 @@ export async function recordPrice(input: RecordPriceInput, actor: StaffUser): Pr
     targetType: 'marketPrice',
     targetId: ref.id,
     targetLabel: `${input.commodityKey} @ ${input.marketId} — ${priceETB.toLocaleString()} ETB/${unitKey}`,
+    // Worth knowing later which figures somebody overrode a warning to enter.
+    // If a price turns out to be wrong, this is the first place to look.
+    reason: input.confirmUnusual ? 'Confirmed past the unusual-move warning' : undefined,
   } as any);
 
   return ref.id;

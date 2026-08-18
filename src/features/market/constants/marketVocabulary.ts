@@ -151,6 +151,65 @@ export function latestPerSeries(observations: MarketPriceObservation[]): MarketP
   return points;
 }
 
+/* -------------------------------------------------------------- the guard */
+
+/**
+ * How far a price may move from the last one before somebody has to mean it.
+ *
+ * Thirty percent is wide on purpose. Staples genuinely swing — a harvest lands,
+ * a road closes — and a threshold tight enough to catch every typo would stop
+ * every real movement too, which trains people to click through the warning
+ * without reading it. This is set to catch the order-of-magnitude slip, the
+ * 92,000 for 9,200, not to police ordinary volatility.
+ */
+export const UNUSUAL_MOVE_PERCENT = 30;
+
+export interface PriceEntryAssessment {
+  /** False only when there is a previous price and the move exceeds the band. */
+  usual: boolean;
+  deviationPercent: number | null;
+  message?: string;
+}
+
+/**
+ * Is this price plausible, given the last one in its series?
+ *
+ * Price systems validate on entry against a band derived from the previous
+ * period's quotes, and this is the small version of that. It exists because a
+ * mistyped price is not one bad row: it is one bad row, and then a second bad
+ * row when the next honest price is measured against it. Exactly the shape of
+ * the fuel meter check.
+ *
+ * A first price cannot be unusual — there is nothing to be unusual against, and
+ * refusing it would make the series impossible to start.
+ */
+export function assessPriceEntry(
+  price: number,
+  previousPrice: number | null,
+  threshold = UNUSUAL_MOVE_PERCENT
+): PriceEntryAssessment {
+  if (previousPrice == null || previousPrice <= 0) {
+    return { usual: true, deviationPercent: null };
+  }
+
+  const deviation = ((price - previousPrice) / previousPrice) * 100;
+  const rounded = Math.round(deviation * 10) / 10;
+
+  if (Math.abs(deviation) <= threshold) {
+    return { usual: true, deviationPercent: rounded };
+  }
+
+  return {
+    usual: false,
+    deviationPercent: rounded,
+    message:
+      `${price.toLocaleString()} is ${Math.abs(rounded)}% ${
+        deviation > 0 ? 'above' : 'below'
+      } the last recorded ${previousPrice.toLocaleString()}. ` +
+      'Check the figure and the unit, then record it again to confirm.',
+  };
+}
+
 /** The live history of one series, newest first, for a detail view. */
 export function seriesHistory(
   observations: MarketPriceObservation[],

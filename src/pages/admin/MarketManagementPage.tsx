@@ -8,6 +8,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   Sparkles,
+  ChevronDown,
+  ChevronRight,
+  ShieldAlert,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -21,13 +24,15 @@ import {
   MARKET_UNITS,
   type MarketUnitKey,
 } from '../../features/market/constants/marketCommodities';
-import { enterableUnits } from '../../features/market/constants/marketVocabulary';
+import { enterableUnits, seriesHistory } from '../../features/market/constants/marketVocabulary';
 import {
   isDemoMarket,
   listLatestPrices,
+  listObservations,
+  MarketPriceOutlierError,
   recordPrice,
 } from '../../features/market/services/marketService';
-import type { MarketPricePoint } from '../../features/market/types/market';
+import type { MarketPriceObservation, MarketPricePoint } from '../../features/market/types/market';
 import { CANONICAL_ZONE_METADATA } from '../../features/investment-map/constants/canonicalZones';
 
 const INPUT =
@@ -56,9 +61,21 @@ export const MarketManagementPage: React.FC = () => {
   const [unitKey, setUnitKey] = useState<MarketUnitKey>(MARKET_COMMODITIES[0].canonicalUnit);
   const [observedAt, setObservedAt] = useState(todayIso());
 
+  // The unusual-move warning. Holding it as state rather than folding it into
+  // `error` is what lets the page offer to record the figure anyway: the
+  // officer is being asked to look again, not being refused.
+  const [outlier, setOutlier] = useState<MarketPriceOutlierError | null>(null);
+
+  // Every observation, kept so a row can show its own history without a second
+  // round trip per series.
+  const [observations, setObservations] = useState<MarketPriceObservation[]>([]);
+  const [expanded, setExpanded] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const all = await listObservations();
+      setObservations(all);
       setPoints(await listLatestPrices());
       setError(null);
     } catch (err) {
@@ -102,9 +119,12 @@ export const MarketManagementPage: React.FC = () => {
           price: parsed,
           unitKey,
           observedAt: new Date(`${observedAt}T00:00:00`),
+          // Only true on a second submit, after the warning has been read.
+          confirmUnusual: Boolean(outlier),
         },
         staffUser
       );
+      setOutlier(null);
       const name = getLocalizedText(MARKET_COMMODITY_BY_KEY[commodityKey].name);
       const centre = getLocalizedText(MARKET_CENTRE_BY_ID[marketId].name);
       setNotice(`${name} at ${centre} recorded.`);
@@ -112,7 +132,13 @@ export const MarketManagementPage: React.FC = () => {
       setShowForm(false);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not record the price.');
+      if (err instanceof MarketPriceOutlierError) {
+        // Not an error banner: the form stays filled and the button becomes a
+        // deliberate confirmation.
+        setOutlier(err);
+      } else {
+        setError(err instanceof Error ? err.message : 'Could not record the price.');
+      }
     } finally {
       setBusy(false);
     }
@@ -194,7 +220,10 @@ export const MarketManagementPage: React.FC = () => {
             <label className={LABEL}>Commodity</label>
             <select
               value={commodityKey}
-              onChange={(e) => setCommodityKey(e.target.value)}
+              onChange={(e) => {
+                setCommodityKey(e.target.value);
+                setOutlier(null);
+              }}
               className={INPUT}
             >
               {(
@@ -218,7 +247,14 @@ export const MarketManagementPage: React.FC = () => {
 
           <div>
             <label className={LABEL}>Market centre</label>
-            <select value={marketId} onChange={(e) => setMarketId(e.target.value)} className={INPUT}>
+            <select
+              value={marketId}
+              onChange={(e) => {
+                setMarketId(e.target.value);
+                setOutlier(null);
+              }}
+              className={INPUT}
+            >
               {MARKET_CENTRES.map((m) => (
                 <option key={m.marketId} value={m.marketId}>
                   {getLocalizedText(m.name)} — {CANONICAL_ZONE_METADATA[m.zoneId].displayName}
@@ -245,7 +281,10 @@ export const MarketManagementPage: React.FC = () => {
             <label className={LABEL}>Price (ETB)</label>
             <input
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              onChange={(e) => {
+                setPrice(e.target.value);
+                setOutlier(null);
+              }}
               inputMode="decimal"
               placeholder="9200"
               className={INPUT}
@@ -274,10 +313,28 @@ export const MarketManagementPage: React.FC = () => {
             </p>
           </div>
 
+          {outlier && (
+            <div className="md:col-span-2 lg:col-span-3 bg-amber-500/10 border border-amber-500/40 text-amber-800 dark:text-amber-300 rounded-2xl p-4 text-xs flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-bold">Check this figure</p>
+                <p>{outlier.message}</p>
+                <p className="text-[11px] opacity-80">
+                  Most often this is a unit: {(outlier.price / 100).toLocaleString()} per quintal
+                  and {outlier.price.toLocaleString()} per kilogram are the same slip. If the price
+                  really did move, record it again and it will be saved.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-end justify-end gap-3">
             <button
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={() => {
+                setOutlier(null);
+                setShowForm(false);
+              }}
               className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs"
             >
               Cancel
@@ -285,9 +342,13 @@ export const MarketManagementPage: React.FC = () => {
             <button
               type="submit"
               disabled={busy}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-bold text-xs shadow"
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs shadow text-white ${
+                outlier
+                  ? 'bg-amber-600 hover:bg-amber-700 disabled:bg-amber-600/50'
+                  : 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50'
+              }`}
             >
-              {busy ? 'Recording…' : 'Record price'}
+              {busy ? 'Recording…' : outlier ? 'Record it anyway' : 'Record price'}
             </button>
           </div>
         </form>
@@ -328,10 +389,29 @@ export const MarketManagementPage: React.FC = () => {
                 {rows.map((p) => {
                   const commodity = MARKET_COMMODITY_BY_KEY[p.commodityKey];
                   const centre = MARKET_CENTRE_BY_ID[p.marketId];
+                  const key = `${p.commodityKey}::${p.marketId}`;
+                  const isOpen = expanded === key;
+                  const history = isOpen
+                    ? seriesHistory(observations, p.commodityKey, p.marketId)
+                    : [];
+
                   return (
-                    <tr key={p.observationId} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <React.Fragment key={p.observationId}>
+                    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                       <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
-                        {commodity ? getLocalizedText(commodity.name) : p.commodityKey}
+                        <button
+                          type="button"
+                          onClick={() => setExpanded(isOpen ? null : key)}
+                          className="inline-flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400"
+                          title="Show every price recorded for this commodity at this market"
+                        >
+                          {isOpen ? (
+                            <ChevronDown className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          {commodity ? getLocalizedText(commodity.name) : p.commodityKey}
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                         {centre ? getLocalizedText(centre.name) : p.marketId}
@@ -355,9 +435,9 @@ export const MarketManagementPage: React.FC = () => {
                           <span
                             className={`inline-flex items-center gap-1 font-bold ${
                               p.trend === 'up'
-                                ? 'text-red-600 dark:text-red-400'
-                                : p.trend === 'down'
                                 ? 'text-emerald-600 dark:text-emerald-400'
+                                : p.trend === 'down'
+                                ? 'text-red-600 dark:text-red-400'
                                 : 'text-slate-500 dark:text-slate-400'
                             }`}
                           >
@@ -378,6 +458,70 @@ export const MarketManagementPage: React.FC = () => {
                         {p.observedAt.toDate().toLocaleDateString()}
                       </td>
                     </tr>
+
+                    {isOpen && (
+                      <tr className="bg-slate-50/60 dark:bg-slate-950/40">
+                        <td colSpan={6} className="px-6 py-4">
+                          <p className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">
+                            Every price recorded for this series
+                          </p>
+                          {history.length <= 1 ? (
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              Only one price so far. A second gives it a direction.
+                            </p>
+                          ) : (
+                            <ul className="space-y-1.5">
+                              {history.map((o, i) => {
+                                // Ordered newest first, so the comparison is
+                                // against the next item along, not the previous.
+                                const earlier = history[i + 1];
+                                const move = earlier
+                                  ? ((o.priceETB - earlier.priceETB) / earlier.priceETB) * 100
+                                  : null;
+                                return (
+                                  <li
+                                    key={o.observationId}
+                                    className="flex items-center justify-between gap-4 text-xs"
+                                  >
+                                    <span className="text-slate-500 dark:text-slate-400 tabular-nums">
+                                      {o.observedAt.toDate().toLocaleDateString()}
+                                    </span>
+                                    <span className="font-bold text-slate-900 dark:text-white tabular-nums">
+                                      {o.priceETB.toLocaleString()} ETB
+                                    </span>
+                                    <span
+                                      className={`font-bold tabular-nums w-16 text-right ${
+                                        move == null
+                                          ? 'text-slate-400'
+                                          : move > 0
+                                          ? 'text-emerald-600 dark:text-emerald-400'
+                                          : move < 0
+                                          ? 'text-red-600 dark:text-red-400'
+                                          : 'text-slate-500'
+                                      }`}
+                                    >
+                                      {move == null
+                                        ? 'first'
+                                        : `${move > 0 ? '+' : ''}${Math.round(move * 10) / 10}%`}
+                                    </span>
+                                    <span className="text-slate-400 dark:text-slate-500 truncate flex-1 text-right">
+                                      {o.recordedByName}
+                                      {o.enteredUnitKey !== o.unitKey && (
+                                        <span className="ml-2 text-[11px] italic">
+                                          entered {o.enteredPriceETB.toLocaleString()}/
+                                          {o.enteredUnitKey}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
