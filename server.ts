@@ -5,6 +5,7 @@ import { createServer as createViteServer } from 'vite';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
+import { handleInvestmentMutation } from './src/server/investmentApi';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -31,6 +32,17 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Global CORS and Preflight handler
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-firebase-id-token, x-actor-uid');
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+    next();
+  });
+
   app.use(express.json());
 
   // Serve static GIS candidate assets directly via Express to ensure fast streaming without Vite middleware buffering
@@ -43,11 +55,24 @@ async function startServer() {
     },
   }));
 
-  // Trusted Backend Endpoint: Investment CMS Mutations & Authoritative Audit Logging
-  app.post('/api/investment/mutate', async (req: Request, res: Response) => {
-    const { handleInvestmentMutation } = await import('./src/server/investmentApi.js');
-    return handleInvestmentMutation(req, res);
-  });
+  // Trusted Backend Endpoint: Investment CMS Mutations via Firebase Functions HTTPS Callable protocol
+  const handleInvestmentRoute = async (req: Request, res: Response) => {
+    try {
+      return await handleInvestmentMutation(req, res);
+    } catch (err: any) {
+      console.error('[InvestmentMutateEndpoint] Error processing mutation:', err);
+      return res.status(500).json({
+        error: {
+          message: err?.message || 'Internal server error processing investment mutation',
+          status: 'INTERNAL',
+          details: { code: 'INTERNAL_ERROR' },
+        },
+      });
+    }
+  };
+
+  app.post('/investmentMutate', handleInvestmentRoute);
+  app.post('/:project/:region/investmentMutate', handleInvestmentRoute);
 
   // Health check
   app.get('/api/health', (req: Request, res: Response) => {

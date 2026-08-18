@@ -11,6 +11,7 @@ import {
   CANONICAL_ZONE_METADATA,
   CanonicalZoneInfo,
 } from '../../features/investment-map/constants/canonicalZones';
+import { callInvestmentCallable } from './investmentMutationClient';
 
 export interface ZoneDirectoryRow {
   zoneInfo: CanonicalZoneInfo;
@@ -77,23 +78,18 @@ export async function createOrUpdateZoneProfile(
     throw new Error(`Invalid canonical zone_id: "${input.zoneId}"`);
   }
 
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'save_zone_profile',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload: input,
-    }),
-  });
+  const res = await callInvestmentCallable<InvestmentZoneProfile>(
+    'save_zone_profile',
+    input,
+    expectedVersion,
+    actor
+  );
 
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to save zone profile for ${input.zoneId}`);
+  if (!res.data) {
+    throw new Error(res.error || 'Failed to save zone profile');
   }
 
-  return resData.data as InvestmentZoneProfile;
+  return res.data;
 }
 
 export async function publishZoneProfile(
@@ -105,21 +101,16 @@ export async function publishZoneProfile(
     throw new Error(`Invalid canonical zone_id: "${zoneId}"`);
   }
 
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'publish_zone_profile',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload: { zoneId },
-    }),
-  });
+  const res = await callInvestmentCallable<InvestmentZoneProfile>(
+    'publish_zone_profile',
+    { zoneId },
+    expectedVersion,
+    actor
+  );
 
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to publish zone profile for ${zoneId}`);
+  if (!res.data) {
+    throw new Error(res.error || 'Failed to publish zone profile');
   }
 
-  return resData.data as InvestmentZoneProfile;
+  return res.data;
 }

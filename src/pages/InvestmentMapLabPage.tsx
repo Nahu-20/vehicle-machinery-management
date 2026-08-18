@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { UnifiedMapContainer } from '../features/investment-map/components/UnifiedMapContainer';
 import { ZoneProfilePanel } from '../features/investment-map/components/ZoneProfilePanel';
 import { ThematicSelectorBar } from '../features/investment-map/components/ThematicSelectorBar';
@@ -21,11 +21,17 @@ import {
   XCircle,
   MapPin,
   Sparkles,
+  Database,
+  FlaskConical,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { GisValidationResult } from '../features/investment-map/types/gis';
 import { OFFICIAL_GIS_METADATA, getZoneFeatureById } from '../features/investment-map/services/gisLoader';
 import { useSelectedZone } from '../features/investment-map/hooks/useSelectedZone';
+import {
+  fetchPublicThematicDataset,
+  PublicThematicDatasetResult,
+} from '../features/investment-map/services/publicThematicInvestmentService';
 
 export const InvestmentMapLabPage: React.FC = () => {
   const [mountMap, setMountMap] = useState<boolean>(true);
@@ -35,6 +41,43 @@ export const InvestmentMapLabPage: React.FC = () => {
   // Milestone M6A Product Thematic Map State
   const [selectedCommodity, setSelectedCommodity] = useState<CommodityKey | null>(null);
   const [selectedMetric, setSelectedMetric] = useState<ThematicMetric>('production');
+
+  // Lab Data Mode: Prioritize real published datasets vs forced synthetic demo fixtures
+  const [useRealDatasets, setUseRealDatasets] = useState<boolean>(true);
+  const [thematicResult, setThematicResult] = useState<PublicThematicDatasetResult | null>(null);
+  const [isLoadingThematic, setIsLoadingThematic] = useState<boolean>(false);
+
+  // Fetch verified thematic dataset when commodity/metric changes
+  useEffect(() => {
+    let isCancelled = false;
+    if (!selectedCommodity || !useRealDatasets) {
+      setThematicResult(null);
+      return;
+    }
+
+    setIsLoadingThematic(true);
+    fetchPublicThematicDataset(selectedCommodity, selectedMetric)
+      .then((res) => {
+        if (!isCancelled) {
+          setThematicResult(res);
+        }
+      })
+      .catch((err) => {
+        console.error('[InvestmentMapLabPage] Thematic dataset fetch error:', err);
+        if (!isCancelled) {
+          setThematicResult(null);
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsLoadingThematic(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedCommodity, selectedMetric, useRealDatasets]);
 
   const handleGisVerified = useCallback((res: GisValidationResult) => {
     setGisResult(res);
@@ -170,7 +213,7 @@ export const InvestmentMapLabPage: React.FC = () => {
           </div>
         </div>
 
-        {/* M6A Product Thematic Map Controls & Demo Banner */}
+        {/* M6A Product Thematic Map Controls & Data Mode Selector */}
         <div className="space-y-3">
           <ThematicSelectorBar
             selectedCommodity={selectedCommodity}
@@ -178,7 +221,49 @@ export const InvestmentMapLabPage: React.FC = () => {
             onSelectCommodity={setSelectedCommodity}
             onSelectMetric={setSelectedMetric}
           />
-          {selectedCommodity && <DemoDataBanner />}
+
+          {/* Lab Data Mode Selector */}
+          {selectedCommodity && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-2xs">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-700 dark:text-slate-300">Data Source Mode:</span>
+                <span className="text-slate-500">
+                  {thematicResult
+                    ? `Active: Published Official Dataset (${thematicResult.dataset.referencePeriod.label})`
+                    : useRealDatasets
+                    ? 'No official published dataset found for this commodity/metric.'
+                    : 'Active: Synthetic Development Fixtures'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={() => setUseRealDatasets(true)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
+                    useRealDatasets
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                  }`}
+                >
+                  <Database className="w-3.5 h-3.5" />
+                  <span>Official Verified</span>
+                </button>
+                <button
+                  onClick={() => setUseRealDatasets(false)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
+                    !useRealDatasets
+                      ? 'bg-amber-600 text-white shadow-2xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                  }`}
+                >
+                  <FlaskConical className="w-3.5 h-3.5" />
+                  <span>Synthetic Lab Fixtures</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {selectedCommodity && !thematicResult && !useRealDatasets && <DemoDataBanner />}
         </div>
 
         {/* Desktop Split View: Map (~68%) + Zone Profile Panel (~32%) */}
@@ -203,6 +288,9 @@ export const InvestmentMapLabPage: React.FC = () => {
                   selectedZoneId={selectedZoneId}
                   selectedCommodity={selectedCommodity}
                   selectedMetric={selectedMetric}
+                  thematicResult={thematicResult}
+                  isLoadingThematic={isLoadingThematic}
+                  allowDemoData={!useRealDatasets}
                   onSelectZone={(zoneId) => selectZone(zoneId)}
                 />
                 <MapLegend
@@ -225,7 +313,9 @@ export const InvestmentMapLabPage: React.FC = () => {
               selectedFeature={selectedFeature}
               selectedCommodity={selectedCommodity}
               selectedMetric={selectedMetric}
+              thematicResult={thematicResult}
               onClearSelection={clearSelection}
+              isPublic={false}
             />
           </div>
         </div>

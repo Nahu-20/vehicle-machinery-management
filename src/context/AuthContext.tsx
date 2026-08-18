@@ -127,35 +127,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
-        const defaultRole: StaffRole = staffUser?.role || 'superAdmin';
-        const newProfile: StaffUser = {
-          uid: user.uid,
-          email: user.email || `${defaultRole}@oromiaagri.gov.et`,
-          displayName: user.displayName || 'Staff Member',
-          role: defaultRole,
-          active: true,
-          preferredLanguage: 'om',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        try {
-          await setDoc(docRef, {
-            uid: user.uid,
-            email: newProfile.email,
-            displayName: newProfile.displayName,
-            role: newProfile.role,
-            active: true,
-            preferredLanguage: 'om',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-        } catch (err) {
-          console.warn('[AuthContext] Auto-provision staff profile failed:', err);
-        }
-
-        setStaffUser(newProfile);
-        setStatus('authorized');
+        logAuditEvent({
+          actorUid: user.uid,
+          actorEmail: user.email || '',
+          actorDisplayName: user.displayName || 'Unregistered User',
+          actorRole: 'unknown',
+          module: 'authentication',
+          action: 'authorization_denied',
+          result: 'denied',
+          targetType: 'staff_account',
+          targetId: user.uid,
+          targetLabel: user.displayName || 'Unregistered User',
+          source: 'dashboard_ui',
+          reason: `No canonical staff profile found in Firestore at staffUsers/${user.uid}. Self-provisioning denied.`,
+        });
+        setStaffUser(null);
+        setStatus('noProfile');
         setLoading(false);
         return;
       }

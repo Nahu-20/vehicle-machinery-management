@@ -2,6 +2,7 @@ import { db } from '../../lib/firebase';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { InvestmentSource, InvestmentDataset } from '../../types/investment';
 import { StaffUser } from '../../types/auth';
+import { callInvestmentCallable } from './investmentMutationClient';
 
 export async function getSource(sourceId: string): Promise<InvestmentSource | null> {
   if (!db) return null;
@@ -31,22 +32,34 @@ export async function createSource(
   input: Omit<
     InvestmentSource,
     'version' | 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy' | 'status'
-  >
+  >,
+  expectedVersion?: number
 ): Promise<InvestmentSource> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'save_source',
-      actorUid: actor.uid,
-      payload: input,
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to create source "${input.sourceId}"`);
+  const res = await callInvestmentCallable<InvestmentSource>(
+    'save_source',
+    input,
+    expectedVersion,
+    actor
+  );
+  if (!res.data) {
+    throw new Error(res.error || 'Failed to create source');
   }
+  return res.data;
+}
 
-  return resData.data as InvestmentSource;
+export async function deleteSource(
+  actor: StaffUser,
+  sourceId: string,
+  expectedVersion?: number
+): Promise<{ success: boolean; deletedId: string }> {
+  const res = await callInvestmentCallable<{ deletedId: string }>(
+    'delete_source',
+    { sourceId },
+    expectedVersion,
+    actor
+  );
+  return {
+    success: res.success,
+    deletedId: res.deletedId || res.data?.deletedId || sourceId,
+  };
 }

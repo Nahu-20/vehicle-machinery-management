@@ -7,6 +7,16 @@ import {
   CanonicalZoneId,
 } from '../features/investment-map/constants/canonicalZones';
 import { StaffRole, Permission } from '../types/auth';
+import {
+  InfrastructureCategory,
+  FacilityOperationalStatus,
+  FacilityOwnership,
+  InfrastructureUnit,
+  FacilityCapacity,
+  LocationPrecision,
+  InvestmentFacility,
+  normalizeInfrastructureCategory,
+} from '../types/investment';
 
 const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
   superAdmin: [
@@ -48,6 +58,10 @@ function checkStaffPermission(staffData: any, requiredPermission: Permission): b
 
 // In-Memory Storage Adapter Fallback for Dev & Sandbox Containers
 const memDb = new Map<string, Map<string, any>>();
+
+export function resetInvestmentDbForTesting() {
+  memDb.clear();
+}
 
 function getMemCol(collection: string) {
   if (!memDb.has(collection)) {
@@ -99,14 +113,18 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
 
     // 1. Authenticate caller
     let actorUid: string | null = null;
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const idToken = authHeader.split('Bearer ')[1];
+    const authHeader = req.headers?.authorization;
+    const customTokenHeader = req.headers?.['x-firebase-id-token'] as string | undefined;
+    const idToken = (authHeader && authHeader.startsWith('Bearer '))
+      ? authHeader.split('Bearer ')[1]
+      : (customTokenHeader || req.body?.idToken || null);
+
+    if (idToken) {
       try {
         const decoded = await getAuth().verifyIdToken(idToken);
         actorUid = decoded.uid;
       } catch (authErr) {
-        console.warn('[InvestmentApi] Bearer token verification warning:', authErr);
+        console.warn('[InvestmentApi] Token verification warning:', authErr);
       }
     }
 
@@ -1219,37 +1237,664 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
         return res.json({ success: true, data: updatedConfig });
       }
 
+      case 'save_facility':
       case 'save_infrastructure': {
-        if (!checkStaffPermission(staffData, 'investment.edit') && !checkStaffPermission(staffData, 'investment.datasets.manage')) {
-          return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Requires investment editing permission' });
+        if (!checkStaffPermission(staffData, 'investment.edit')) {
+          return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Requires investment.edit permission' });
         }
 
-        const infra = payload || {};
-        if (!infra.recordId) {
-          return res.status(400).json({ success: false, code: 'INVALID_RECORD_ID', error: 'Missing recordId' });
+        const facilityInput = payload || {};
+        const facilityId = facilityInput.facilityId || facilityInput.recordId;
+        if (!facilityId || typeof facilityId !== 'string' || facilityId.trim() === '') {
+          return res.status(400).json({ success: false, code: 'INVALID_FACILITY_ID', error: 'Missing or invalid facilityId' });
         }
 
-        if (!isCanonicalZoneId(infra.zoneId)) {
-          return res.status(400).json({ success: false, code: 'INVALID_ZONE_ID', error: `Invalid canonical zoneId: "${infra.zoneId}"` });
+        if (!isCanonicalZoneId(facilityInput.zoneId)) {
+          return res.status(400).json({ success: false, code: 'INVALID_ZONE_ID', error: `Invalid canonical zoneId: "${facilityInput.zoneId}"` });
         }
 
-        const docSnap = await safeGetDoc('investmentInfrastructure', infra.recordId);
+        // Validate Category
+        const rawCategory = facilityInput.category;
+        const validCategories: InfrastructureCategory[] = [
+          'road', 'electricity', 'irrigation', 'warehouse', 'cold_storage', 'processing',
+          'collection_center', 'market', 'livestock_market', 'laboratory', 'veterinary',
+          'input_distribution', 'logistics', 'other'
+        ];
+        const normalizedCategory = normalizeInfrastructureCategory(rawCategory);
+        if (!rawCategory || (!validCategories.includes(rawCategory) && rawCategory !== 'cold-storage')) {
+          return res.status(400).json({ success: false, code: 'INVALID_INFRASTRUCTURE_CATEGORY', error: `Invalid infrastructure category: "${rawCategory}"` });
+        }
+
+        // Validate Coordinates if provided
+        if (facilityInput.coordinates !== null && facilityInput.coordinates !== undefined) {
+          const { lat, lng } = facilityInput.coordinates;
+          if (
+            typeof lat !== 'number' || !Number.isFinite(lat) || lat < -90 || lat > 90 ||
+            typeof lng !== 'number' || !Number.isFinite(lng) || lng < -180 || lng > 180
+          ) {
+            return res.status(400).json({ success: false, code: 'INVALID_COORDINATES', error: 'Coordinates must have finite numbers with -90 <= lat <= 90 and -180 <= lng <= 180' });
+          }
+        }
+
+        // Validate Location Precision
+        const validPrecisions: LocationPrecision[] = ['exact', 'approximate', 'zone_centroid'];
+        const locationPrecision: LocationPrecision = facilityInput.locationPrecision && validPrecisions.includes(facilityInput.locationPrecision)
+          ? facilityInput.locationPrecision
+          : 'exact';
+
+        // Validate Operational Status
+        const validOperationalStatuses: FacilityOperationalStatus[] = [
+          'operational', 'under_construction', 'planned', 'temporarily_closed', 'inactive'
+        ];
+        const operationalStatus: FacilityOperationalStatus = validOperationalStatuses.includes(facilityInput.operationalStatus)
+          ? facilityInput.operationalStatus
+          : validOperationalStatuses.includes(facilityInput.status)
+            ? facilityInput.status
+            : 'operational';
+
+        // Validate Ownership
+        const validOwnerships: FacilityOwnership[] = [
+          'government', 'cooperative', 'private' ,'ppp', 'ngo_development_partner', 'other'
+        ];
+        const ownership: FacilityOwnership | undefined = facilityInput.ownership && validOwnerships.includes(facilityInput.ownership)
+          ? facilityInput.ownership
+          : undefined;
+
+        // Validate Capacities
+        const validUnits: InfrastructureUnit[] = [
+          'MT', 'tonnes', 'tonnes_per_day', 'm3', 'hectares', 'MW', 'kW', 'km', 'count', 'percent'
+        ];
+        const parsedCapacities: FacilityCapacity[] = [];
+        if (facilityInput.capacities !== undefined && facilityInput.capacities !== null) {
+          if (!Array.isArray(facilityInput.capacities)) {
+            return res.status(400).json({ success: false, code: 'INVALID_CAPACITY', error: 'capacities must be an array' });
+          }
+          for (const cap of facilityInput.capacities) {
+            if (!cap.metricKey || typeof cap.metricKey !== 'string' || cap.metricKey.trim() === '') {
+              return res.status(400).json({ success: false, code: 'INVALID_CAPACITY', error: 'Capacity entry must have a non-empty metricKey' });
+            }
+            if (cap.numericValue !== null && cap.numericValue !== undefined) {
+              if (typeof cap.numericValue !== 'number' || !Number.isFinite(cap.numericValue)) {
+                return res.status(400).json({ success: false, code: 'INVALID_CAPACITY', error: `Capacity metric "${cap.metricKey}" numericValue must be a finite number or null` });
+              }
+              if (cap.numericValue < 0) {
+                return res.status(400).json({ success: false, code: 'INVALID_CAPACITY', error: `Capacity metric "${cap.metricKey}" cannot have a negative numericValue` });
+              }
+            }
+            if (cap.unit !== null && cap.unit !== undefined && !validUnits.includes(cap.unit)) {
+              return res.status(400).json({ success: false, code: 'INVALID_CAPACITY', error: `Invalid capacity unit: "${cap.unit}"` });
+            }
+            parsedCapacities.push({
+              metricKey: cap.metricKey.trim(),
+              label: cap.label,
+              numericValue: cap.numericValue !== undefined && cap.numericValue !== null ? cap.numericValue : null,
+              unit: cap.unit || null,
+              referencePeriod: cap.referencePeriod || null,
+            });
+          }
+        }
+
+        // Validate Sources if supplied
+        const sourceIds: string[] = Array.isArray(facilityInput.sourceIds) ? facilityInput.sourceIds : [];
+
+        // Title validation
+        const title = typeof facilityInput.title === 'string'
+          ? { en: facilityInput.title }
+          : facilityInput.title || { en: '' };
+
+        const docSnap = await safeGetDoc('investmentInfrastructure', facilityId);
         const existing = docSnap.exists ? docSnap.data() : null;
 
-        const newVersion = (existing?.version || 0) + 1;
-        const updatedInfra = {
+        if (existing) {
+          if (typeof expectedVersion === 'number' && existing.version !== expectedVersion) {
+            return res.status(409).json({
+              success: false,
+              code: 'VERSION_CONFLICT',
+              error: `Version conflict: Expected version ${expectedVersion}, but document is at version ${existing.version}`,
+            });
+          }
+
+          // Locked States Check: Only draft and unpublished can be directly edited
+          if (existing.lifecycleStatus === 'review' || existing.lifecycleStatus === 'published' || existing.lifecycleStatus === 'archived') {
+            return res.status(400).json({
+              success: false,
+              code: 'FACILITY_LIFECYCLE_LOCKED',
+              error: `Cannot edit facility "${facilityId}" in state "${existing.lifecycleStatus}". It must be returned to draft or unpublished first.`,
+            });
+          }
+
+          const newVersion = (existing.version || 0) + 1;
+          const updatedFacility: InvestmentFacility = {
+            facilityId,
+            zoneId: facilityInput.zoneId,
+            category: normalizedCategory,
+            title,
+            description: facilityInput.description,
+            locationDescription: facilityInput.locationDescription,
+            coordinates: facilityInput.coordinates ? { lat: facilityInput.coordinates.lat, lng: facilityInput.coordinates.lng } : null,
+            locationPrecision,
+            operationalStatus,
+            ownership,
+            operatorName: facilityInput.operatorName,
+            capacities: parsedCapacities,
+            commodityKeys: Array.isArray(facilityInput.commodityKeys) ? facilityInput.commodityKeys : existing.commodityKeys || [],
+            commissioningYear: facilityInput.commissioningYear ?? existing.commissioningYear ?? null,
+            assessmentDate: facilityInput.assessmentDate ?? existing.assessmentDate ?? null,
+            referencePeriod: facilityInput.referencePeriod ?? existing.referencePeriod ?? null,
+            sourceIds,
+            lifecycleStatus: existing.lifecycleStatus || 'draft',
+            // HARD RULE: Content mutation in draft/unpublished always forces verificationStatus = 'pending'
+            verificationStatus: 'pending',
+            internalNotes: facilityInput.internalNotes !== undefined ? facilityInput.internalNotes : existing.internalNotes,
+            rejectionReason: existing.rejectionReason,
+            version: newVersion,
+            createdAt: existing.createdAt || nowIso,
+            createdBy: existing.createdBy || actorUid,
+            updatedAt: nowIso,
+            updatedBy: actorUid,
+            submittedForReviewAt: existing.submittedForReviewAt,
+            submittedForReviewBy: existing.submittedForReviewBy,
+            verifiedAt: existing.verifiedAt,
+            verifiedBy: existing.verifiedBy,
+            publishedAt: existing.publishedAt,
+            publishedBy: existing.publishedBy,
+          };
+
+          await safeSetDoc('investmentInfrastructure', facilityId, updatedFacility);
+          await writeAuditLog('infrastructure', facilityId, 'infrastructure_updated', `Updated facility ${facilityId} (v${newVersion})`, existing.version, newVersion);
+          return res.json({ success: true, data: updatedFacility });
+        } else {
+          // New Facility Creation: Always defaults to draft + pending + version 1
+          const newFacility: InvestmentFacility = {
+            facilityId,
+            zoneId: facilityInput.zoneId,
+            category: normalizedCategory,
+            title,
+            description: facilityInput.description,
+            locationDescription: facilityInput.locationDescription,
+            coordinates: facilityInput.coordinates ? { lat: facilityInput.coordinates.lat, lng: facilityInput.coordinates.lng } : null,
+            locationPrecision,
+            operationalStatus,
+            ownership,
+            operatorName: facilityInput.operatorName,
+            capacities: parsedCapacities,
+            commodityKeys: Array.isArray(facilityInput.commodityKeys) ? facilityInput.commodityKeys : [],
+            commissioningYear: facilityInput.commissioningYear ?? null,
+            assessmentDate: facilityInput.assessmentDate ?? null,
+            referencePeriod: facilityInput.referencePeriod ?? null,
+            sourceIds,
+            lifecycleStatus: 'draft',
+            verificationStatus: 'pending',
+            internalNotes: facilityInput.internalNotes,
+            version: 1,
+            createdAt: nowIso,
+            createdBy: actorUid,
+            updatedAt: nowIso,
+            updatedBy: actorUid,
+          };
+
+          await safeSetDoc('investmentInfrastructure', facilityId, newFacility);
+          await writeAuditLog('infrastructure', facilityId, 'infrastructure_created', `Created facility draft ${facilityId}`, 0, 1);
+          return res.json({ success: true, data: newFacility });
+        }
+      }
+
+      case 'submit_facility_review': {
+        if (!checkStaffPermission(staffData, 'investment.edit')) {
+          return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Requires investment.edit permission' });
+        }
+
+        const { facilityId } = payload || {};
+        if (!facilityId) {
+          return res.status(400).json({ success: false, code: 'INVALID_FACILITY_ID', error: 'Missing facilityId' });
+        }
+
+        const docSnap = await safeGetDoc('investmentInfrastructure', facilityId);
+        if (!docSnap.exists) {
+          return res.status(404).json({ success: false, code: 'NOT_FOUND', error: `Facility "${facilityId}" not found` });
+        }
+
+        const existing = docSnap.data() as InvestmentFacility;
+        if (typeof expectedVersion === 'number' && existing.version !== expectedVersion) {
+          return res.status(409).json({ success: false, code: 'VERSION_CONFLICT', error: `Version conflict: Expected version ${expectedVersion}, got ${existing.version}` });
+        }
+
+        if (existing.lifecycleStatus !== 'draft' && existing.lifecycleStatus !== 'unpublished') {
+          return res.status(400).json({
+            success: false,
+            code: 'INVALID_LIFECYCLE_TRANSITION',
+            error: `Cannot submit facility "${facilityId}" for review from state "${existing.lifecycleStatus}". Must be "draft" or "unpublished".`,
+          });
+        }
+
+        // Must have at least one source
+        if (!existing.sourceIds || !Array.isArray(existing.sourceIds) || existing.sourceIds.length === 0) {
+          return res.status(400).json({
+            success: false,
+            code: 'MISSING_SOURCE',
+            error: 'Facility cannot be submitted for review without at least one valid sourceId.',
+          });
+        }
+
+        // Validate all referenced sources exist
+        for (const sId of existing.sourceIds) {
+          const sSnap = await safeGetDoc('investmentSources', sId);
+          if (!sSnap.exists) {
+            return res.status(400).json({
+              success: false,
+              code: 'SOURCE_NOT_FOUND',
+              error: `Referenced source "${sId}" does not exist in investmentSources.`,
+            });
+          }
+        }
+
+        // Minimum multilingual title check: Afaan Oromoo or English must exist
+        if (!existing.title || (!existing.title.en && !existing.title.om && !existing.title.am)) {
+          return res.status(400).json({
+            success: false,
+            code: 'INVALID_TITLE',
+            error: 'Facility must have a valid title before submitting for review.',
+          });
+        }
+
+        const newVersion = (existing.version || 0) + 1;
+        const updatedFacility = {
           ...existing,
-          ...infra,
+          lifecycleStatus: 'review',
+          verificationStatus: 'pending',
+          submittedForReviewAt: nowIso,
+          submittedForReviewBy: actorUid,
           version: newVersion,
           updatedAt: nowIso,
           updatedBy: actorUid,
-          createdAt: existing?.createdAt || nowIso,
-          createdBy: existing?.createdBy || actorUid,
         };
 
-        await safeSetDoc('investmentInfrastructure', infra.recordId, updatedInfra);
-        await writeAuditLog('infrastructure', infra.recordId, existing ? 'update' : 'create', `Saved infrastructure record ${infra.recordId}`, existing?.version, newVersion);
-        return res.json({ success: true, data: updatedInfra });
+        await safeSetDoc('investmentInfrastructure', facilityId, updatedFacility);
+        await writeAuditLog('infrastructure', facilityId, 'infrastructure_submitted_for_review', `Submitted facility ${facilityId} for review (v${newVersion})`, existing.version, newVersion);
+        return res.json({ success: true, data: updatedFacility });
+      }
+
+      case 'return_facility_to_draft': {
+        if (!checkStaffPermission(staffData, 'investment.edit') && !checkStaffPermission(staffData, 'investment.verify')) {
+          return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Requires investment.edit or investment.verify permission' });
+        }
+
+        const { facilityId } = payload || {};
+        if (!facilityId) {
+          return res.status(400).json({ success: false, code: 'INVALID_FACILITY_ID', error: 'Missing facilityId' });
+        }
+
+        const docSnap = await safeGetDoc('investmentInfrastructure', facilityId);
+        if (!docSnap.exists) {
+          return res.status(404).json({ success: false, code: 'NOT_FOUND', error: `Facility "${facilityId}" not found` });
+        }
+
+        const existing = docSnap.data() as InvestmentFacility;
+        if (typeof expectedVersion === 'number' && existing.version !== expectedVersion) {
+          return res.status(409).json({ success: false, code: 'VERSION_CONFLICT', error: `Version conflict: Expected version ${expectedVersion}, got ${existing.version}` });
+        }
+
+        if (existing.lifecycleStatus !== 'review') {
+          return res.status(400).json({
+            success: false,
+            code: 'INVALID_LIFECYCLE_TRANSITION',
+            error: `Cannot return facility "${facilityId}" to draft from state "${existing.lifecycleStatus}". Must be in "review".`,
+          });
+        }
+
+        const newVersion = (existing.version || 0) + 1;
+        const updatedFacility = {
+          ...existing,
+          lifecycleStatus: 'draft',
+          verificationStatus: 'pending',
+          version: newVersion,
+          updatedAt: nowIso,
+          updatedBy: actorUid,
+        };
+
+        await safeSetDoc('investmentInfrastructure', facilityId, updatedFacility);
+        await writeAuditLog('infrastructure', facilityId, 'infrastructure_returned_to_draft', `Returned facility ${facilityId} to draft for editing (v${newVersion})`, existing.version, newVersion);
+        return res.json({ success: true, data: updatedFacility });
+      }
+
+      case 'verify_facility': {
+        if (!checkStaffPermission(staffData, 'investment.verify')) {
+          return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Requires investment.verify permission' });
+        }
+
+        const { facilityId } = payload || {};
+        if (!facilityId) {
+          return res.status(400).json({ success: false, code: 'INVALID_FACILITY_ID', error: 'Missing facilityId' });
+        }
+
+        const docSnap = await safeGetDoc('investmentInfrastructure', facilityId);
+        if (!docSnap.exists) {
+          return res.status(404).json({ success: false, code: 'NOT_FOUND', error: `Facility "${facilityId}" not found` });
+        }
+
+        const existing = docSnap.data() as InvestmentFacility;
+        if (typeof expectedVersion === 'number' && existing.version !== expectedVersion) {
+          return res.status(409).json({ success: false, code: 'VERSION_CONFLICT', error: `Version conflict: Expected version ${expectedVersion}, got ${existing.version}` });
+        }
+
+        if (existing.lifecycleStatus !== 'review') {
+          return res.status(400).json({
+            success: false,
+            code: 'INVALID_LIFECYCLE_TRANSITION',
+            error: `Facility "${facilityId}" must be in "review" status before verification (current: ${existing.lifecycleStatus}).`,
+          });
+        }
+
+        // Verify source dependencies
+        if (!existing.sourceIds || !Array.isArray(existing.sourceIds) || existing.sourceIds.length === 0) {
+          return res.status(400).json({
+            success: false,
+            code: 'MISSING_SOURCE',
+            error: 'Facility cannot be verified without at least one valid sourceId.',
+          });
+        }
+
+        for (const sId of existing.sourceIds) {
+          const sSnap = await safeGetDoc('investmentSources', sId);
+          if (!sSnap.exists) {
+            return res.status(400).json({
+              success: false,
+              code: 'SOURCE_NOT_FOUND',
+              error: `Attached source "${sId}" does not exist.`,
+            });
+          }
+          const sData = sSnap.data() || {};
+          if (sData.verificationStatus !== 'verified') {
+            return res.status(400).json({
+              success: false,
+              code: 'SOURCE_NOT_VERIFIED',
+              error: `Attached source "${sId}" must be verified before facility verification.`,
+            });
+          }
+        }
+
+        const newVersion = (existing.version || 0) + 1;
+        const updatedFacility = {
+          ...existing,
+          lifecycleStatus: 'review', // Verification does NOT publish automatically
+          verificationStatus: 'verified',
+          verifiedAt: nowIso,
+          verifiedBy: actorUid,
+          version: newVersion,
+          updatedAt: nowIso,
+          updatedBy: actorUid,
+        };
+
+        await safeSetDoc('investmentInfrastructure', facilityId, updatedFacility);
+        await writeAuditLog('infrastructure', facilityId, 'infrastructure_verified', `Verified facility ${facilityId} (v${newVersion})`, existing.version, newVersion);
+        return res.json({ success: true, data: updatedFacility });
+      }
+
+      case 'reject_facility': {
+        if (!checkStaffPermission(staffData, 'investment.verify')) {
+          return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Requires investment.verify permission' });
+        }
+
+        const { facilityId, reason } = payload || {};
+        if (!facilityId) {
+          return res.status(400).json({ success: false, code: 'INVALID_FACILITY_ID', error: 'Missing facilityId' });
+        }
+
+        if (!reason || typeof reason !== 'string' || reason.trim().length < 5) {
+          return res.status(400).json({ success: false, code: 'INVALID_REJECTION_REASON', error: 'A meaningful rejection reason (at least 5 characters) is required.' });
+        }
+
+        const docSnap = await safeGetDoc('investmentInfrastructure', facilityId);
+        if (!docSnap.exists) {
+          return res.status(404).json({ success: false, code: 'NOT_FOUND', error: `Facility "${facilityId}" not found` });
+        }
+
+        const existing = docSnap.data() as InvestmentFacility;
+        if (typeof expectedVersion === 'number' && existing.version !== expectedVersion) {
+          return res.status(409).json({ success: false, code: 'VERSION_CONFLICT', error: `Version conflict: Expected version ${expectedVersion}, got ${existing.version}` });
+        }
+
+        if (existing.lifecycleStatus !== 'review') {
+          return res.status(400).json({
+            success: false,
+            code: 'INVALID_LIFECYCLE_TRANSITION',
+            error: `Facility "${facilityId}" must be in "review" status before rejection (current: ${existing.lifecycleStatus}).`,
+          });
+        }
+
+        const newVersion = (existing.version || 0) + 1;
+        const updatedFacility = {
+          ...existing,
+          lifecycleStatus: 'review',
+          verificationStatus: 'rejected',
+          rejectionReason: reason.trim(),
+          version: newVersion,
+          updatedAt: nowIso,
+          updatedBy: actorUid,
+        };
+
+        await safeSetDoc('investmentInfrastructure', facilityId, updatedFacility);
+        await writeAuditLog('infrastructure', facilityId, 'infrastructure_rejected', `Rejected facility ${facilityId}: ${reason.trim()} (v${newVersion})`, existing.version, newVersion);
+        return res.json({ success: true, data: updatedFacility });
+      }
+
+      case 'publish_facility': {
+        if (!checkStaffPermission(staffData, 'investment.publish')) {
+          return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Requires investment.publish permission' });
+        }
+
+        const { facilityId } = payload || {};
+        if (!facilityId) {
+          return res.status(400).json({ success: false, code: 'INVALID_FACILITY_ID', error: 'Missing facilityId' });
+        }
+
+        const docSnap = await safeGetDoc('investmentInfrastructure', facilityId);
+        if (!docSnap.exists) {
+          return res.status(404).json({ success: false, code: 'NOT_FOUND', error: `Facility "${facilityId}" not found` });
+        }
+
+        const existing = docSnap.data() as InvestmentFacility;
+        if (typeof expectedVersion === 'number' && existing.version !== expectedVersion) {
+          return res.status(409).json({
+            success: false,
+            code: 'VERSION_CONFLICT',
+            error: `Version conflict: Expected version ${expectedVersion}, got ${existing.version}`,
+          });
+        }
+
+        // Hard gate: Facility must be in 'review' state
+        if (existing.lifecycleStatus !== 'review') {
+          return res.status(400).json({
+            success: false,
+            code: 'INVALID_LIFECYCLE_TRANSITION',
+            error: `Facility "${facilityId}" must be in "review" status before publication (current: ${existing.lifecycleStatus}).`,
+          });
+        }
+
+        // Hard gate: Facility must be verified
+        if (existing.verificationStatus !== 'verified') {
+          return res.status(400).json({
+            success: false,
+            code: 'UNVERIFIED_FACILITY',
+            error: `Facility "${facilityId}" must have verificationStatus === "verified" before publication (current: ${existing.verificationStatus}).`,
+          });
+        }
+
+        // Recheck all sources server-side
+        if (!existing.sourceIds || !Array.isArray(existing.sourceIds) || existing.sourceIds.length === 0) {
+          return res.status(400).json({
+            success: false,
+            code: 'MISSING_SOURCE',
+            error: 'Facility cannot be published without at least one valid sourceId.',
+          });
+        }
+
+        for (const sId of existing.sourceIds) {
+          const sSnap = await safeGetDoc('investmentSources', sId);
+          if (!sSnap.exists) {
+            return res.status(400).json({
+              success: false,
+              code: 'INVALID_SOURCE',
+              error: `Attached source "${sId}" does not exist.`,
+            });
+          }
+          const sData = sSnap.data() || {};
+          if (sData.verificationStatus !== 'verified') {
+            return res.status(400).json({
+              success: false,
+              code: 'UNVERIFIED_SOURCE',
+              error: `Attached source "${sId}" must be verified before facility publication.`,
+            });
+          }
+        }
+
+        const newVersion = (existing.version || 0) + 1;
+        const updatedFacility = {
+          ...existing,
+          lifecycleStatus: 'published',
+          verificationStatus: 'verified',
+          publishedAt: nowIso,
+          publishedBy: actorUid,
+          version: newVersion,
+          updatedAt: nowIso,
+          updatedBy: actorUid,
+        };
+
+        await safeSetDoc('investmentInfrastructure', facilityId, updatedFacility);
+        await writeAuditLog('infrastructure', facilityId, 'infrastructure_published', `Published facility ${facilityId} (v${newVersion})`, existing.version, newVersion);
+        return res.json({ success: true, data: updatedFacility });
+      }
+
+      case 'unpublish_facility': {
+        if (!checkStaffPermission(staffData, 'investment.publish')) {
+          return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Requires investment.publish permission' });
+        }
+
+        const { facilityId } = payload || {};
+        if (!facilityId) {
+          return res.status(400).json({ success: false, code: 'INVALID_FACILITY_ID', error: 'Missing facilityId' });
+        }
+
+        const docSnap = await safeGetDoc('investmentInfrastructure', facilityId);
+        if (!docSnap.exists) {
+          return res.status(404).json({ success: false, code: 'NOT_FOUND', error: `Facility "${facilityId}" not found` });
+        }
+
+        const existing = docSnap.data() as InvestmentFacility;
+        if (typeof expectedVersion === 'number' && existing.version !== expectedVersion) {
+          return res.status(409).json({ success: false, code: 'VERSION_CONFLICT', error: `Version conflict: Expected version ${expectedVersion}, got ${existing.version}` });
+        }
+
+        if (existing.lifecycleStatus !== 'published') {
+          return res.status(400).json({
+            success: false,
+            code: 'INVALID_LIFECYCLE_TRANSITION',
+            error: `Cannot unpublish facility "${facilityId}" with status "${existing.lifecycleStatus}". Must be "published".`,
+          });
+        }
+
+        const newVersion = (existing.version || 0) + 1;
+        const updatedFacility = {
+          ...existing,
+          lifecycleStatus: 'unpublished',
+          version: newVersion,
+          updatedAt: nowIso,
+          updatedBy: actorUid,
+        };
+
+        await safeSetDoc('investmentInfrastructure', facilityId, updatedFacility);
+        await writeAuditLog('infrastructure', facilityId, 'infrastructure_unpublished', `Unpublished facility ${facilityId} (v${newVersion})`, existing.version, newVersion);
+        return res.json({ success: true, data: updatedFacility });
+      }
+
+      case 'archive_facility': {
+        if (!checkStaffPermission(staffData, 'investment.publish') && !checkStaffPermission(staffData, 'investment.edit')) {
+          return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Requires investment editing or publishing permission to archive' });
+        }
+
+        const { facilityId } = payload || {};
+        if (!facilityId) {
+          return res.status(400).json({ success: false, code: 'INVALID_FACILITY_ID', error: 'Missing facilityId' });
+        }
+
+        const docSnap = await safeGetDoc('investmentInfrastructure', facilityId);
+        if (!docSnap.exists) {
+          return res.status(404).json({ success: false, code: 'NOT_FOUND', error: `Facility "${facilityId}" not found` });
+        }
+
+        const existing = docSnap.data() as InvestmentFacility;
+        if (typeof expectedVersion === 'number' && existing.version !== expectedVersion) {
+          return res.status(409).json({ success: false, code: 'VERSION_CONFLICT', error: `Version conflict: Expected version ${expectedVersion}, got ${existing.version}` });
+        }
+
+        // Hard Rule: Published records must be explicitly unpublished before archiving
+        if (existing.lifecycleStatus === 'published') {
+          return res.status(400).json({
+            success: false,
+            code: 'MUST_UNPUBLISH_FIRST',
+            error: `Facility "${facilityId}" is currently published. It must be unpublished before archiving.`,
+          });
+        }
+
+        if (existing.lifecycleStatus === 'archived') {
+          return res.json({ success: true, data: existing, message: 'Facility already archived' });
+        }
+
+        const newVersion = (existing.version || 0) + 1;
+        const updatedFacility = {
+          ...existing,
+          lifecycleStatus: 'archived',
+          version: newVersion,
+          updatedAt: nowIso,
+          updatedBy: actorUid,
+        };
+
+        await safeSetDoc('investmentInfrastructure', facilityId, updatedFacility);
+        await writeAuditLog('infrastructure', facilityId, 'infrastructure_archived', `Archived facility ${facilityId} (v${newVersion})`, existing.version, newVersion);
+        return res.json({ success: true, data: updatedFacility });
+      }
+
+      case 'restore_facility': {
+        if (!checkStaffPermission(staffData, 'investment.publish') && !checkStaffPermission(staffData, 'investment.edit')) {
+          return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Requires investment editing or publishing permission to restore' });
+        }
+
+        const { facilityId } = payload || {};
+        if (!facilityId) {
+          return res.status(400).json({ success: false, code: 'INVALID_FACILITY_ID', error: 'Missing facilityId' });
+        }
+
+        const docSnap = await safeGetDoc('investmentInfrastructure', facilityId);
+        if (!docSnap.exists) {
+          return res.status(404).json({ success: false, code: 'NOT_FOUND', error: `Facility "${facilityId}" not found` });
+        }
+
+        const existing = docSnap.data() as InvestmentFacility;
+        if (typeof expectedVersion === 'number' && existing.version !== expectedVersion) {
+          return res.status(409).json({ success: false, code: 'VERSION_CONFLICT', error: `Version conflict: Expected version ${expectedVersion}, got ${existing.version}` });
+        }
+
+        if (existing.lifecycleStatus !== 'archived') {
+          return res.status(400).json({
+            success: false,
+            code: 'NOT_ARCHIVED',
+            error: `Facility "${facilityId}" is in state "${existing.lifecycleStatus}". Only archived facilities can be restored.`,
+          });
+        }
+
+        const newVersion = (existing.version || 0) + 1;
+        const updatedFacility = {
+          ...existing,
+          lifecycleStatus: 'draft',
+          verificationStatus: 'pending', // Restored records return to draft with pending verification
+          version: newVersion,
+          updatedAt: nowIso,
+          updatedBy: actorUid,
+        };
+
+        await safeSetDoc('investmentInfrastructure', facilityId, updatedFacility);
+        await writeAuditLog('infrastructure', facilityId, 'infrastructure_restored', `Restored facility ${facilityId} from archive to draft (v${newVersion})`, existing.version, newVersion);
+        return res.json({ success: true, data: updatedFacility });
       }
 
       case 'delete_entity': {
@@ -1259,10 +1904,10 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
         }
 
         const isSuperAdmin = staffData.role === 'superAdmin';
-        const hasPublishPermission = checkStaffPermission(staffData, 'investment.publish');
 
-        if (!isSuperAdmin && !hasPublishPermission) {
-          return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Permanent deletion is restricted to Super Administrators or Authorized Publishers' });
+        // HARD REQUIREMENT: Permanent deletion is STRICTLY restricted to SuperAdmin
+        if (!isSuperAdmin) {
+          return res.status(403).json({ success: false, code: 'PERMISSION_DENIED', error: 'Permanent deletion is strictly restricted to Super Administrators' });
         }
 
         const collectionNameMap: Record<string, string> = {
@@ -1272,6 +1917,7 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
           methodology: 'investmentMethodologies',
           opportunity: 'investmentOpportunities',
           infrastructure: 'investmentInfrastructure',
+          facility: 'investmentInfrastructure',
         };
 
         const targetCollection = collectionNameMap[entityType];
@@ -1295,7 +1941,14 @@ export async function handleInvestmentMutation(req: Request, res: Response) {
         }
 
         await safeDeleteDoc(targetCollection, entityId);
-        await writeAuditLog(entityType, entityId, 'delete', `Permanently deleted ${entityType} "${entityId}"`, existing.version, 0);
+        await writeAuditLog(
+          entityType === 'facility' ? 'infrastructure' : entityType,
+          entityId,
+          entityType === 'infrastructure' || entityType === 'facility' ? 'infrastructure_deleted' : 'delete',
+          `Permanently deleted ${entityType} "${entityId}"`,
+          existing.version,
+          0
+        );
         return res.json({ success: true, deletedId: entityId });
       }
 

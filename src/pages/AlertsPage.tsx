@@ -38,8 +38,10 @@ export const AlertsPage: React.FC = () => {
   // Extract unique zones for filter dropdown
   const allZones = useMemo(() => {
     const zoneSet = new Set<string>();
-    mockAlerts.forEach((a) => {
-      a.affectedZones?.forEach((z) => zoneSet.add(z));
+    (mockAlerts || []).forEach((a) => {
+      (a?.affectedZones || []).forEach((z) => {
+        if (z) zoneSet.add(z);
+      });
     });
     return Array.from(zoneSet).sort();
   }, []);

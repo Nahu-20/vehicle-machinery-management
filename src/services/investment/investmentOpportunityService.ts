@@ -5,6 +5,7 @@ import {
   validateZoneId,
 } from '../../types/investment';
 import { StaffUser } from '../../types/auth';
+import { callInvestmentCallable } from './investmentMutationClient';
 
 export async function getOpportunity(opportunityId: string): Promise<InvestmentOpportunity | null> {
   if (!db) return null;
@@ -26,7 +27,8 @@ export async function createOpportunity(
   input: Omit<
     InvestmentOpportunity,
     'version' | 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy' | 'publishedAt' | 'publishedBy' | 'lifecycleStatus'
-  >
+  >,
+  expectedVersion?: number
 ): Promise<InvestmentOpportunity> {
   for (const zid of input.zoneIds) {
     if (!validateZoneId(zid)) {
@@ -34,20 +36,31 @@ export async function createOpportunity(
     }
   }
 
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'save_opportunity',
-      actorUid: actor.uid,
-      payload: input,
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || `Failed to create opportunity "${input.opportunityId}"`);
+  const res = await callInvestmentCallable<InvestmentOpportunity>(
+    'save_opportunity',
+    input,
+    expectedVersion,
+    actor
+  );
+  if (!res.data) {
+    throw new Error(res.error || 'Failed to create opportunity');
   }
+  return res.data;
+}
 
-  return resData.data as InvestmentOpportunity;
+export async function deleteOpportunity(
+  actor: StaffUser,
+  opportunityId: string,
+  expectedVersion?: number
+): Promise<{ success: boolean; deletedId: string }> {
+  const res = await callInvestmentCallable<{ deletedId: string }>(
+    'delete_opportunity',
+    { opportunityId },
+    expectedVersion,
+    actor
+  );
+  return {
+    success: res.success,
+    deletedId: res.deletedId || res.data?.deletedId || opportunityId,
+  };
 }

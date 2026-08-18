@@ -1,4 +1,33 @@
-import { runAllInvestmentSecurityTests } from './investmentSecurityTests';
+import { runAllInvestmentSecurityTests, setCustomMutateHandler } from './investmentSecurityTests';
+import { handleInvestmentMutation } from '../server/investmentApi';
+
+setCustomMutateHandler(async (action, actorUid, payload, expectedVersion) => {
+  let statusCode = 200;
+  let responseData: any = null;
+
+  const mockReq: any = {
+    body: { action, actorUid, payload, expectedVersion },
+    headers: {},
+  };
+
+  const mockRes: any = {
+    status(code: number) {
+      statusCode = code;
+      return mockRes;
+    },
+    json(data: any) {
+      responseData = data;
+      return mockRes;
+    },
+    send(data: any) {
+      responseData = data;
+      return mockRes;
+    },
+  };
+
+  await handleInvestmentMutation(mockReq, mockRes);
+  return { status: statusCode, data: responseData };
+});
 
 async function main() {
   console.log('Running A2B-G Acceptance & Security Audit Suite...');

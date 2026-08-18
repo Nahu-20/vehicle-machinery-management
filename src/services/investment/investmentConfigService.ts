@@ -2,6 +2,7 @@ import { db } from '../../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { InvestmentMapConfig } from '../../types/investment';
 import { StaffUser } from '../../types/auth';
+import { callInvestmentCallable } from './investmentMutationClient';
 
 export async function getMapConfig(): Promise<InvestmentMapConfig | null> {
   if (!db) return null;
@@ -16,21 +17,14 @@ export async function saveMapConfig(
   payload: Partial<InvestmentMapConfig>,
   expectedVersion?: number
 ): Promise<InvestmentMapConfig> {
-  const res = await fetch('/api/investment/mutate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'save_map_config',
-      actorUid: actor.uid,
-      expectedVersion,
-      payload,
-    }),
-  });
-
-  const resData = await res.json();
-  if (!res.ok || !resData.success) {
-    throw new Error(resData.error || 'Failed to save map configuration');
+  const res = await callInvestmentCallable<InvestmentMapConfig>(
+    'save_map_config',
+    payload,
+    expectedVersion,
+    actor
+  );
+  if (!res.data) {
+    throw new Error(res.error || 'Failed to save map configuration');
   }
-
-  return resData.data as InvestmentMapConfig;
+  return res.data;
 }
