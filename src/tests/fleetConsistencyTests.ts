@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { Timestamp } from 'firebase/firestore';
 import type {
   FleetAsset,
@@ -67,7 +68,8 @@ export interface TestResult {
     | 'Service'
     | 'Drivers'
     | 'Compliance'
-    | 'Fuel';
+    | 'Fuel'
+    | 'Rules';
   passed: boolean;
   message: string;
   details?: any;
@@ -903,6 +905,154 @@ export function runFleetConsistencyTests(): TestResult[] {
       passed: pts[0]?.reason === 'first-fill' && pts[1]?.consumption === 10,
       message: 'A list sorted newest-first for display is the wrong way round for the arithmetic.',
       details: pts.map((p) => p.reason),
+    };
+  });
+
+  /* ----------------------------------------------------------------- rules */
+
+  /*
+   * firestore.rules is the third place fleet permissions are written down, and
+   * unlike the other two nothing typechecks it — it is a text file the compiler
+   * never sees, deployed by a command nobody has run.
+   *
+   * It was wrong. Every fleet write was gated on a `permissions` array on the
+   * staff document, and no code path has ever written that field, so every
+   * clause was false and every write would have been denied in production —
+   * including for a super admin. Reads were unaffected, which is exactly why it
+   * survived four rounds: the module lists, renders, and then refuses.
+   *
+   * These read the actual file. They run under tsx from the CLI, never in the
+   * browser, so node:fs is available.
+   */
+
+  const RULES = (() => {
+    try {
+      return readFileSync('firestore.rules', 'utf8');
+    } catch {
+      return '';
+    }
+  })();
+
+  check('firestore.rules is readable from the repo root', 'Rules', () => ({
+    passed: RULES.length > 0,
+    message: RULES.length > 0
+      ? `${RULES.split('\n').length} lines read.`
+      : 'Could not read firestore.rules — run npm run test:fleet from the repo root.',
+  }));
+
+  check('No rule tests a permissions array that nothing writes', 'Rules', () => {
+    const offenders = RULES.split('\n')
+      .map((line, i) => ({ line: line.trim(), n: i + 1 }))
+      .filter((l) => l.line.includes('.permissions.hasAny'));
+    return {
+      passed: offenders.length === 0,
+      message:
+        offenders.length === 0
+          ? 'Every clause gates on the role string, which staff provisioning actually writes.'
+          : 'A clause reads staffUsers.permissions. No code writes that field, so the clause is always false.',
+      details: offenders,
+    };
+  });
+
+  check('Fleet permissions are held only by superAdmin and fleetOfficer', 'Rules', () => {
+    // The rules collapse seven fleet.* permissions onto one role check. That is
+    // only honest while no third role holds any of them — this is the assertion
+    // that catches somebody granting fleet.view to, say, an advisoryOfficer and
+    // finding the rules quietly disagree with the nav.
+    const holders = (Object.keys(ROLE_PERMISSIONS_MAP) as (keyof typeof ROLE_PERMISSIONS_MAP)[])
+      .filter((role) => ROLE_PERMISSIONS_MAP[role].some((p) => String(p).startsWith('fleet.')));
+    const unexpected = holders.filter((r) => r !== 'superAdmin' && r !== 'fleetOfficer');
+    return {
+      passed: unexpected.length === 0,
+      message:
+        unexpected.length === 0
+          ? 'isFleetOfficer() in the rules covers exactly the roles the table grants.'
+          : 'A role holds a fleet permission that firestore.rules will not honour.',
+      details: { holders, unexpected },
+    };
+  });
+
+  check('isFleetOfficer folds superAdmin in, like its siblings', 'Rules', () => {
+    const fn = RULES.match(/function isFleetOfficer\(\)\s*\{([^}]*)\}/);
+    const body = fn?.[1] ?? '';
+    return {
+      passed: body.includes("'superAdmin'") && body.includes("'fleetOfficer'"),
+      message: body
+        ? 'A super admin is not locked out of the module they administer.'
+        : 'isFleetOfficer() is not defined in firestore.rules.',
+      details: { body: body.trim() },
+    };
+  });
+
+  check('Every fleet collection gates its writes on a role', 'Rules', () => {
+    const collections = [
+      'fleetAssets',
+      'fleetAssignments',
+      'fleetWorkOrders',
+      'fleetStatusEvents',
+      'fleetServiceRecords',
+      'fleetDrivers',
+      'fleetFuelLogs',
+    ];
+    const missing = collections.filter((c) => {
+      const block = RULES.match(new RegExp(`match /${c}/\\{[^}]*\\}\\s*\\{([\\s\\S]*?)\\n    \\}`));
+      const body = block?.[1] ?? '';
+      // Every block must exist and must mention a role helper somewhere in its
+      // write clauses. fleetWorkOrders deliberately lets any active staff CREATE
+      // a fault report, so isCurrentActiveStaff alone is acceptable there.
+      return !body || !/isFleetOfficer\(\)|isSuperAdmin\(\)/.test(body);
+    });
+    return {
+      passed: missing.length === 0,
+      message:
+        missing.length === 0
+          ? 'All seven fleet collections have a role-gated write path.'
+          : 'A fleet collection has no role-gated write clause.',
+      details: { missing },
+    };
+  });
+
+  check('Retiring an asset is refused to anyone but a super admin', 'Rules', () => {
+    // fleet.asset.retire is withheld from fleetOfficer in the table, and used to
+    // be enforced nowhere: retireAsset delegates to setAssetStatus, which the
+    // rules gated on fleet.asset.manage. The rule now refuses a write that sets
+    // the status to 'disposed' unless the writer is a super admin.
+    const block = RULES.match(/match \/fleetAssets\/\{assetId\}\s*\{([\s\S]*?)\n    \}/);
+    const body = block?.[1] ?? '';
+    const guarded = /isSuperAdmin\(\)/.test(body) && /disposed/.test(body);
+    const tableWithholds = !ROLE_PERMISSIONS_MAP.fleetOfficer.includes('fleet.asset.retire' as Permission);
+    return {
+      passed: guarded && tableWithholds,
+      message: guarded
+        ? 'The rule refuses a disposed status from a fleet officer, matching the table.'
+        : 'fleet.asset.retire is withheld in the table and unenforced in the rules.',
+      details: { guarded, tableWithholds },
+    };
+  });
+
+  check('A fleet officer can append to the audit trail', 'Rules', () => {
+    // logAuditEvent reads the target document inside its transaction before
+    // writing, so a role that cannot read adminAuditLogs cannot append to it —
+    // and the failure is swallowed and warned, leaving the module with a
+    // silently empty history.
+    const block = RULES.match(/match \/adminAuditLogs\/\{logId\}\s*\{([\s\S]*?)\n    \}/);
+    const body = block?.[1] ?? '';
+    return {
+      passed: /allow get:\s*if canAppendAuditLog\(\)/.test(body),
+      message: /canAppendAuditLog/.test(body)
+        ? 'Any active staff member may read a log entry, which is what appending one requires.'
+        : 'adminAuditLogs read is narrower than its write, so audit writes fail silently.',
+      details: { body: body.trim().split('\n').map((l) => l.trim()).filter(Boolean) },
+    };
+  });
+
+  check('No rule guards a collection with no code behind it', 'Rules', () => {
+    // fleetMeterReadings had a full rule block, a type, and nothing else — no
+    // collection constant, no service, no query, no writer. A rule for something
+    // that does not exist reads as though the collection were in use.
+    return {
+      passed: !RULES.includes('fleetMeterReadings/{'),
+      message: 'The dead fleetMeterReadings block is gone; it returns with the code that needs it.',
     };
   });
 

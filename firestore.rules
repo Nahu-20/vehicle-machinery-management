@@ -63,8 +63,27 @@ service cloud.firestore {
       return isCurrentActiveStaff() && (getStaffRole() == 'superAdmin' || getStaffRole() == 'advisoryOfficer');
     }
 
+    function isFleetOfficer() {
+      return isCurrentActiveStaff() && (getStaffRole() == 'superAdmin' || getStaffRole() == 'fleetOfficer');
+    }
+
     function hasAuditViewPermission() {
       return isCurrentActiveStaff() && (getStaffRole() == 'superAdmin' || getStaffRole() == 'contentAdmin');
+    }
+
+    /**
+     * Who may read the audit trail in order to WRITE to it.
+     *
+     * logAuditEvent wraps its write in a transaction and reads the target
+     * document first, for idempotency. That read is subject to the read rule, so
+     * a role that may not read the trail cannot append to it either — and the
+     * failure is caught and warned rather than surfaced, which is how a whole
+     * module ends up with a silently empty audit history.
+     *
+     * Reading the trail is still narrower: see hasAuditViewPermission.
+     */
+    function canAppendAuditLog() {
+      return isCurrentActiveStaff();
     }
 
     function isValidFeaturedImageStaging(docData) {
@@ -355,21 +374,16 @@ service cloud.firestore {
     // Active owners with media.upload role can read metadata of their own mediaAssets.
     // Active staff with media.manage role can read managed media records.
     match /mediaAssets/{mediaId} {
+      // These two clauses used to test a `permissions` array on the staff
+      // document. No code has ever written that field, so the clauses were
+      // always false and only the ownerUid and isContentAdmin branches ever
+      // matched. Expressed as roles: media.upload is held by editor and above,
+      // media.manage by contentAdmin and above.
       allow get: if isSignedIn() && (
         resource.data.ownerUid == request.auth.uid ||
-        isContentAdmin() ||
-        (isCurrentActiveStaff() &&
-         exists(/databases/$(database)/documents/staffUsers/$(request.auth.uid)) &&
-         'permissions' in get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data &&
-         get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.permissions.hasAny(['media.manage', 'media.upload']))
+        isEditor()
       );
-      allow list: if isSignedIn() && (
-        isContentAdmin() ||
-        (isCurrentActiveStaff() &&
-         exists(/databases/$(database)/documents/staffUsers/$(request.auth.uid)) &&
-         'permissions' in get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data &&
-         get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.permissions.hasAny(['media.manage']))
-      );
+      allow list: if isSignedIn() && isContentAdmin();
       allow create, update, delete: if false;
     }
 
@@ -387,8 +401,14 @@ service cloud.firestore {
     }
 
     match /adminAuditLogs/{logId} {
-      allow read: if hasAuditViewPermission();
-      allow create: if isSignedIn();
+      // Read is deliberately wider than hasAuditViewPermission by exactly one
+      // step: any active staff member may read a log entry, because appending
+      // one requires reading it first. Signed-out and inactive users still see
+      // nothing. The admin UI that browses the trail remains gated on
+      // audit.view in application code.
+      allow get: if canAppendAuditLog();
+      allow list: if hasAuditViewPermission();
+      allow create: if canAppendAuditLog();
       allow update, delete: if false;
     }
 
@@ -494,17 +514,31 @@ service cloud.firestore {
     // they are and who holds them. There is no published state and no anonymous
     // read — every rule below requires active staff.
 
-    function hasFleetPermission(perm) {
-      return isCurrentActiveStaff()
-        && 'permissions' in get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data
-        && get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.permissions.hasAny([perm]);
-    }
+    // This block used to gate every fleet write on a `permissions` array stored
+    // on the staff document. Nothing in the application has ever written that
+    // field — not AuthContext, not the seed services, not StaffManagementPage,
+    // which performs no writes at all — so the clause was false for every
+    // document that will ever exist and every fleet write would have been
+    // denied, including for a super admin.
+    //
+    // Reads were unaffected, which is what made it dangerous: the module would
+    // have listed, rendered and then refused every button.
+    //
+    // Fleet now gates on the role string, like news, alerts and achievements
+    // do, because `role` is a field every staff-provisioning path writes.
+    // The mapping is not a simplification: in ROLE_PERMISSIONS_MAP every
+    // fleet.* permission is held by exactly superAdmin and fleetOfficer, and
+    // fleet.asset.retire by superAdmin alone.
 
     match /fleetAssets/{assetId} {
       allow get, list: if isCurrentActiveStaff();
-      allow create, update: if hasFleetPermission('fleet.asset.manage')
-                            || hasFleetPermission('fleet.assign')
-                            || hasFleetPermission('fleet.maintenance.manage');
+      allow create: if isFleetOfficer();
+      // Retiring is the one irreversible act here, and fleet.asset.retire is
+      // granted to superAdmin alone. The rule enforces it the only way it can:
+      // by refusing a write that sets the status to 'disposed'. Without this,
+      // the permission existed in the table and was checked nowhere.
+      allow update: if isSuperAdmin()
+                    || (isFleetOfficer() && request.resource.data.status != 'disposed');
       // Assets are retired by setting status to 'disposed', never deleted: the
       // register's value is its history, and the audit trail points at these ids.
       allow delete: if false;
@@ -512,7 +546,7 @@ service cloud.firestore {
 
     match /fleetAssignments/{assignmentId} {
       allow get, list: if isCurrentActiveStaff();
-      allow create, update: if hasFleetPermission('fleet.assign');
+      allow create, update: if isFleetOfficer();
       // The sign-out book is append-only. A returned row is closed, not removed.
       allow delete: if false;
     }
@@ -522,7 +556,7 @@ service cloud.firestore {
       allow create: if isCurrentActiveStaff();
       // Anyone may report a fault — the driver who finds it is rarely the
       // mechanic — but only the garage may move the job through its lifecycle.
-      allow update: if hasFleetPermission('fleet.maintenance.manage');
+      allow update: if isFleetOfficer();
       allow delete: if false;
     }
 
@@ -532,9 +566,7 @@ service cloud.firestore {
     // to Firestore at all.
     match /fleetStatusEvents/{eventId} {
       allow get, list: if isCurrentActiveStaff();
-      allow create: if hasFleetPermission('fleet.asset.manage')
-                    || hasFleetPermission('fleet.assign')
-                    || hasFleetPermission('fleet.maintenance.manage');
+      allow create: if isFleetOfficer();
       // A timeline is a record of what happened. Correcting it means adding to
       // it, never editing what it already says.
       allow update, delete: if false;
@@ -542,9 +574,9 @@ service cloud.firestore {
 
     match /fleetServiceRecords/{recordId} {
       allow get, list: if isCurrentActiveStaff();
-      allow create: if hasFleetPermission('fleet.maintenance.manage');
-      // Append-only for the same reason as the readings below: a mistyped
-      // service reading stays visible in context rather than becoming the truth.
+      allow create: if isFleetOfficer();
+      // Append-only: a mistyped service reading stays visible in context rather
+      // than becoming the truth.
       allow update, delete: if false;
     }
 
@@ -556,7 +588,7 @@ service cloud.firestore {
     // the issue form has to name a driver; writing one is narrower.
     match /fleetDrivers/{driverId} {
       allow get, list: if isCurrentActiveStaff();
-      allow create, update: if hasFleetPermission('fleet.driver.manage');
+      allow create, update: if isFleetOfficer();
       // A driver who leaves is set inactive, never deleted: the sign-out book
       // points at these ids, and removing one would orphan its own history.
       allow delete: if false;
@@ -571,8 +603,8 @@ service cloud.firestore {
     // writer may touch on an existing slip are the three that record the void.
     match /fleetFuelLogs/{fuelLogId} {
       allow get, list: if isCurrentActiveStaff();
-      allow create: if hasFleetPermission('fleet.fuel.record');
-      allow update: if hasFleetPermission('fleet.fuel.record')
+      allow create: if isFleetOfficer();
+      allow update: if isFleetOfficer()
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['voidedAt', 'voidedByUid', 'voidReason']);
       // Deleting would leave a gap the register cannot explain. A voided slip
@@ -580,14 +612,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /fleetMeterReadings/{readingId} {
-      allow get, list: if isCurrentActiveStaff();
-      allow create: if hasFleetPermission('fleet.assign')
-                    || hasFleetPermission('fleet.maintenance.manage')
-                    || hasFleetPermission('fleet.asset.manage');
-      // Readings accumulate. Correcting one means appending, not rewriting, so a
-      // mistyped figure stays visible in context instead of becoming the truth.
-      allow update, delete: if false;
-    }
+    // fleetMeterReadings had a rule block here. It is gone, along with nothing
+    // else: the collection has no name constant, no service, no query and no
+    // writer — only a type and this block. A rule guarding something that does
+    // not exist is a rule nobody maintains correctly, and it would have gone on
+    // looking like the collection was in use. If meter history is built later,
+    // the block comes back with the code that needs it.
   }
 }
