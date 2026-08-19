@@ -257,6 +257,23 @@ export interface MarketPrice {
   changePercent: number;
   updatedDate: string;
   trend: 'up' | 'down' | 'stable';
+  /**
+   * The first price recorded for this commodity at this market.
+   *
+   * Distinct from a change of zero. Nothing is known about what it cost before,
+   * so showing "0%" would assert it held steady when nobody has any idea.
+   */
+  isFirstPrice?: boolean;
+  /**
+   * The observation is older than the staleness threshold.
+   *
+   * A month-old price shown as current is worse than no price: somebody takes a
+   * load to market on the strength of it. Same reasoning as dropping lapsed
+   * advisories rather than displaying them.
+   */
+  isStale?: boolean;
+  /** When it was seen, for sorting and for the "as of" line. */
+  observedAtMs?: number;
 }
 
 export interface WeatherInfo {

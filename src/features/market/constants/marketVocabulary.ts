@@ -1,5 +1,11 @@
+import type { MarketPrice as PublicMarketPrice } from '../../../types';
+import {
+  CANONICAL_ZONE_METADATA,
+  type CanonicalZoneId,
+} from '../../investment-map/constants/canonicalZones';
 import type { MarketPriceObservation, MarketPricePoint, MarketTrend } from '../types/market';
 import {
+  MARKET_CENTRE_BY_ID,
   MARKET_COMMODITY_BY_KEY,
   MARKET_UNITS,
   type MarketUnitKey,
@@ -208,6 +214,72 @@ export function assessPriceEntry(
       } the last recorded ${previousPrice.toLocaleString()}. ` +
       'Check the figure and the unit, then record it again to confirm.',
   };
+}
+
+/* ------------------------------------------------------------- staleness */
+
+/**
+ * How long a price stays worth showing.
+ *
+ * Three weeks. Prices are gathered weekly, so this tolerates a missed round and
+ * a late one before the figure stops being current. Past it the price is still
+ * shown — hiding it would leave the section emptier than the register actually
+ * is — but marked, because the reader's decision depends on knowing the number
+ * is old.
+ */
+export const STALE_AFTER_DAYS = 21;
+
+export function isStale(observedAtMs: number, now = Date.now(), days = STALE_AFTER_DAYS): boolean {
+  return now - observedAtMs > days * 24 * 60 * 60 * 1000;
+}
+
+/* ------------------------------------------------------- the public shape */
+
+/** `02 Aug 2026`, matching what the public section already renders. */
+function formatObservedDate(ms: number): string {
+  const d = new Date(ms);
+  const month = d.toLocaleString('en-GB', { month: 'short' });
+  return `${String(d.getDate()).padStart(2, '0')} ${month} ${d.getFullYear()}`;
+}
+
+/**
+ * Turn stored observations into the shape the public section already renders.
+ *
+ * The view model is deliberately not what gets stored. MarketPrice carries a
+ * change and a trend as plain fields because that is what a card needs to draw;
+ * the register keeps neither, because storing a derived figure is how an arrow
+ * ends up pointing the opposite way to the numbers beside it. This is the one
+ * place the two meet.
+ */
+export function toPublicPrices(
+  points: MarketPricePoint[],
+  now = Date.now()
+): PublicMarketPrice[] {
+  return points
+    .map((p) => {
+      const commodity = MARKET_COMMODITY_BY_KEY[p.commodityKey];
+      const centre = MARKET_CENTRE_BY_ID[p.marketId];
+      const observedAtMs = p.observedAt.toMillis();
+
+      return {
+        id: p.observationId,
+        commodityKey: p.commodityKey,
+        commodity: commodity?.name ?? p.commodityKey,
+        market: centre?.name ?? p.marketId,
+        zone: CANONICAL_ZONE_METADATA[p.zoneId as CanonicalZoneId]?.displayName ?? p.zoneId,
+        unit: MARKET_UNITS[p.unitKey]?.label ?? p.unitKey,
+        priceETB: p.priceETB,
+        // Zero only when there is genuinely no movement; isFirstPrice is what
+        // tells the card not to draw a percentage at all.
+        changePercent: p.changePercent ?? 0,
+        trend: p.trend === 'new' ? 'stable' : p.trend,
+        updatedDate: formatObservedDate(observedAtMs),
+        isFirstPrice: p.trend === 'new',
+        isStale: isStale(observedAtMs, now),
+        observedAtMs,
+      } satisfies PublicMarketPrice;
+    })
+    .sort((a, b) => (b.observedAtMs ?? 0) - (a.observedAtMs ?? 0));
 }
 
 /** The live history of one series, newest first, for a detail view. */

@@ -13,9 +13,12 @@ import {
   changePercent,
   deriveTrend,
   enterableUnits,
+  isStale,
   latestPerSeries,
   seriesHistory,
+  STALE_AFTER_DAYS,
   toCanonicalUnit,
+  toPublicPrices,
   UNUSUAL_MOVE_PERCENT,
 } from '../features/market/constants/marketVocabulary';
 import { validatePrice } from '../features/market/services/marketService';
@@ -35,7 +38,15 @@ import type { MarketPriceObservation } from '../features/market/types/market';
 export interface TestResult {
   id: number;
   name: string;
-  category: 'Units' | 'Change' | 'Series' | 'Guard' | 'Dictionary' | 'Service' | 'Rules';
+  category:
+    | 'Units'
+    | 'Change'
+    | 'Series'
+    | 'Guard'
+    | 'Dictionary'
+    | 'Service'
+    | 'Public'
+    | 'Rules';
   passed: boolean;
   message: string;
   details?: unknown;
@@ -477,6 +488,96 @@ export function runMarketConsistencyTests(): TestResult[] {
       passed: r.priceETB === 9200 && r.unitKey === 'quintal',
       message: 'The service writes the canonical figure, so no series holds a mixture of scales.',
       details: r,
+    };
+  });
+
+  /* ----------------------------------------------------------------- public */
+
+  const DAY = 24 * 60 * 60 * 1000;
+
+  check('A price past the threshold is stale', 'Public', () => {
+    const now = Date.UTC(2026, 7, 30);
+    return {
+      passed:
+        isStale(now - (STALE_AFTER_DAYS + 1) * DAY, now) &&
+        !isStale(now - (STALE_AFTER_DAYS - 1) * DAY, now),
+      message: `Prices older than ${STALE_AFTER_DAYS} days are marked; newer ones are not.`,
+    };
+  });
+
+  check('A stale price is marked, not hidden', 'Public', () => {
+    // Hiding it would make the section look emptier than the register is, and
+    // the reader would not know the Bureau has a figure at all. Marking it lets
+    // them judge.
+    const now = Date.UTC(2026, 7, 30);
+    const pub = toPublicPrices(
+      latestPerSeries([obs('teff_white', 'adama_central', 9200, '2026-06-01')]),
+      now
+    );
+    return {
+      passed: pub.length === 1 && pub[0].isStale === true,
+      message: 'Still listed, carrying its age.',
+      details: pub[0],
+    };
+  });
+
+  check('A first price says so instead of showing 0%', 'Public', () => {
+    const now = Date.UTC(2026, 7, 30);
+    const pub = toPublicPrices(
+      latestPerSeries([obs('wheat', 'asella', 6100, '2026-08-29')]),
+      now
+    );
+    return {
+      passed: pub[0].isFirstPrice === true && pub[0].trend === 'stable',
+      message:
+        pub[0].isFirstPrice
+          ? 'The card renders "New" rather than asserting the price held steady.'
+          : 'A first price was presented as an unchanged one.',
+      details: pub[0],
+    };
+  });
+
+  check('The public shape carries trilingual names, not keys', 'Public', () => {
+    const now = Date.UTC(2026, 7, 30);
+    const pub = toPublicPrices(
+      latestPerSeries([obs('teff_white', 'adama_central', 9200, '2026-08-29')]),
+      now
+    );
+    const c = pub[0].commodity;
+    const m = pub[0].market;
+    return {
+      passed:
+        typeof c === 'object' && Boolean(c?.om && c?.am && c?.en) &&
+        typeof m === 'object' && Boolean(m?.om && m?.am && m?.en),
+      message: 'The home page renders whichever language the visitor chose.',
+      details: { commodity: c, market: m },
+    };
+  });
+
+  check('Public prices come newest first', 'Public', () => {
+    const now = Date.UTC(2026, 7, 30);
+    const pub = toPublicPrices(
+      latestPerSeries([
+        obs('wheat', 'asella', 6100, '2026-08-10'),
+        obs('teff_white', 'adama_central', 9200, '2026-08-28'),
+        obs('maize', 'jimma_main', 4300, '2026-08-19'),
+      ]),
+      now
+    );
+    return {
+      passed:
+        pub[0].commodityKey === 'teff_white' &&
+        pub[1].commodityKey === 'maize' &&
+        pub[2].commodityKey === 'wheat',
+      message: 'The four featured cards are the four most recently seen prices.',
+      details: pub.map((p) => `${p.commodityKey}:${p.updatedDate}`),
+    };
+  });
+
+  check('An empty register produces an empty public list', 'Public', () => {
+    return {
+      passed: toPublicPrices([]).length === 0,
+      message: 'The section says nothing is published rather than inventing a price.',
     };
   });
 

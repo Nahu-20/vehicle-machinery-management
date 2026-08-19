@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
-import { mockMarketPrices } from '../../data/mockData';
 import { MarketPrice } from '../../types';
+import { isDemoMarket, listPublicPrices } from '../../features/market/services/marketService';
 import { SectionHeaderReveal } from '../common/scroll/SectionHeaderReveal';
 import { ScrollReveal } from '../common/scroll/ScrollReveal';
 import { StaggerContainer, StaggerItem } from '../common/scroll/StaggerContainer';
-import { TrendingUp, TrendingDown, AlertCircle, RefreshCw, Filter, Sparkles } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertCircle, RefreshCw, Filter, Sparkles, Clock } from 'lucide-react';
 
 export const MarketPriceCardList: React.FC<{ items: MarketPrice[] }> = ({ items }) => {
   const { t, getLocalizedText } = useLanguage();
@@ -50,12 +50,16 @@ export const MarketPriceCardList: React.FC<{ items: MarketPrice[] }> = ({ items 
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                 }`}
               >
-                {item.changePercent > 0 ? (
+                {item.isFirstPrice ? null : item.changePercent > 0 ? (
                   <TrendingUp className="h-3.5 w-3.5" />
                 ) : item.changePercent < 0 ? (
                   <TrendingDown className="h-3.5 w-3.5" />
                 ) : null}
-                {item.changePercent > 0 ? `+${item.changePercent}%` : `${item.changePercent}%`}
+                {item.isFirstPrice
+                  ? 'New'
+                  : item.changePercent > 0
+                  ? `+${item.changePercent}%`
+                  : `${item.changePercent}%`}
               </span>
             </div>
 
@@ -84,7 +88,16 @@ export const MarketPriceCardList: React.FC<{ items: MarketPrice[] }> = ({ items 
               </div>
               <div>
                 <span className="text-[11px] font-bold text-[#637069] dark:text-emerald-400/80 block">{t('market_th_date')}</span>
-                <span className="font-semibold text-[#637069] dark:text-emerald-300/80">{item.updatedDate}</span>
+                <span
+                  className={`font-semibold inline-flex items-center gap-1 ${
+                    item.isStale
+                      ? 'text-amber-700 dark:text-amber-400'
+                      : 'text-[#637069] dark:text-emerald-300/80'
+                  }`}
+                >
+                  {item.isStale && <Clock className="h-3 w-3 shrink-0" />}
+                  {item.updatedDate}
+                </span>
               </div>
             </div>
           </div>
@@ -139,16 +152,32 @@ export const MarketPriceTable: React.FC<{ items: MarketPrice[] }> = ({ items }) 
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                     }`}
                   >
-                    {item.changePercent > 0 ? (
+                    {item.isFirstPrice ? null : item.changePercent > 0 ? (
                       <TrendingUp className="h-3.5 w-3.5" />
                     ) : item.changePercent < 0 ? (
                       <TrendingDown className="h-3.5 w-3.5" />
                     ) : null}
-                    {item.changePercent > 0 ? `+${item.changePercent}%` : `${item.changePercent}%`}
+                    {item.isFirstPrice
+                      ? 'New'
+                      : item.changePercent > 0
+                      ? `+${item.changePercent}%`
+                      : `${item.changePercent}%`}
                   </span>
                 </td>
-                <td className="px-5 py-4 text-right text-xs text-[#637069] dark:text-emerald-300/80">
-                  {item.updatedDate}
+                <td className="px-5 py-4 text-right text-xs">
+                  {item.isStale ? (
+                    <span
+                      className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-400"
+                      title="Older than three weeks - treat as indicative only"
+                    >
+                      <Clock className="h-3 w-3 shrink-0" />
+                      {item.updatedDate}
+                    </span>
+                  ) : (
+                    <span className="text-[#637069] dark:text-emerald-300/80">
+                      {item.updatedDate}
+                    </span>
+                  )}
                 </td>
               </tr>
             );
@@ -162,6 +191,24 @@ export const MarketPriceTable: React.FC<{ items: MarketPrice[] }> = ({ items }) 
 export const MarketSnapshotSection: React.FC = () => {
   const { t, getLocalizedText } = useLanguage();
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
+  const [prices, setPrices] = useState<MarketPrice[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      setPrices(await listPublicPrices());
+    } catch {
+      // Read anonymously, so a refusal or an outage should leave the rest of
+      // the home page standing rather than taking it down.
+      setPrices([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const filterOptions = [
     { id: 'all', key: 'alert_category_all' },
@@ -171,9 +218,24 @@ export const MarketSnapshotSection: React.FC = () => {
     { id: 'coffee', key: 'comm_coffee' },
   ];
 
-  const filteredPrices = selectedFilter === 'all' 
-    ? mockMarketPrices 
-    : mockMarketPrices.filter(p => p.id.toLowerCase().includes(selectedFilter));
+  // Matched on the commodity key rather than the document id. Ids used to be
+  // 'mkt-1' and happened to contain the commodity name; a real observation id
+  // is a random Firestore string and would match nothing.
+  const filteredPrices = useMemo(
+    () =>
+      selectedFilter === 'all'
+        ? prices
+        : prices.filter((p) => (p.commodityKey ?? p.id).toLowerCase().includes(selectedFilter)),
+    [prices, selectedFilter]
+  );
+
+  // The newest price on the page is what "updated" honestly means. It used to
+  // be a date typed into the markup, which would have gone stale the moment
+  // anybody believed it.
+  const newestMs = useMemo(
+    () => prices.reduce((acc, p) => Math.max(acc, p.observedAtMs ?? 0), 0),
+    [prices]
+  );
 
   return (
     <section className="bg-white dark:bg-[#0B1912] py-12 lg:py-20 border-b border-[#DDE8E1] dark:border-emerald-900/60 w-full max-w-full overflow-hidden transition-colors duration-200">
@@ -200,8 +262,20 @@ export const MarketSnapshotSection: React.FC = () => {
           />
 
           <div className="flex items-center gap-2 text-xs font-bold text-[#063D2A] dark:text-emerald-200 bg-[#EFF8F2] dark:bg-[#12281D] px-4 py-2 rounded-xl border border-[#DDE8E1] dark:border-emerald-800/60 shrink-0 self-start md:self-auto">
-            <RefreshCw className="h-4 w-4 text-[#087A4B] dark:text-[#D7A928]" />
-            <span>Updated: August 02, 2026</span>
+            <RefreshCw
+              className={`h-4 w-4 text-[#087A4B] dark:text-[#D7A928] ${loading ? 'animate-spin' : ''}`}
+            />
+            <span>
+              {loading
+                ? 'Loading...'
+                : newestMs
+                ? `Updated: ${new Date(newestMs).toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                  })}`
+                : 'No prices published'}
+            </span>
           </div>
         </div>
 
@@ -227,16 +301,23 @@ export const MarketSnapshotSection: React.FC = () => {
         </div>
 
         {/* Prominent Disclaimer Notice */}
-        <ScrollReveal variant="fade-up" duration={0.5}>
-          <div className="mb-8 rounded-2xl bg-amber-50 dark:bg-amber-950/40 p-4 border border-amber-200 dark:border-amber-800/60 flex items-center gap-3 text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-200 shadow-2xs min-w-0">
-            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
-            <span className="overflow-wrap-anywhere">{t('market_disclaimer')}</span>
-          </div>
-        </ScrollReveal>
+        {/*
+          The demonstration warning belongs with demonstration data. Once prices
+          come from the register it is not merely unnecessary, it is false, and a
+          notice that cries wolf is one nobody reads when it matters.
+        */}
+        {isDemoMarket() && (
+          <ScrollReveal variant="fade-up" duration={0.5}>
+            <div className="mb-8 rounded-2xl bg-amber-50 dark:bg-amber-950/40 p-4 border border-amber-200 dark:border-amber-800/60 flex items-center gap-3 text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-200 shadow-2xs min-w-0">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="overflow-wrap-anywhere">{t('market_disclaimer')}</span>
+            </div>
+          </ScrollReveal>
+        )}
 
         {/* Featured Price Cards Grid */}
         <StaggerContainer staggerDelay={0.08} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 min-w-0">
-          {mockMarketPrices.slice(0, 4).map((item) => {
+          {prices.slice(0, 4).map((item) => {
             const commName = item.commodity ? getLocalizedText(item.commodity) : (item.commodityKey ? t(item.commodityKey) : '');
             const mktName = getLocalizedText(item.market);
             const zName = getLocalizedText(item.zone);
@@ -247,7 +328,16 @@ export const MarketSnapshotSection: React.FC = () => {
                   <div>
                     <div className="flex items-center justify-between text-xs font-bold text-[#637069] dark:text-emerald-400/80 gap-2">
                       <span className="truncate">{zName} ({mktName})</span>
-                      <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-[#087A4B] dark:text-emerald-300 px-2 py-0.5 rounded-full shrink-0">Active</span>
+                      {item.isStale ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full shrink-0">
+                          <Clock className="h-3 w-3" />
+                          {item.updatedDate}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-[#087A4B] dark:text-emerald-300 px-2 py-0.5 rounded-full shrink-0">
+                          {item.updatedDate}
+                        </span>
+                      )}
                     </div>
                     <h3 className="text-base font-black text-[#063D2A] dark:text-emerald-100 mt-2 overflow-wrap-anywhere leading-snug">{commName}</h3>
                   </div>
@@ -263,8 +353,16 @@ export const MarketSnapshotSection: React.FC = () => {
                           : 'bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300'
                       }`}
                     >
-                      {item.changePercent > 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                      {item.changePercent > 0 ? `+${item.changePercent}%` : `${item.changePercent}%`}
+                      {item.isFirstPrice ? null : item.changePercent > 0 ? (
+                        <TrendingUp className="h-3.5 w-3.5" />
+                      ) : (
+                        <TrendingDown className="h-3.5 w-3.5" />
+                      )}
+                      {item.isFirstPrice
+                        ? 'New'
+                        : item.changePercent > 0
+                        ? `+${item.changePercent}%`
+                        : `${item.changePercent}%`}
                     </span>
                   </div>
                 </div>
@@ -274,15 +372,35 @@ export const MarketSnapshotSection: React.FC = () => {
         </StaggerContainer>
 
         {/* Responsive Market Section: Card list on mobile (<768px), Table on tablet/desktop (>=768px) */}
-        <ScrollReveal variant="fade-up" duration={0.6}>
-          <div className="block md:hidden w-full max-w-full">
-            <MarketPriceCardList items={filteredPrices} />
+        {loading ? (
+          <div className="rounded-2xl border border-[#DDE8E1] dark:border-emerald-900/60 bg-white dark:bg-[#12281D] p-10 text-center text-sm text-[#637069] dark:text-emerald-300/70">
+            Loading prices...
           </div>
+        ) : prices.length === 0 ? (
+          /*
+           * Nothing published yet. Said plainly rather than filled with invented
+           * figures: a wrong price on a government site sends somebody to market
+           * with a load they cannot sell at the price they were promised.
+           */
+          <div className="rounded-2xl border border-[#DDE8E1] dark:border-emerald-900/60 bg-[#FAFAF7] dark:bg-[#12281D] p-10 text-center">
+            <p className="text-base font-black text-[#063D2A] dark:text-emerald-100">
+              No prices published yet
+            </p>
+            <p className="mt-1 text-sm text-[#637069] dark:text-emerald-300/80">
+              Market prices appear here as soon as the Bureau records them.
+            </p>
+          </div>
+        ) : (
+          <ScrollReveal variant="fade-up" duration={0.6}>
+            <div className="block md:hidden w-full max-w-full">
+              <MarketPriceCardList items={filteredPrices} />
+            </div>
 
-          <div className="hidden md:block w-full">
-            <MarketPriceTable items={filteredPrices} />
-          </div>
-        </ScrollReveal>
+            <div className="hidden md:block w-full">
+              <MarketPriceTable items={filteredPrices} />
+            </div>
+          </ScrollReveal>
+        )}
       </div>
     </section>
   );

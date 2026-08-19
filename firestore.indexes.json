@@ -507,6 +507,34 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "marketPrices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "commodityKey",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "observedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "marketPrices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "marketId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "observedAt",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

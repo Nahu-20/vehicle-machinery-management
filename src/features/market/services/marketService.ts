@@ -25,7 +25,10 @@ import {
   isLive,
   latestPerSeries,
   toCanonicalUnit,
+  toPublicPrices,
 } from '../constants/marketVocabulary';
+import { mockMarketPrices } from '../../../data/mockData';
+import type { MarketPrice as PublicMarketPrice } from '../../../types';
 
 /**
  * Recording what a commodity cost, and reading it back.
@@ -115,6 +118,24 @@ export async function listObservations(commodityKey?: string): Promise<MarketPri
 /** The current price of everything, with its movement. */
 export async function listLatestPrices(): Promise<MarketPricePoint[]> {
   return latestPerSeries(await listObservations());
+}
+
+/**
+ * What the public site shows.
+ *
+ * Read without a signed-in user — firestore.rules grants `allow read: if true`
+ * on marketPrices, which is the point: a price list that requires an account
+ * helps nobody who needs it.
+ *
+ * Falls back to the demonstration rows when Firebase is unconfigured, so the
+ * home page never renders an empty section on a developer machine. Once
+ * configured it shows the register, empty or not — an invented price on a
+ * government site is worse than no price at all, which is why the fallback is
+ * tied to configuration rather than to the register being empty.
+ */
+export async function listPublicPrices(): Promise<PublicMarketPrice[]> {
+  if (isDemoMarket()) return mockMarketPrices;
+  return toPublicPrices(await listLatestPrices());
 }
 
 /* ----------------------------------------------------------------- writes */
