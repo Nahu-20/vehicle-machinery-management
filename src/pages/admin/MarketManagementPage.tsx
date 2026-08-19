@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   Undo2,
   Scale,
+  ClipboardList,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -37,7 +38,9 @@ import {
   listObservations,
   MarketPriceOutlierError,
   recordPrice,
+  recordPriceRound,
   supersedePrice,
+  type PriceRoundOutcome,
 } from '../../features/market/services/marketService';
 import type { MarketPriceObservation, MarketPricePoint } from '../../features/market/types/market';
 import { CANONICAL_ZONE_METADATA } from '../../features/investment-map/constants/canonicalZones';
@@ -85,6 +88,14 @@ export const MarketManagementPage: React.FC = () => {
 
   // The commodity being compared across markets, or null for the plain table.
   const [comparing, setComparing] = useState<string | null>(null);
+
+  // A market round: everything seen at one market on one morning. The market
+  // and the date are chosen once; the grid holds a price per commodity.
+  const [showRound, setShowRound] = useState(false);
+  const [roundMarketId, setRoundMarketId] = useState(MARKET_CENTRES[0].marketId);
+  const [roundDate, setRoundDate] = useState(todayIso());
+  const [roundPrices, setRoundPrices] = useState<Record<string, string>>({});
+  const [roundOutcomes, setRoundOutcomes] = useState<PriceRoundOutcome[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -176,6 +187,81 @@ export const MarketManagementPage: React.FC = () => {
     }
   };
 
+  /**
+   * What each commodity last fetched at the market being recorded.
+   *
+   * Shown beside every box because it is the number the clerk is comparing
+   * against in their head anyway, and seeing it is what catches a price typed
+   * on the wrong row before the guard ever has to.
+   */
+  const lastPriceAtRoundMarket = useMemo(() => {
+    const out: Record<string, { price: number; when: number }> = {};
+    for (const o of observations) {
+      if (o.marketId !== roundMarketId || o.supersededAt) continue;
+      const at = o.observedAt.toMillis();
+      const held = out[o.commodityKey];
+      if (!held || at > held.when) out[o.commodityKey] = { price: o.priceETB, when: at };
+    }
+    return out;
+  }, [observations, roundMarketId]);
+
+  const handleRound = async () => {
+    if (!staffUser || busy) return;
+    setBusy(true);
+    setError(null);
+
+    const previous = new Map(roundOutcomes.map((o) => [o.commodityKey, o.status]));
+
+    try {
+      const outcomes = await recordPriceRound(
+        {
+          marketId: roundMarketId,
+          observedAt: new Date(`${roundDate}T00:00:00`),
+          entries: MARKET_COMMODITIES.map((c) => ({
+            commodityKey: c.commodityKey,
+            price: roundPrices[c.commodityKey]?.trim()
+              ? Number(roundPrices[c.commodityKey])
+              : null,
+            unitKey: c.canonicalUnit,
+            // A row that was flagged last time and left unchanged is being
+            // stood behind; submitting again is the confirmation.
+            confirmUnusual: previous.get(c.commodityKey) === 'needs-confirmation',
+          })),
+        },
+        staffUser
+      );
+
+      setRoundOutcomes(outcomes);
+
+      const recorded = outcomes.filter((o) => o.status === 'recorded');
+      const pending = outcomes.filter((o) => o.status === 'needs-confirmation');
+      const failed = outcomes.filter((o) => o.status === 'failed');
+
+      // Clear only what landed, so the grid keeps exactly the rows still
+      // needing attention rather than making the officer find them again.
+      if (recorded.length) {
+        setRoundPrices((cur) => {
+          const next = { ...cur };
+          for (const r of recorded) delete next[r.commodityKey];
+          return next;
+        });
+      }
+
+      const parts: string[] = [];
+      if (recorded.length) parts.push(`${recorded.length} recorded`);
+      if (pending.length) parts.push(`${pending.length} needs a second look`);
+      if (failed.length) parts.push(`${failed.length} refused`);
+      setNotice(parts.length ? parts.join(', ') + '.' : 'Nothing entered.');
+
+      if (!pending.length && !failed.length && recorded.length) setShowRound(false);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not record the round.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const comparison = useMemo(
     () => (comparing ? compareAcrossMarkets(points, comparing) : []),
     [points, comparing]
@@ -214,11 +300,26 @@ export const MarketManagementPage: React.FC = () => {
           </button>
           {canManageMarket && (
             <button
-              onClick={() => setShowForm((v) => !v)}
+              onClick={() => {
+                setShowForm(false);
+                setShowRound((v) => !v);
+              }}
+              className="px-4 py-2.5 rounded-xl border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 font-bold text-xs flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+            >
+              <ClipboardList className="w-4 h-4" />
+              <span>Record a round</span>
+            </button>
+          )}
+          {canManageMarket && (
+            <button
+              onClick={() => {
+                setShowRound(false);
+                setShowForm((v) => !v);
+              }}
               className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow"
             >
               <Plus className="w-4 h-4" />
-              <span>Record price</span>
+              <span>Single price</span>
             </button>
           )}
         </div>
@@ -245,6 +346,126 @@ export const MarketManagementPage: React.FC = () => {
         <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 rounded-2xl p-3 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{notice}</span>
+        </div>
+      )}
+
+      {showRound && canManageMarket && (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-slate-200 dark:border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="md:col-span-2">
+              <label className={LABEL}>Market centre</label>
+              <select
+                value={roundMarketId}
+                onChange={(e) => {
+                  setRoundMarketId(e.target.value);
+                  setRoundOutcomes([]);
+                }}
+                className={INPUT}
+              >
+                {MARKET_CENTRES.map((m) => (
+                  <option key={m.marketId} value={m.marketId}>
+                    {getLocalizedText(m.name)} — {CANONICAL_ZONE_METADATA[m.zoneId].displayName}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                Chosen once for the whole round, which is how the prices were gathered.
+              </p>
+            </div>
+            <div>
+              <label className={LABEL}>Seen on</label>
+              <input
+                type="date"
+                value={roundDate}
+                max={todayIso()}
+                onChange={(e) => setRoundDate(e.target.value)}
+                className={INPUT}
+              />
+            </div>
+          </div>
+
+          <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+            {MARKET_COMMODITIES.map((c) => {
+              const last = lastPriceAtRoundMarket[c.commodityKey];
+              const outcome = roundOutcomes.find((o) => o.commodityKey === c.commodityKey);
+              return (
+                <div
+                  key={c.commodityKey}
+                  className={`px-6 py-3 flex flex-wrap items-center gap-3 ${
+                    outcome?.status === 'needs-confirmation'
+                      ? 'bg-amber-50 dark:bg-amber-950/30'
+                      : outcome?.status === 'failed'
+                      ? 'bg-red-50 dark:bg-red-950/30'
+                      : ''
+                  }`}
+                >
+                  <span className="font-bold text-xs text-slate-900 dark:text-white flex-1 min-w-[160px]">
+                    {getLocalizedText(c.name)}
+                  </span>
+
+                  <span className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums w-32 text-right">
+                    {last ? `was ${last.price.toLocaleString()}` : 'no previous price'}
+                  </span>
+
+                  <input
+                    value={roundPrices[c.commodityKey] ?? ''}
+                    onChange={(e) =>
+                      setRoundPrices((cur) => ({ ...cur, [c.commodityKey]: e.target.value }))
+                    }
+                    inputMode="decimal"
+                    placeholder="—"
+                    className={`${INPUT} w-32 text-right`}
+                  />
+
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 w-28">
+                    ETB / {getLocalizedText(MARKET_UNITS[c.canonicalUnit].label)}
+                  </span>
+
+                  <span className="text-[11px] font-bold w-56">
+                    {outcome?.status === 'recorded' && (
+                      <span className="text-emerald-600 dark:text-emerald-400">Recorded</span>
+                    )}
+                    {outcome?.status === 'needs-confirmation' && (
+                      <span className="text-amber-700 dark:text-amber-400">
+                        {outcome.deviationPercent != null
+                          ? `${outcome.deviationPercent > 0 ? '+' : ''}${outcome.deviationPercent}% on ${outcome.previousPrice?.toLocaleString()} — submit again to confirm`
+                          : 'Check this figure'}
+                      </span>
+                    )}
+                    {outcome?.status === 'failed' && (
+                      <span className="text-red-600 dark:text-red-400">{outcome.message}</span>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="p-6 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Leave a commodity blank if it was not traded. A blank is a silence, not a zero.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRound(false);
+                  setRoundOutcomes([]);
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void handleRound()}
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-bold text-xs shadow"
+              >
+                {busy ? 'Recording...' : 'Record the round'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

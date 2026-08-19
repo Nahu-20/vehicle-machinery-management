@@ -305,6 +305,98 @@ export async function recordPrice(input: RecordPriceInput, actor: StaffUser): Pr
   return ref.id;
 }
 
+/* ------------------------------------------------------------ the round */
+
+export interface PriceRoundEntry {
+  commodityKey: string;
+  /** Blank means "not seen at this market today", which is not an error. */
+  price: number | null;
+  unitKey: MarketUnitKey;
+  confirmUnusual?: boolean;
+}
+
+export interface PriceRoundInput {
+  marketId: string;
+  observedAt: Date;
+  entries: PriceRoundEntry[];
+}
+
+export interface PriceRoundOutcome {
+  commodityKey: string;
+  status: 'recorded' | 'skipped' | 'needs-confirmation' | 'failed';
+  observationId?: string;
+  message?: string;
+  /** Present on needs-confirmation, so the row can show what it is comparing. */
+  previousPrice?: number;
+  deviationPercent?: number;
+}
+
+/**
+ * Record everything seen at one market on one day.
+ *
+ * A market round is how the data is actually gathered: somebody walks one
+ * market and writes down a dozen prices in one morning. Entering them one form
+ * at a time means picking the same market and the same date twelve times, and
+ * that friction is what decides whether a tool gets used in week three.
+ *
+ * Each entry still goes through recordPrice, so the dictionary check, the unit
+ * conversion, the date check and the unusual-move guard are the same code on
+ * the same terms. Nothing here is a faster path with weaker rules.
+ *
+ * Deliberately not a transaction. Eleven good prices should not be lost because
+ * the twelfth needs a second look — each is an independent fact, and the ones
+ * that landed are reported so the officer can fix only what remains.
+ */
+export async function recordPriceRound(
+  input: PriceRoundInput,
+  actor: StaffUser
+): Promise<PriceRoundOutcome[]> {
+  const outcomes: PriceRoundOutcome[] = [];
+
+  for (const entry of input.entries) {
+    if (entry.price == null || !Number.isFinite(entry.price)) {
+      // Not every commodity is traded at every market every week. A blank is a
+      // silence, not a zero, and recording it as a price would be a lie the
+      // trend arithmetic would then repeat.
+      outcomes.push({ commodityKey: entry.commodityKey, status: 'skipped' });
+      continue;
+    }
+
+    try {
+      const observationId = await recordPrice(
+        {
+          commodityKey: entry.commodityKey,
+          marketId: input.marketId,
+          price: entry.price,
+          unitKey: entry.unitKey,
+          observedAt: input.observedAt,
+          confirmUnusual: entry.confirmUnusual,
+        },
+        actor
+      );
+      outcomes.push({ commodityKey: entry.commodityKey, status: 'recorded', observationId });
+    } catch (err) {
+      if (err instanceof MarketPriceOutlierError) {
+        outcomes.push({
+          commodityKey: entry.commodityKey,
+          status: 'needs-confirmation',
+          message: err.message,
+          previousPrice: err.previousPrice,
+          deviationPercent: err.deviationPercent,
+        });
+      } else {
+        outcomes.push({
+          commodityKey: entry.commodityKey,
+          status: 'failed',
+          message: err instanceof Error ? err.message : 'Could not record this price.',
+        });
+      }
+    }
+  }
+
+  return outcomes;
+}
+
 /**
  * Correct a price that was wrong.
  *
