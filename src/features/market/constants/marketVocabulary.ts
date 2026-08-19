@@ -282,6 +282,61 @@ export function toPublicPrices(
     .sort((a, b) => (b.observedAtMs ?? 0) - (a.observedAtMs ?? 0));
 }
 
+/* ----------------------------------------------------------- comparison */
+
+export interface MarketComparisonRow {
+  marketId: string;
+  zoneId: string;
+  priceETB: number;
+  observedAtMs: number;
+  /** How far above the cheapest market this one is, as a percentage. */
+  premiumPercent: number;
+  isCheapest: boolean;
+  isDearest: boolean;
+  isStale: boolean;
+}
+
+/**
+ * One commodity across every market that has a price for it.
+ *
+ * This is the comparison that actually changes a decision. A single national
+ * average tells a farmer in Shashamane nothing; teff at 9,200 in Adama against
+ * 8,600 where they are tells them whether the journey is worth making. It is
+ * the core of every market information service worth using.
+ *
+ * The spread is measured from the cheapest rather than from an average, because
+ * the question being asked is "how much more would I get elsewhere", and the
+ * answer is relative to somewhere real rather than to a figure no market
+ * charges.
+ */
+export function compareAcrossMarkets(
+  points: MarketPricePoint[],
+  commodityKey: string,
+  now = Date.now()
+): MarketComparisonRow[] {
+  const forCommodity = points.filter((p) => p.commodityKey === commodityKey);
+  if (forCommodity.length === 0) return [];
+
+  const cheapest = Math.min(...forCommodity.map((p) => p.priceETB));
+  const dearest = Math.max(...forCommodity.map((p) => p.priceETB));
+
+  return forCommodity
+    .map((p) => ({
+      marketId: p.marketId,
+      zoneId: p.zoneId,
+      priceETB: p.priceETB,
+      observedAtMs: p.observedAt.toMillis(),
+      premiumPercent: cheapest > 0 ? Math.round(((p.priceETB - cheapest) / cheapest) * 1000) / 10 : 0,
+      isCheapest: p.priceETB === cheapest,
+      // Both flags on a single market is correct rather than a bug: with one
+      // price recorded it is simultaneously the highest and the lowest, and
+      // saying so is more honest than picking one.
+      isDearest: p.priceETB === dearest,
+      isStale: isStale(p.observedAt.toMillis(), now),
+    }))
+    .sort((a, b) => b.priceETB - a.priceETB);
+}
+
 /** The live history of one series, newest first, for a detail view. */
 export function seriesHistory(
   observations: MarketPriceObservation[],

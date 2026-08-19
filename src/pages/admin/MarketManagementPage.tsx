@@ -11,6 +11,8 @@ import {
   ChevronDown,
   ChevronRight,
   ShieldAlert,
+  Undo2,
+  Scale,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -24,13 +26,18 @@ import {
   MARKET_UNITS,
   type MarketUnitKey,
 } from '../../features/market/constants/marketCommodities';
-import { enterableUnits, seriesHistory } from '../../features/market/constants/marketVocabulary';
+import {
+  compareAcrossMarkets,
+  enterableUnits,
+  seriesHistory,
+} from '../../features/market/constants/marketVocabulary';
 import {
   isDemoMarket,
   listLatestPrices,
   listObservations,
   MarketPriceOutlierError,
   recordPrice,
+  supersedePrice,
 } from '../../features/market/services/marketService';
 import type { MarketPriceObservation, MarketPricePoint } from '../../features/market/types/market';
 import { CANONICAL_ZONE_METADATA } from '../../features/investment-map/constants/canonicalZones';
@@ -70,6 +77,14 @@ export const MarketManagementPage: React.FC = () => {
   // round trip per series.
   const [observations, setObservations] = useState<MarketPriceObservation[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  // Which observation is being corrected, and why. A correction without a
+  // reason is unreadable a month later, so the id alone is not enough state.
+  const [correcting, setCorrecting] = useState<string | null>(null);
+  const [correctionReason, setCorrectionReason] = useState('');
+
+  // The commodity being compared across markets, or null for the plain table.
+  const [comparing, setComparing] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -143,6 +158,28 @@ export const MarketManagementPage: React.FC = () => {
       setBusy(false);
     }
   };
+
+  const handleCorrect = async (observationId: string) => {
+    if (!staffUser || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await supersedePrice(observationId, correctionReason, staffUser);
+      setCorrecting(null);
+      setCorrectionReason('');
+      setNotice('Price corrected. The original stays on the record, struck through.');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not correct the price.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const comparison = useMemo(
+    () => (comparing ? compareAcrossMarkets(points, comparing) : []),
+    [points, comparing]
+  );
 
   const rows = useMemo(
     () =>
@@ -354,6 +391,68 @@ export const MarketManagementPage: React.FC = () => {
         </form>
       )}
 
+      {comparing && comparison.length > 0 && (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+            <div className="font-bold text-xs text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <Scale className="w-4 h-4 text-blue-500" />
+              <span>
+                {getLocalizedText(MARKET_COMMODITY_BY_KEY[comparing]?.name ?? comparing)} across
+                market centres
+              </span>
+            </div>
+            <button
+              onClick={() => setComparing(null)}
+              className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+            >
+              Close
+            </button>
+          </div>
+          <div className="p-4 space-y-2">
+            {comparison.map((c) => (
+              <div
+                key={c.marketId}
+                className="flex items-center gap-3 text-xs border border-slate-100 dark:border-slate-800 rounded-xl px-3 py-2.5"
+              >
+                <span className="font-bold text-slate-900 dark:text-white flex-1 truncate">
+                  {getLocalizedText(MARKET_CENTRE_BY_ID[c.marketId]?.name ?? c.marketId)}
+                  <span className="ml-2 font-medium text-slate-400">
+                    {CANONICAL_ZONE_METADATA[c.zoneId as keyof typeof CANONICAL_ZONE_METADATA]
+                      ?.displayName ?? c.zoneId}
+                  </span>
+                </span>
+                <span className="font-black tabular-nums text-slate-900 dark:text-white">
+                  {c.priceETB.toLocaleString()} ETB
+                </span>
+                <span className="w-20 text-right tabular-nums font-bold text-slate-500 dark:text-slate-400">
+                  {c.premiumPercent > 0 ? `+${c.premiumPercent}%` : '—'}
+                </span>
+                <span className="w-24 text-right">
+                  {c.isCheapest && !c.isDearest && (
+                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                      Lowest
+                    </span>
+                  )}
+                  {c.isDearest && !c.isCheapest && (
+                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                      Highest
+                    </span>
+                  )}
+                  {c.isStale && (
+                    <span className="ml-1 text-[10px] font-bold uppercase text-amber-600">old</span>
+                  )}
+                </span>
+              </div>
+            ))}
+            {comparison.length === 1 && (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+                Only one market has a price for this commodity. Record it at a second to compare.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-slate-300">
           Regional Commodity Prices ({rows.length})
@@ -414,7 +513,17 @@ export const MarketManagementPage: React.FC = () => {
                         </button>
                       </td>
                       <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
-                        {centre ? getLocalizedText(centre.name) : p.marketId}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setComparing(comparing === p.commodityKey ? null : p.commodityKey)
+                          }
+                          className="inline-flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400"
+                          title="Compare this commodity across every market centre"
+                        >
+                          <Scale className="w-3.5 h-3.5 shrink-0 opacity-60" />
+                          {centre ? getLocalizedText(centre.name) : p.marketId}
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
                         {CANONICAL_ZONE_METADATA[p.zoneId as keyof typeof CANONICAL_ZONE_METADATA]
@@ -513,11 +622,64 @@ export const MarketManagementPage: React.FC = () => {
                                         </span>
                                       )}
                                     </span>
+                                    {canManageMarket && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setCorrecting(
+                                            correcting === o.observationId ? null : o.observationId
+                                          );
+                                          setCorrectionReason('');
+                                        }}
+                                        className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-red-600 dark:hover:text-red-400"
+                                        title="Mark this price as wrong. It stays on the record."
+                                      >
+                                        <Undo2 className="w-3 h-3" />
+                                        Correct
+                                      </button>
+                                    )}
                                   </li>
                                 );
                               })}
                             </ul>
                           )}
+
+                          {correcting &&
+                            history.some((o) => o.observationId === correcting) && (
+                              <div className="mt-3 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-3">
+                                <label className="block text-[11px] font-bold uppercase text-amber-800 dark:text-amber-300 mb-1.5">
+                                  Why is this price wrong?
+                                </label>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <input
+                                    value={correctionReason}
+                                    onChange={(e) => setCorrectionReason(e.target.value)}
+                                    placeholder="Recorded against the wrong market / litres transposed"
+                                    className={`${INPUT} flex-1 min-w-[220px]`}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setCorrecting(null)}
+                                    className="px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busy || !correctionReason.trim()}
+                                    onClick={() => void handleCorrect(correcting)}
+                                    className="px-3 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:bg-red-600/40 text-white font-bold text-xs"
+                                  >
+                                    {busy ? 'Correcting...' : 'Correct it'}
+                                  </button>
+                                </div>
+                                <p className="mt-2 text-[11px] text-amber-800/80 dark:text-amber-300/70">
+                                  The price stays visible and struck through, with this reason. It
+                                  drops out of the trend, and the next price is compared against the
+                                  last one still standing.
+                                </p>
+                              </div>
+                            )}
                         </td>
                       </tr>
                     )}

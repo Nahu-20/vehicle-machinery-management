@@ -11,6 +11,7 @@ import {
 import {
   assessPriceEntry,
   changePercent,
+  compareAcrossMarkets,
   deriveTrend,
   enterableUnits,
   isStale,
@@ -46,6 +47,7 @@ export interface TestResult {
     | 'Dictionary'
     | 'Service'
     | 'Public'
+    | 'Compare'
     | 'Rules';
   passed: boolean;
   message: string;
@@ -581,6 +583,103 @@ export function runMarketConsistencyTests(): TestResult[] {
     };
   });
 
+  /* ---------------------------------------------------------------- compare */
+
+  check('The cheapest and dearest markets are identified', 'Compare', () => {
+    const rows = compareAcrossMarkets(
+      latestPerSeries([
+        obs('teff_white', 'adama_central', 9200, '2026-08-20'),
+        obs('teff_white', 'shashamane', 8600, '2026-08-20'),
+        obs('teff_white', 'asella', 8900, '2026-08-20'),
+      ]),
+      'teff_white'
+    );
+    const cheapest = rows.find((r) => r.isCheapest);
+    const dearest = rows.find((r) => r.isDearest);
+    return {
+      passed: cheapest?.marketId === 'shashamane' && dearest?.marketId === 'adama_central',
+      message: 'This is the comparison that decides whether a journey is worth making.',
+      details: rows.map((r) => `${r.marketId}:${r.priceETB}`),
+    };
+  });
+
+  check('The premium is measured from the cheapest, not an average', 'Compare', () => {
+    // The question is "how much more would I get elsewhere", and the answer has
+    // to be relative to a price somebody is actually paying.
+    const rows = compareAcrossMarkets(
+      latestPerSeries([
+        obs('teff_white', 'adama_central', 9200, '2026-08-20'),
+        obs('teff_white', 'shashamane', 8000, '2026-08-20'),
+      ]),
+      'teff_white'
+    );
+    const adama = rows.find((r) => r.marketId === 'adama_central');
+    return {
+      passed: adama?.premiumPercent === 15,
+      message: '9,200 is 15% above 8,000.',
+      details: rows.map((r) => `${r.marketId}:+${r.premiumPercent}%`),
+    };
+  });
+
+  check('Rows are ordered dearest first', 'Compare', () => {
+    const rows = compareAcrossMarkets(
+      latestPerSeries([
+        obs('wheat', 'asella', 6100, '2026-08-20'),
+        obs('wheat', 'ambo', 6800, '2026-08-20'),
+        obs('wheat', 'nekemte', 6400, '2026-08-20'),
+      ]),
+      'wheat'
+    );
+    return {
+      passed: rows[0].priceETB === 6800 && rows[2].priceETB === 6100,
+      message: 'A seller reads down from the best price.',
+      details: rows.map((r) => r.priceETB),
+    };
+  });
+
+  check('One market is both cheapest and dearest', 'Compare', () => {
+    // Not a bug worth hiding: with a single price it genuinely is both, and
+    // saying so is more honest than picking one and implying a comparison.
+    const rows = compareAcrossMarkets(
+      latestPerSeries([obs('maize', 'jimma_main', 4300, '2026-08-20')]),
+      'maize'
+    );
+    return {
+      passed: rows.length === 1 && rows[0].isCheapest && rows[0].isDearest,
+      message: 'The page says so, and asks for a second market.',
+      details: rows[0],
+    };
+  });
+
+  check('Comparing an unpriced commodity yields nothing', 'Compare', () => {
+    const rows = compareAcrossMarkets(
+      latestPerSeries([obs('wheat', 'asella', 6100, '2026-08-20')]),
+      'coffee_washed'
+    );
+    return {
+      passed: rows.length === 0,
+      message: 'No prices, no comparison, rather than a panel of zeroes.',
+    };
+  });
+
+  check('A corrected price is not compared across markets', 'Compare', () => {
+    const rows = compareAcrossMarkets(
+      latestPerSeries([
+        obs('barley', 'robe_bale', 5200, '2026-08-20'),
+        obs('barley', 'ambo', 52000, '2026-08-20', {
+          supersededAt: ts('2026-08-21'),
+          supersedeReason: 'unit slip',
+        }),
+      ]),
+      'barley'
+    );
+    return {
+      passed: rows.length === 1 && rows[0].marketId === 'robe_bale',
+      message: 'A mistake must not become the market anyone is measured against.',
+      details: rows,
+    };
+  });
+
   /* ------------------------------------------------------------------ rules */
 
   check('marketPrices is writable only by a market officer', 'Rules', () => {
@@ -617,6 +716,30 @@ export function runMarketConsistencyTests(): TestResult[] {
       message:
         'The whole point is farmers reading them without an account. A signed-in-only price list helps nobody.',
       details: body.trim(),
+    };
+  });
+
+  check('An existing price may only be marked corrected', 'Rules', () => {
+    // Editing the figure in place would erase the fact that the public site
+    // showed a different number, which somebody may have acted on.
+    let rules = '';
+    try {
+      rules = readFileSync('firestore.rules', 'utf8');
+    } catch {
+      return { passed: false, message: 'Could not read firestore.rules.' };
+    }
+    const block = rules.match(/match \/marketPrices\/\{[^}]*\}\s*\{([\s\S]*?)\n    \}/);
+    const body = block?.[1] ?? '';
+    const appendOnly =
+      /affectedKeys\(\)/.test(body) &&
+      /supersededAt/.test(body) &&
+      /allow delete:\s*if false/.test(body);
+    return {
+      passed: appendOnly,
+      message: appendOnly
+        ? 'Only the three correction fields may change, and nothing may be deleted.'
+        : 'A price can still be edited in place or removed.',
+      details: body.trim().split('\n').map((l) => l.trim()).filter(Boolean),
     };
   });
 

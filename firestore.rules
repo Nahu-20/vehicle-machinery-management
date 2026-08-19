@@ -359,9 +359,28 @@ service cloud.firestore {
       allow create, update, delete: if isAdvisoryOfficer();
     }
 
+    // Recorded prices, one document per sighting.
+    //
+    // Public read is the point: a price list that requires an account helps
+    // nobody who needs it.
+    //
+    // Append-only with one exception, the same shape as fleetFuelLogs. A price
+    // recorded against the wrong market, or with the figure transposed, are the
+    // two mistakes that actually happen at a desk, and both need undoing -- so
+    // an existing observation may be marked superseded and nothing else. The
+    // clause enforces that literally: the only fields a writer may touch on an
+    // existing row are the three that record the correction.
+    //
+    // Editing the price in place would erase the fact that the public site
+    // showed a different number, which somebody may have acted on. Deleting
+    // would leave a gap in a series the trend arithmetic cannot explain.
     match /marketPrices/{priceId} {
       allow read: if true;
-      allow create, update, delete: if isMarketOfficer();
+      allow create: if isMarketOfficer();
+      allow update: if isMarketOfficer()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['supersededAt', 'supersededByUid', 'supersedeReason']);
+      allow delete: if false;
     }
 
     match /resources/{resourceId} {

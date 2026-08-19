@@ -7,6 +7,7 @@ import {
   where,
   limit as fsLimit,
   setDoc,
+  runTransaction,
   serverTimestamp,
   Timestamp,
   type QueryConstraint,
@@ -302,4 +303,75 @@ export async function recordPrice(input: RecordPriceInput, actor: StaffUser): Pr
   } as any);
 
   return ref.id;
+}
+
+/**
+ * Correct a price that was wrong.
+ *
+ * The row stays. It is struck through, carries the reason, and drops out of
+ * every figure — the same treatment a mistyped fuel slip gets, for the same
+ * reason. Editing the number in place would erase the fact that the public site
+ * showed a different one, and somebody may have acted on it. What was published
+ * is part of the record whether or not it was right.
+ *
+ * The meter is not wound back and neither is anything here: the next price
+ * recorded for the series is simply compared against the last one still
+ * standing, which is what makes the correction useful rather than merely tidy.
+ */
+export async function supersedePrice(
+  observationId: string,
+  reason: string,
+  actor: StaffUser
+): Promise<void> {
+  const why = reason.trim();
+  if (!why) {
+    throw new Error('Say why this price is being corrected — the record keeps the reason.');
+  }
+
+  if (isDemoMarket()) {
+    const row = demoObservations.find((o) => o.observationId === observationId);
+    if (!row) throw new Error(`Price ${observationId} was not found.`);
+    if (row.supersededAt) throw new Error('That price has already been corrected.');
+    row.supersededAt = Timestamp.now();
+    row.supersededByUid = actor.uid;
+    row.supersedeReason = why;
+    return;
+  }
+
+  const database = requireDb();
+  const ref = doc(database, MARKET_PRICES_COLLECTION, observationId);
+
+  /*
+   * Read inside the transaction rather than before it. Two officers correcting
+   * the same price from two tabs would otherwise both pass the check, and the
+   * second would overwrite the first one's reason and name — losing the only
+   * record of why the correction happened.
+   */
+  await runTransaction(database, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error(`Price ${observationId} was not found.`);
+
+    const current = snap.data() as MarketPriceObservation;
+    if (current.supersededAt) throw new Error('That price has already been corrected.');
+
+    // Only these three fields, matching what firestore.rules accepts on an
+    // existing observation. Anything else here is refused at the server.
+    tx.update(ref, {
+      supersededAt: serverTimestamp(),
+      supersededByUid: actor.uid,
+      supersedeReason: why,
+    });
+  });
+
+  await logAuditEvent({
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+    actorDisplayName: actor.displayName,
+    actorRole: actor.role,
+    module: 'market',
+    action: 'price_superseded',
+    targetType: 'marketPrice',
+    targetId: observationId,
+    targetLabel: `${observationId} — ${why}`,
+  } as any);
 }
