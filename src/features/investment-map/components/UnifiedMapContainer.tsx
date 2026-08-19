@@ -93,11 +93,20 @@ export const UnifiedMapContainer: React.FC<UnifiedMapContainerProps> = ({
         badge: 'bg-[#A3E635]/25 text-[#0A1912] dark:bg-[#A3E635]/15 dark:text-[#A3E635]',
       };
 
-  // Mapbox leads because it carries terrain and place-name context the other two
-  // cannot, but it depends on an external token, so a failure hands back to
-  // OpenLayers rather than leaving an empty frame.
+  /*
+   * OpenLayers leads. It is the engine this project treats as primary, it is
+   * labelled that way in the selector, and it depends on nothing outside the
+   * build.
+   *
+   * Mapbox used to lead whenever a token happened to be configured. Combined
+   * with the selector being hidden unless a page opts in, that meant the
+   * primary engine was unreachable on any deployment that set
+   * VITE_MAPBOX_TOKEN -- silently, with nothing on screen to say a different
+   * renderer had been substituted. Mapbox remains available and selectable; it
+   * simply no longer overrides the choice by being present.
+   */
   const mapboxAvailable = Boolean(import.meta.env?.VITE_MAPBOX_TOKEN);
-  const [engine, setEngine] = useState<MapEngine>(mapboxAvailable ? 'mapbox' : 'openlayers');
+  const [engine, setEngine] = useState<MapEngine>('openlayers');
   const [fallbackNotice, setFallbackNotice] = useState<boolean>(false);
   const [mapboxFailed, setMapboxFailed] = useState<boolean>(false);
 
