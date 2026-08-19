@@ -14,6 +14,9 @@ import {
   Undo2,
   Scale,
   ClipboardList,
+  Upload,
+  Download,
+  FileWarning,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -33,6 +36,7 @@ import {
   seriesHistory,
 } from '../../features/market/constants/marketVocabulary';
 import {
+  importPriceRows,
   isDemoMarket,
   listLatestPrices,
   listObservations,
@@ -40,8 +44,14 @@ import {
   recordPrice,
   recordPriceRound,
   supersedePrice,
+  type ImportOutcome,
   type PriceRoundOutcome,
 } from '../../features/market/services/marketService';
+import {
+  buildTemplateCsv,
+  resolveCsv,
+  type ResolvedImportRow,
+} from '../../features/market/constants/marketCsv';
 import type { MarketPriceObservation, MarketPricePoint } from '../../features/market/types/market';
 import { CANONICAL_ZONE_METADATA } from '../../features/investment-map/constants/canonicalZones';
 
@@ -96,6 +106,16 @@ export const MarketManagementPage: React.FC = () => {
   const [roundDate, setRoundDate] = useState(todayIso());
   const [roundPrices, setRoundPrices] = useState<Record<string, string>>({});
   const [roundOutcomes, setRoundOutcomes] = useState<PriceRoundOutcome[]>([]);
+
+  // A file, previewed before anything is written. Holding the parsed rows in
+  // state rather than importing on upload is the whole point: a misaligned
+  // column should be visible on screen, not discovered afterwards in the
+  // register.
+  const [showImport, setShowImport] = useState(false);
+  const [importRows, setImportRows] = useState<ResolvedImportRow[]>([]);
+  const [importFileName, setImportFileName] = useState('');
+  const [importHeaderProblem, setImportHeaderProblem] = useState<string | null>(null);
+  const [importOutcomes, setImportOutcomes] = useState<ImportOutcome[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -262,6 +282,92 @@ export const MarketManagementPage: React.FC = () => {
     }
   };
 
+  const handleTemplate = () => {
+    const blob = new Blob([buildTemplateCsv()], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'market-prices-template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleFile = async (file: File) => {
+    setImportOutcomes([]);
+    setImportFileName(file.name);
+    setError(null);
+    try {
+      const { rows, headerProblem } = resolveCsv(await file.text());
+      setImportHeaderProblem(headerProblem ?? null);
+      setImportRows(rows);
+    } catch {
+      setImportHeaderProblem('That file could not be read as text.');
+      setImportRows([]);
+    }
+  };
+
+  // Only rows that resolved completely. Anything with a problem is shown and
+  // left out; the alternative is guessing what a name meant, which is how two
+  // series quietly become one.
+  const importReady = useMemo(
+    () =>
+      importRows.filter(
+        (r) => !r.problem && r.commodityKey && r.marketId && r.unitKey && r.price && r.observedAt
+      ),
+    [importRows]
+  );
+
+  const handleImport = async () => {
+    if (!staffUser || busy || importReady.length === 0) return;
+    setBusy(true);
+    setError(null);
+
+    const flagged = new Set(
+      importOutcomes.filter((o) => o.status === 'needs-confirmation').map((o) => o.line)
+    );
+
+    try {
+      const outcomes = await importPriceRows(
+        importReady.map((r) => ({
+          line: r.line,
+          commodityKey: r.commodityKey!,
+          marketId: r.marketId!,
+          unitKey: r.unitKey!,
+          price: r.price!,
+          observedAt: r.observedAt!,
+          // A row held last time and re-submitted unchanged is being stood
+          // behind, exactly as in the round.
+          confirmUnusual: flagged.has(r.line),
+        })),
+        staffUser
+      );
+
+      setImportOutcomes(outcomes);
+
+      const recorded = outcomes.filter((o) => o.status === 'recorded');
+      const pending = outcomes.filter((o) => o.status === 'needs-confirmation');
+      const failed = outcomes.filter((o) => o.status === 'failed');
+
+      // Drop what landed, so a second press deals only with what is left.
+      if (recorded.length) {
+        const done = new Set(recorded.map((o) => o.line));
+        setImportRows((cur) => cur.filter((r) => !done.has(r.line)));
+      }
+
+      const parts: string[] = [];
+      if (recorded.length) parts.push(`${recorded.length} recorded`);
+      if (pending.length) parts.push(`${pending.length} needs a second look`);
+      if (failed.length) parts.push(`${failed.length} refused`);
+      setNotice(parts.join(', ') + '.');
+
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not import the file.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const comparison = useMemo(
     () => (comparing ? compareAcrossMarkets(points, comparing) : []),
     [points, comparing]
@@ -302,6 +408,20 @@ export const MarketManagementPage: React.FC = () => {
             <button
               onClick={() => {
                 setShowForm(false);
+                setShowRound(false);
+                setShowImport((v) => !v);
+              }}
+              className="px-4 py-2.5 rounded-xl border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 font-bold text-xs flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Import a file</span>
+            </button>
+          )}
+          {canManageMarket && (
+            <button
+              onClick={() => {
+                setShowForm(false);
+                setShowImport(false);
                 setShowRound((v) => !v);
               }}
               className="px-4 py-2.5 rounded-xl border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 font-bold text-xs flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-950/40"
@@ -314,6 +434,7 @@ export const MarketManagementPage: React.FC = () => {
             <button
               onClick={() => {
                 setShowRound(false);
+                setShowImport(false);
                 setShowForm((v) => !v);
               }}
               className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow"
@@ -346,6 +467,168 @@ export const MarketManagementPage: React.FC = () => {
         <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 rounded-2xl p-3 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{notice}</span>
+        </div>
+      )}
+
+      {showImport && canManageMarket && (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-[240px]">
+              <p className="font-bold text-sm text-slate-900 dark:text-white">
+                Import prices from a spreadsheet
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Download the template, fill in the price column, upload it back. Nothing is
+                recorded until you have seen what the file contains.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleTemplate}
+              className="px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              <Download className="w-4 h-4" />
+              <span>Template</span>
+            </button>
+            <label className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow cursor-pointer">
+              <Upload className="w-4 h-4" />
+              <span>{importFileName || 'Choose a CSV file'}</span>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleFile(f);
+                }}
+              />
+            </label>
+          </div>
+
+          {importHeaderProblem && (
+            <div className="px-6 py-4 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
+              <FileWarning className="w-4 h-4 shrink-0" />
+              <span>{importHeaderProblem}</span>
+            </div>
+          )}
+
+          {importRows.length > 0 && (
+            <>
+              <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
+                <span>{importRows.length} row(s) read</span>
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  {importReady.length} ready
+                </span>
+                {importRows.length - importReady.length > 0 && (
+                  <span className="text-red-600 dark:text-red-400">
+                    {importRows.length - importReady.length} cannot be used
+                  </span>
+                )}
+              </div>
+
+              <div className="overflow-x-auto max-h-[26rem]">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 uppercase font-bold border-b border-slate-200 dark:border-slate-800 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-2.5">Line</th>
+                      <th className="px-4 py-2.5">Market</th>
+                      <th className="px-4 py-2.5">Commodity</th>
+                      <th className="px-4 py-2.5 text-right">Price</th>
+                      <th className="px-4 py-2.5">Seen</th>
+                      <th className="px-4 py-2.5">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {importRows.map((r) => {
+                      const outcome = importOutcomes.find((o) => o.line === r.line);
+                      const bad = Boolean(r.problem) || outcome?.status === 'failed';
+                      const pending = outcome?.status === 'needs-confirmation';
+                      return (
+                        <tr
+                          key={r.line}
+                          className={
+                            bad
+                              ? 'bg-red-50 dark:bg-red-950/20'
+                              : pending
+                              ? 'bg-amber-50 dark:bg-amber-950/20'
+                              : ''
+                          }
+                        >
+                          <td className="px-4 py-2.5 text-slate-400 tabular-nums">{r.line}</td>
+                          <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300">
+                            {r.marketId
+                              ? getLocalizedText(MARKET_CENTRE_BY_ID[r.marketId].name)
+                              : r.raw.market || '—'}
+                          </td>
+                          <td className="px-4 py-2.5 font-bold text-slate-900 dark:text-white">
+                            {r.commodityKey
+                              ? getLocalizedText(MARKET_COMMODITY_BY_KEY[r.commodityKey].name)
+                              : r.raw.commodity || '—'}
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums">
+                            {r.price != null ? r.price.toLocaleString() : r.raw.price || '—'}
+                            {r.unitKey && (
+                              <span className="text-slate-400 ml-1">/{r.unitKey}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
+                            {r.observedAt ? r.observedAt.toLocaleDateString() : r.raw.date || '—'}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            {r.problem ? (
+                              <span className="text-red-600 dark:text-red-400">{r.problem}</span>
+                            ) : outcome?.status === 'failed' ? (
+                              <span className="text-red-600 dark:text-red-400">
+                                {outcome.message}
+                              </span>
+                            ) : outcome?.status === 'needs-confirmation' ? (
+                              <span className="text-amber-700 dark:text-amber-400">
+                                {outcome.deviationPercent != null
+                                  ? `${outcome.deviationPercent > 0 ? '+' : ''}${outcome.deviationPercent}% on ${outcome.previousPrice?.toLocaleString()} — import again to confirm`
+                                  : 'Check this figure'}
+                              </span>
+                            ) : (
+                              <span className="text-emerald-600 dark:text-emerald-400">Ready</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          <div className="p-6 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-xl">
+              Rows that cannot be used are left out rather than guessed at — a name the
+              register does not know is a decision nobody has made yet.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImport(false);
+                  setImportRows([]);
+                  setImportOutcomes([]);
+                  setImportFileName('');
+                  setImportHeaderProblem(null);
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                disabled={busy || importReady.length === 0}
+                onClick={() => void handleImport()}
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/40 text-white font-bold text-xs shadow"
+              >
+                {busy ? 'Importing...' : `Import ${importReady.length} price(s)`}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

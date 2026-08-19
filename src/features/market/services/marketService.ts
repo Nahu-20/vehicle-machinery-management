@@ -397,6 +397,81 @@ export async function recordPriceRound(
   return outcomes;
 }
 
+/* ----------------------------------------------------------- the import */
+
+export interface ImportOutcome extends PriceRoundOutcome {
+  /** Line in the file, so a problem can be pointed at rather than described. */
+  line: number;
+  marketId: string;
+}
+
+/**
+ * Write rows that came from a file.
+ *
+ * Takes rows already resolved to dictionary keys — the parsing and the name
+ * matching live in marketCsv, which is pure, so the only thing left here is the
+ * writing. Rows that failed to resolve never reach this function; the preview
+ * refuses them before anybody presses confirm.
+ *
+ * Each row goes through recordPrice, so a file cannot bypass the unit
+ * conversion, the date check or the unusual-move guard. Importing a hundred
+ * prices is a hundred ordinary entries, not a faster path with weaker rules.
+ *
+ * Not a transaction, for the same reason the round is not: an import that
+ * discarded ninety-nine good prices because the hundredth needed a second look
+ * would be worse than one that reports which is which.
+ */
+export async function importPriceRows(
+  rows: {
+    line: number;
+    commodityKey: string;
+    marketId: string;
+    unitKey: MarketUnitKey;
+    price: number;
+    observedAt: Date;
+    confirmUnusual?: boolean;
+  }[],
+  actor: StaffUser
+): Promise<ImportOutcome[]> {
+  const outcomes: ImportOutcome[] = [];
+
+  for (const row of rows) {
+    const base = { commodityKey: row.commodityKey, line: row.line, marketId: row.marketId };
+    try {
+      const observationId = await recordPrice(
+        {
+          commodityKey: row.commodityKey,
+          marketId: row.marketId,
+          price: row.price,
+          unitKey: row.unitKey,
+          observedAt: row.observedAt,
+          confirmUnusual: row.confirmUnusual,
+        },
+        actor
+      );
+      outcomes.push({ ...base, status: 'recorded', observationId });
+    } catch (err) {
+      if (err instanceof MarketPriceOutlierError) {
+        outcomes.push({
+          ...base,
+          status: 'needs-confirmation',
+          message: err.message,
+          previousPrice: err.previousPrice,
+          deviationPercent: err.deviationPercent,
+        });
+      } else {
+        outcomes.push({
+          ...base,
+          status: 'failed',
+          message: err instanceof Error ? err.message : 'Could not record this price.',
+        });
+      }
+    }
+  }
+
+  return outcomes;
+}
+
 /**
  * Correct a price that was wrong.
  *

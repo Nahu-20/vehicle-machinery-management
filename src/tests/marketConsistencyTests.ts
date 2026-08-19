@@ -23,6 +23,12 @@ import {
   UNUSUAL_MOVE_PERCENT,
 } from '../features/market/constants/marketVocabulary';
 import { validatePrice } from '../features/market/services/marketService';
+import {
+  buildTemplateCsv,
+  parseCsv,
+  resolveCsv,
+  resolveImportRow,
+} from '../features/market/constants/marketCsv';
 import type { MarketPriceObservation } from '../features/market/types/market';
 
 /**
@@ -48,6 +54,7 @@ export interface TestResult {
     | 'Service'
     | 'Public'
     | 'Compare'
+    | 'Import'
     | 'Rules';
   passed: boolean;
   message: string;
@@ -677,6 +684,188 @@ export function runMarketConsistencyTests(): TestResult[] {
       passed: rows.length === 1 && rows[0].marketId === 'robe_bale',
       message: 'A mistake must not become the market anyone is measured against.',
       details: rows,
+    };
+  });
+
+  /* ----------------------------------------------------------------- import */
+
+  const HEAD = 'market,commodity,unit,price,date';
+  const ROW = 'Adama Central Market,Teff (White),Quintal (100kg),9200,2026-08-18';
+
+  check('A quoted field may contain the separator', 'Import', () => {
+    // A commodity or market name with a comma in it is written quoted by every
+    // spreadsheet. Splitting on commas alone would silently shift every later
+    // column by one, which reads as a bad price rather than a bad parse.
+    const rows = parseCsv('a,b\n"one, two",three\n');
+    return {
+      passed: rows[1][0] === 'one, two' && rows[1][1] === 'three',
+      message: 'Columns stay aligned when a value contains a comma.',
+      details: rows[1],
+    };
+  });
+
+  check('A doubled quote inside a quoted field is one quote', 'Import', () => {
+    const rows = parseCsv('a\n"say ""teff"" here"\n');
+    return {
+      passed: rows[1][0] === 'say "teff" here',
+      message: 'Escaped quotes survive the round trip.',
+      details: rows[1],
+    };
+  });
+
+  check('Windows line endings and a trailing blank line are tolerated', 'Import', () => {
+    const rows = parseCsv('a,b\r\n1,2\r\n\r\n');
+    return {
+      passed: rows.length === 2 && rows[1][1] === '2',
+      message: 'A file saved on Windows parses to the same records as one saved anywhere else.',
+      details: rows,
+    };
+  });
+
+  check("Excel's byte-order mark does not break the first column", 'Import', () => {
+    // Left in place the BOM becomes part of the first header, and 'market'
+    // stops being 'market' for reasons nothing on screen would explain.
+    const { rows, headerProblem } = resolveCsv('\ufeff' + HEAD + '\n' + ROW + '\n');
+    return {
+      passed: !headerProblem && rows.length === 1 && rows[0].marketId === 'adama_central',
+      message: 'A file straight out of Excel imports.',
+      details: { headerProblem, first: rows[0]?.marketId },
+    };
+  });
+
+  check('Columns are matched by name, not position', 'Import', () => {
+    const reordered = 'date,price,commodity,unit,market\n2026-08-18,9200,Wheat,Quintal (100kg),Asella Market';
+    const { rows } = resolveCsv(reordered);
+    return {
+      passed:
+        rows.length === 1 &&
+        rows[0].commodityKey === 'wheat' &&
+        rows[0].marketId === 'asella' &&
+        rows[0].price === 9200,
+      message: 'A spreadsheet with the columns in a different order still imports.',
+      details: rows[0],
+    };
+  });
+
+  check('A missing column is refused before any row is read', 'Import', () => {
+    const { rows, headerProblem } = resolveCsv('market,commodity,price\nAdama Central Market,Wheat,6100');
+    return {
+      passed: Boolean(headerProblem) && rows.length === 0,
+      message: 'Named in the message, so the fix is obvious.',
+      details: headerProblem,
+    };
+  });
+
+  check('Names match regardless of case and stray spaces', 'Import', () => {
+    const r = resolveImportRow(
+      { market: '  adama central market ', commodity: 'TEFF (WHITE)', unit: 'quintal (100kg)', price: '9200', date: '2026-08-18' },
+      2
+    );
+    return {
+      passed: r.commodityKey === 'teff_white' && r.marketId === 'adama_central',
+      message: 'Formatting is the spreadsheet\u2019s fault and costs nothing to absorb.',
+      details: { commodity: r.commodityKey, market: r.marketId, problem: r.problem },
+    };
+  });
+
+  check('A name the register does not know stops that row', 'Import', () => {
+    // The whole reason the dictionary exists. Guessing here is how "Teff",
+    // "teff" and "White Teff" become three series in one import.
+    const r = resolveImportRow(
+      { market: 'Adama Central Market', commodity: 'Quinoa', unit: 'Quintal (100kg)', price: '9200', date: '2026-08-18' },
+      2
+    );
+    return {
+      passed: Boolean(r.problem) && r.problem!.includes('Quinoa') && r.price === undefined,
+      message: 'Named in the message, and nothing is written for it.',
+      details: r.problem,
+    };
+  });
+
+  check('A price with thousands separators is read', 'Import', () => {
+    // What a spreadsheet exports when the cell is formatted as a number.
+    const r = resolveImportRow(
+      { market: 'Asella Market', commodity: 'Wheat', unit: 'Quintal (100kg)', price: '6,100', date: '2026-08-18' },
+      2
+    );
+    return {
+      passed: r.price === 6100 && !r.problem,
+      message: 'Refusing 6,100 for looking like two fields would be pedantry.',
+      details: { price: r.price, problem: r.problem },
+    };
+  });
+
+  check('A blank or non-numeric price stops the row', 'Import', () => {
+    const blank = resolveImportRow(
+      { market: 'Asella Market', commodity: 'Wheat', unit: 'Quintal (100kg)', price: '', date: '2026-08-18' },
+      2
+    );
+    const junk = resolveImportRow(
+      { market: 'Asella Market', commodity: 'Wheat', unit: 'Quintal (100kg)', price: 'n/a', date: '2026-08-18' },
+      3
+    );
+    return {
+      passed: Boolean(blank.problem) && Boolean(junk.problem),
+      message: 'An empty cell in a template is a row nobody filled in, not a price of zero.',
+      details: { blank: blank.problem, junk: junk.problem },
+    };
+  });
+
+  check('A date lands on the day it says, not the one before', 'Import', () => {
+    // Parsed at midday. A date-only string read as UTC midnight lands on the
+    // previous day west of Greenwich, filing a Tuesday market under Monday.
+    const r = resolveImportRow(
+      { market: 'Asella Market', commodity: 'Wheat', unit: 'Quintal (100kg)', price: '6100', date: '2026-08-18' },
+      2
+    );
+    const d = r.observedAt!;
+    return {
+      passed: d.getFullYear() === 2026 && d.getMonth() === 7 && d.getDate() === 18,
+      message: 'Local date preserved regardless of the reader\u2019s timezone.',
+      details: d?.toString(),
+    };
+  });
+
+  check('An unreadable date stops the row and says the format', 'Import', () => {
+    const r = resolveImportRow(
+      { market: 'Asella Market', commodity: 'Wheat', unit: 'Quintal (100kg)', price: '6100', date: 'last tuesday' },
+      2
+    );
+    return {
+      passed: Boolean(r.problem) && r.problem!.includes('YYYY-MM-DD'),
+      message: 'The message carries the fix.',
+      details: r.problem,
+    };
+  });
+
+  check('The template it hands out is a file it accepts back', 'Import', () => {
+    // The surest way to make names match is to hand them over rather than ask
+    // anyone to spell them. This asserts that round trip holds.
+    const template = buildTemplateCsv(new Date('2026-08-18T12:00:00'));
+    const withPrices = template
+      .split('\r\n')
+      .map((line, i) => (i === 0 || !line.trim() ? line : line.replace(/,,/, ',9200,')))
+      .join('\r\n');
+    const { rows, headerProblem } = resolveCsv(withPrices);
+    const unresolved = rows.filter((r) => r.problem);
+    return {
+      passed: !headerProblem && rows.length > 0 && unresolved.length === 0,
+      message: !headerProblem && unresolved.length === 0
+        ? `${rows.length} template rows resolve with no unmatched names.`
+        : 'The template contains names the resolver rejects.',
+      details: { headerProblem, rows: rows.length, unresolved: unresolved.map((r) => r.problem) },
+    };
+  });
+
+  check('One market per file is just a file with one market in it', 'Import', () => {
+    const many = resolveCsv(
+      HEAD + '\n' + ROW + '\nShashamane Market,Teff (White),Quintal (100kg),8600,2026-08-18'
+    );
+    const one = resolveCsv(HEAD + '\n' + ROW);
+    return {
+      passed: many.rows.length === 2 && one.rows.length === 1 && !one.rows[0].problem,
+      message: 'No separate mode needed for a single market round.',
+      details: { many: many.rows.length, one: one.rows.length },
     };
   });
 
