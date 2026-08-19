@@ -31,12 +31,14 @@ import { AchievementsPage } from './pages/AchievementsPage';
 import { AchievementDetailPage } from './pages/AchievementDetailPage';
 import { InvestmentPage } from './pages/InvestmentPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { BlockchainTraceabilityPage } from './pages/BlockchainTraceabilityPage';
 import { ChatLauncher } from './components/chat/ChatLauncher';
 import { ChatPanel } from './components/chat/ChatPanel';
 import { ChatMessage } from './services/chatService';
 
 // Admin Auth & Authorization Guards
 import { AdminSignInPage } from './pages/admin/AdminSignInPage';
+import { AttestationAdminPage } from './pages/admin/attestation/AttestationAdminPage';
 import { ForgotPasswordPage } from './pages/admin/ForgotPasswordPage';
 import { RequireAuthentication } from './components/auth/RequireAuthentication';
 import { RequireStaffAuthorization } from './components/auth/RequireStaffAuthorization';
@@ -89,6 +91,7 @@ import { AdminDatasetCreatePage } from './pages/admin/investment/AdminDatasetCre
 import { AdminDatasetDetailPage } from './pages/admin/investment/AdminDatasetDetailPage';
 import { AdminDatasetPreviewPage } from './pages/admin/investment/AdminDatasetPreviewPage';
 import { AdminSourcesPage } from './pages/admin/investment/AdminSourcesPage';
+import { AdminMethodologiesPage } from './pages/admin/investment/AdminMethodologiesPage';
 import { AdminZoneProfilesPage } from './pages/admin/investment/AdminZoneProfilesPage';
 import { AdminOpportunitiesPage } from './pages/admin/investment/AdminOpportunitiesPage';
 import { AdminInfrastructurePage } from './pages/admin/investment/AdminInfrastructurePage';
@@ -380,6 +383,17 @@ export default function App() {
                       }
                     />
                     <Route
+                      path="attestation"
+                      element={
+                        <RequirePermission
+                          requiredPermission="attestation.manage"
+                          moduleTitle="Attestation Management"
+                        >
+                          <AttestationAdminPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
                       path="resources"
                       element={
                         <RequirePermission
@@ -420,6 +434,7 @@ export default function App() {
                       <Route path="datasets/:datasetId" element={<AdminDatasetDetailPage />} />
                       <Route path="datasets/:datasetId/preview" element={<AdminDatasetPreviewPage />} />
                       <Route path="sources" element={<AdminSourcesPage />} />
+                      <Route path="methodologies" element={<AdminMethodologiesPage />} />
                       <Route path="opportunities" element={<AdminOpportunitiesPage />} />
                       <Route path="infrastructure" element={<AdminInfrastructurePage />} />
                       <Route path="infrastructure/new" element={<AdminFacilityCreatePage />} />
@@ -511,6 +526,7 @@ export default function App() {
                     />
                     <Route path="/investment/*" element={<InvestmentPage />} />
                     <Route path="/contact" element={<ContactPage />} />
+                    <Route path="/traceability/scan" element={<BlockchainTraceabilityPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Route>
                 </Routes>

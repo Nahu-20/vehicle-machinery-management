@@ -62,6 +62,7 @@ export type Permission =
   | 'investment.opportunities.manage'
   | 'investment.config.manage'
   | 'gis.manage'
+  | 'attestation.manage'
   | 'fleet.view'
   | 'fleet.asset.manage'
   | 'fleet.assign'

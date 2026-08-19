@@ -4,35 +4,10 @@ dotenv.config();
 import express, { Request, Response } from 'express';
 import path from 'path';
 import multer from 'multer';
-import { createServer as createViteServer } from 'vite';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { networkInterfaces } from 'os';
-import { handleInvestmentMutation } from './src/server/investmentApi';
-
-// Missing ADC must not kill the web server. Investment mutations fall back to user-token writes.
-function isMissingAdcError(reason: unknown): boolean {
-  const msg = reason instanceof Error ? reason.message : String(reason || '');
-  return /Could not load the default credentials|Unable to detect a Project Id|NO_ADC_FOUND|MetadataLookupWarning/i.test(msg);
-}
-
-process.on('unhandledRejection', (reason) => {
-  if (isMissingAdcError(reason)) {
-    console.warn('[Firebase Admin] ADC unavailable (non-fatal):', reason instanceof Error ? reason.message : reason);
-    return;
-  }
-  console.error('[unhandledRejection]', reason);
-});
-
-process.on('uncaughtException', (err) => {
-  if (isMissingAdcError(err)) {
-    console.warn('[Firebase Admin] ADC unavailable (non-fatal):', err.message);
-    return;
-  }
-  console.error('[uncaughtException]', err);
-  process.exit(1);
-});
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -55,22 +30,10 @@ if (!getApps().length) {
   }
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+const app = express();
+const PORT = 3000;
 
-  // Global CORS and Preflight handler
-  app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-firebase-id-token, x-actor-uid');
-    if (req.method === 'OPTIONS') {
-      return res.status(204).end();
-    }
-    next();
-  });
-
-  app.use(express.json());
+app.use(express.json());
 
   // Serve static GIS candidate assets directly via Express to ensure fast streaming without Vite middleware buffering
   app.use('/data/gis', express.static(path.join(process.cwd(), 'public', 'data', 'gis'), {
@@ -82,72 +45,10 @@ async function startServer() {
     },
   }));
 
-  // Trusted Backend Endpoint: Investment CMS Mutations via Firebase Functions HTTPS Callable protocol
-  const handleInvestmentRoute = async (req: Request, res: Response) => {
-    // Unwrap Firebase callable envelope: { data: { action, payload, ... } }
-    if (req.body?.data && typeof req.body.data === 'object' && !req.body.action) {
-      req.body = { ...req.body, ...req.body.data };
-    }
-
-    const originalStatus = res.status.bind(res);
-    const originalJson = res.json.bind(res);
-    let statusCode = 200;
-
-    res.status = ((code: number) => {
-      statusCode = code;
-      return res;
-    }) as typeof res.status;
-
-    // Callable clients expect HTTP 200 with { result } or { error }
-    res.json = ((body: any) => {
-      if (statusCode >= 400) {
-        return originalJson({
-          error: {
-            message: body?.error || body?.message || 'Investment mutation failed',
-            status: statusCode === 401 ? 'UNAUTHENTICATED' : statusCode === 403 ? 'PERMISSION_DENIED' : 'INVALID_ARGUMENT',
-            details: body,
-          },
-        });
-      }
-      return originalJson({ result: body });
-    }) as typeof res.json;
-
-    try {
-      return await handleInvestmentMutation(req, res);
-    } catch (err: any) {
-      console.error('[InvestmentMutateEndpoint] Error processing mutation:', err);
-      return originalStatus(200).json({
-        error: {
-          message: err?.message || 'Internal server error processing investment mutation',
-          status: 'INTERNAL',
-          details: { code: 'INTERNAL_ERROR' },
-        },
-      });
-    }
-  };
-
-  app.post('/investmentMutate', handleInvestmentRoute);
-  app.post('/:project/:region/investmentMutate', handleInvestmentRoute);
-
-  // Public Chatbot Endpoint: grounded retrieval over Bureau content.
-  // Runs server-side so GEMINI_API_KEY is never exposed to the browser.
-  app.post('/api/chat', async (req: Request, res: Response) => {
-    const { handleChat } = await import('./src/server/chat/chatApi.js');
-    return handleChat(req, res);
-  });
-
-  // Flat REST mutate path (tests / direct clients) — no callable envelope
+  // Trusted Backend Endpoint: Investment CMS Mutations & Authoritative Audit Logging
   app.post('/api/investment/mutate', async (req: Request, res: Response) => {
-    try {
-      return await handleInvestmentMutation(req, res);
-    } catch (err: any) {
-      console.error('[InvestmentMutateApi] Error:', err);
-      return res.status(500).json({
-        success: false,
-        code: 'INTERNAL_ERROR',
-        error: err?.message || 'Internal server error',
-      });
-    }
+    const { handleInvestmentMutation } = await import('./investmentApi.js');
+    return handleInvestmentMutation(req, res);
   });
 
   // Health check
@@ -160,7 +61,7 @@ async function startServer() {
     const nets = networkInterfaces();
     let localIp = 'localhost';
     for (const name of Object.keys(nets)) {
-      for (const net of nets[name] || []) {
+      for (const net of nets[name]) {
         // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
         if (net.family === 'IPv4' && !net.internal && name.toLowerCase().includes('wi-fi')) {
           localIp = net.address;
@@ -170,7 +71,7 @@ async function startServer() {
     // Fallback if Wi-Fi not found
     if (localIp === 'localhost') {
       for (const name of Object.keys(nets)) {
-        for (const net of nets[name] || []) {
+        for (const net of nets[name]) {
           if (net.family === 'IPv4' && !net.internal) {
             localIp = net.address;
           }
@@ -179,6 +80,7 @@ async function startServer() {
     }
     res.json({ ip: localIp });
   });
+
   // Media Processing Trigger Endpoint
   app.post('/api/media/process', async (req: Request, res: Response) => {
     try {
@@ -187,7 +89,7 @@ async function startServer() {
         return res.status(400).json({ success: false, error: 'Missing required parameters' });
       }
 
-      const { processNewsMediaStaging } = await import('./src/services/mediaProcessingService.js');
+      const { processNewsMediaStaging } = await import('../services/mediaProcessingService.js');
       const asset = await processNewsMediaStaging({
         mediaId,
         ownerUid,
@@ -213,7 +115,7 @@ async function startServer() {
       const mediaId = (req.body.mediaId as string) || crypto.randomUUID();
       const storagePath = `media/staging/${ownerUid}/${mediaId}`;
 
-      const { processNewsMediaStaging, localStagingStore } = await import('./src/services/mediaProcessingService.js');
+      const { processNewsMediaStaging, localStagingStore } = await import('../services/mediaProcessingService.js');
 
       // Store in memory for sharp pipeline
       localStagingStore.stagingBuffers.set(mediaId, {
@@ -269,7 +171,7 @@ async function startServer() {
   app.get('/api/media/asset/:mediaId', async (req: Request, res: Response) => {
     const { mediaId } = req.params;
     try {
-      const { localMediaStore } = await import('./src/services/mediaProcessingService.js');
+      const { localMediaStore } = await import('../services/mediaProcessingService.js');
       const localAsset = localMediaStore.assets.get(mediaId);
       if (localAsset) {
         return res.json({ success: true, asset: localAsset });
@@ -545,7 +447,7 @@ async function startServer() {
       }
 
       if (!mediaData) {
-        const { localMediaStore } = await import('./src/services/mediaProcessingService.js');
+        const { localMediaStore } = await import('../services/mediaProcessingService.js');
         mediaData = localMediaStore.assets.get(mediaId);
       }
 
@@ -587,7 +489,7 @@ async function startServer() {
       }
 
       // Check localMediaStore buffer fallback
-      const { localMediaStore } = await import('./src/services/mediaProcessingService.js');
+      const { localMediaStore } = await import('../services/mediaProcessingService.js');
       const localBuf = localMediaStore.variants.get(`${mediaId}:${variant}`);
       if (localBuf) {
         res.setHeader('Content-Type', 'image/webp');
@@ -656,7 +558,7 @@ async function startServer() {
   app.post('/api/blockchain/batch', async (req: Request, res: Response) => {
     try {
       const { batchId, origin, variety } = req.body;
-      const { getBlockchainSigner } = await import('./src/lib/blockchain');
+      const { getBlockchainSigner } = await import('../lib/blockchain');
       const contract = getBlockchainSigner();
       
       const tx = await contract.createBatch(batchId, origin, variety);
@@ -665,41 +567,60 @@ async function startServer() {
       res.json({ success: true, txHash: receipt.hash });
     } catch (err: any) {
       console.error('[Blockchain API] Error creating batch:', err);
-      res.status(500).json({ success: false, error: err.message || 'Failed to create batch' });
+      // Extract human-readable revert reason from ethers.js error
+      const cleanError = err.reason || (err.message && err.message.match(/reason="([^"]+)"/)?.[1]) || 'Failed to create batch';
+      res.status(500).json({ success: false, error: cleanError });
     }
   });
 
   app.post('/api/blockchain/attest', async (req: Request, res: Response) => {
     try {
       const { batchId, stage, actor, location, description, ipfsHash = "" } = req.body;
-      const { getBlockchainSigner } = await import('./src/lib/blockchain');
+      const { getBlockchainSigner } = await import('../lib/blockchain');
       const contract = getBlockchainSigner();
 
       let tx;
       if (stage === 'cultivation') {
         tx = await contract.logCultivation(batchId, actor, location, description, ipfsHash);
-      } else if (stage === 'processing') {
-        tx = await contract.logProcessing(batchId, actor, location, description, ipfsHash);
-      } else if (stage === 'quality') {
-        tx = await contract.logQuality(batchId, actor, location, description, ipfsHash);
-      } else if (stage === 'export') {
-        tx = await contract.logExport(batchId, actor, location, description, ipfsHash);
       } else {
-        return res.status(400).json({ success: false, error: 'Invalid stage' });
+        // Enforce sequential logging by checking history for prerequisite stages
+        const history = await contract.getBatchHistory(batchId);
+        const stagesLogged = history.map((event: any) => Number(event.stage));
+
+        if (stage === 'processing') {
+          if (!stagesLogged.includes(1)) {
+            return res.status(400).json({ success: false, error: 'Cannot log Processing. The Cultivation & Harvest stage is missing. Please log Cultivation first.' });
+          }
+          tx = await contract.logProcessing(batchId, actor, location, description, ipfsHash);
+        } else if (stage === 'quality') {
+          if (!stagesLogged.includes(2)) {
+            return res.status(400).json({ success: false, error: 'Cannot log Quality Certification. The Washing & Processing stage is missing. Please log Processing first.' });
+          }
+          tx = await contract.logQuality(batchId, actor, location, description, ipfsHash);
+        } else if (stage === 'export') {
+          if (!stagesLogged.includes(3)) {
+            return res.status(400).json({ success: false, error: 'Cannot log Export. The Quality Certification stage is missing. Please log Quality first.' });
+          }
+          tx = await contract.logExport(batchId, actor, location, description, ipfsHash);
+        } else {
+          return res.status(400).json({ success: false, error: 'Invalid stage' });
+        }
       }
 
       const receipt = await tx.wait();
       res.json({ success: true, txHash: receipt.hash });
     } catch (err: any) {
       console.error('[Blockchain API] Error logging attestation:', err);
-      res.status(500).json({ success: false, error: err.message || 'Failed to log attestation' });
+      // Extract human-readable revert reason from ethers.js error
+      const cleanError = err.reason || (err.message && err.message.match(/reason="([^"]+)"/)?.[1]) || 'Failed to log attestation';
+      res.status(500).json({ success: false, error: cleanError });
     }
   });
 
   app.get('/api/blockchain/history/:batchId', async (req: Request, res: Response) => {
     try {
       const { batchId } = req.params;
-      const { getBlockchainReader } = await import('./src/lib/blockchain');
+      const { getBlockchainReader } = await import('../lib/blockchain');
       const contract = getBlockchainReader();
 
       const details = await contract.getBatchDetails(batchId);
@@ -732,24 +653,29 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
+  if (process.env.VERCEL !== '1' && process.env.NODE_ENV !== 'production') {
+    // Only in local development: import and use Vite
+    import('vite').then(async ({ createServer: createViteServer }) => {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+      
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on http://0.0.0.0:${PORT}`);
+      });
     });
-    app.use(vite.middlewares);
-  } else {
+  } else if (process.env.VERCEL !== '1') {
+    // Production build (not Vercel)
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req: Request, res: Response) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
+    });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-  });
-}
-
-startServer();
+export default app;

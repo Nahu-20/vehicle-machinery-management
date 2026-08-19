@@ -43,6 +43,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   'investment.opportunities.manage',
   'investment.config.manage',
   'gis.manage',
+  'attestation.manage',
   // Kept in step with ALL_PERMISSIONS in ../auth/permissions.ts. The two
   // tables are checked against each other in fleetConsistencyTests, because
   // they drifted once already: fleetOfficer was added to the role map here

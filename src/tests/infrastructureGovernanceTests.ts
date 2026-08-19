@@ -63,6 +63,10 @@ async function callMutateApi(
 }
 
 export async function runAllInfrastructureGovernanceTests(): Promise<TestAssertionResult[]> {
+  const { enableInvestmentApiTestMode, resetInvestmentDbForTesting } = await import('../server/investmentApi');
+  process.env.INVESTMENT_ALLOW_TEST_AUTH = 'true';
+  enableInvestmentApiTestMode(true);
+  resetInvestmentDbForTesting();
   const results: TestAssertionResult[] = [];
 
   // Setup Mock Actors matching testStaffDocs in investmentApi

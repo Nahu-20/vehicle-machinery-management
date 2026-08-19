@@ -1,25 +1,46 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   FileText,
   Plus,
   Search,
   Filter,
   RotateCcw,
-  ExternalLink,
   Save,
   X,
   AlertCircle,
   Database,
+  Eye,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { useStaffAuthorizationContext } from '../../../context/StaffAuthorizationContext';
 import { hasPermission } from '../../../lib/permissions';
 import {
   getAllSources,
   createSource,
+  updateSource,
+  deleteSource,
   getDatasetsUsingSource,
 } from '../../../services/investment/investmentSourceService';
-import { InvestmentSource, InvestmentDataset } from '../../../types/investment';
+import { InvestmentSource, LifecycleStatus, VerificationStatus } from '../../../types/investment';
+import { SourceDetailModal } from '../../../components/admin/investment/SourceDetailModal';
+
+type FormMode = 'create' | 'edit';
+
+const emptyForm = () => ({
+  sourceId: '',
+  title: '',
+  organization: 'Oromia Agriculture Bureau',
+  documentTitle: '',
+  publicationDate: new Date().toISOString().slice(0, 10),
+  referencePeriod: '',
+  url: '',
+  methodologyNotes: '',
+  license: '',
+  status: 'published' as LifecycleStatus,
+  verificationStatus: 'verified' as VerificationStatus,
+});
 
 export function AdminSourcesPage() {
   const { staffUser } = useStaffAuthorizationContext();
@@ -30,23 +51,19 @@ export function AdminSourcesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal State for Create Source
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [sourceId, setSourceId] = useState('');
-  const [title, setTitle] = useState('');
-  const [organization, setOrganization] = useState('Oromia Agriculture Bureau');
-  const [documentTitle, setDocumentTitle] = useState('');
-  const [publicationDate, setPublicationDate] = useState('2024-06-30');
-  const [referencePeriod, setReferencePeriod] = useState('2024 Meher Season');
-  const [url, setUrl] = useState('');
-  const [methodologyNotes, setMethodologyNotes] = useState('');
+  const [formMode, setFormMode] = useState<FormMode | null>(null);
+  const [form, setForm] = useState(emptyForm());
+  const [editingVersion, setEditingVersion] = useState<number | undefined>(undefined);
+  const [viewSource, setViewSource] = useState<InvestmentSource | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<InvestmentSource | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   const canManageSources = hasPermission(staffUser, 'investment.sources.manage');
+  const canDelete = staffUser?.role === 'superAdmin';
 
-  // Filters
   const searchQuery = searchParams.get('search') || '';
   const verificationFilter = searchParams.get('verificationStatus') || 'all';
   const statusFilter = searchParams.get('status') || 'all';
@@ -56,9 +73,8 @@ export function AdminSourcesPage() {
     setError(null);
     try {
       const data = await getAllSources();
-      setSources(data);
+      setSources(data.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '')));
 
-      // Compute dataset linkage counts for each source
       const cntMap: Record<string, number> = {};
       await Promise.all(
         data.map(async (src) => {
@@ -92,9 +108,7 @@ export function AdminSourcesPage() {
     setSearchParams(next);
   };
 
-  const resetFilters = () => {
-    setSearchParams(new URLSearchParams());
-  };
+  const resetFilters = () => setSearchParams(new URLSearchParams());
 
   const filteredSources = useMemo(() => {
     return sources.filter((s) => {
@@ -105,59 +119,107 @@ export function AdminSourcesPage() {
         const mId = s.sourceId?.toLowerCase().includes(q);
         if (!mTitle && !mOrg && !mId) return false;
       }
-
       if (verificationFilter !== 'all' && s.verificationStatus !== verificationFilter) return false;
       if (statusFilter !== 'all' && s.status !== statusFilter) return false;
-
       return true;
     });
   }, [sources, searchQuery, verificationFilter, statusFilter]);
 
-  const handleTitleChange = (val: string) => {
-    setTitle(val);
-    const slug = val
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '');
-    if (slug) {
-      setSourceId(`src_${slug}`);
-    }
+  const openCreate = () => {
+    setForm(emptyForm());
+    setEditingVersion(undefined);
+    setFormError(null);
+    setFormMode('create');
   };
 
-  const handleCreateSource = async (e: React.FormEvent) => {
+  const openEdit = (src: InvestmentSource) => {
+    setForm({
+      sourceId: src.sourceId,
+      title: src.title || '',
+      organization: src.organization || '',
+      documentTitle: src.documentTitle || '',
+      publicationDate: src.publicationDate || '',
+      referencePeriod: src.referencePeriod || '',
+      url: src.url || '',
+      methodologyNotes: src.methodologyNotes || '',
+      license: src.license || '',
+      status: (src.status as LifecycleStatus) || 'published',
+      verificationStatus: (src.verificationStatus as VerificationStatus) || 'verified',
+    });
+    setEditingVersion(src.version);
+    setFormError(null);
+    setViewSource(null);
+    setFormMode('edit');
+  };
+
+  const handleTitleChange = (val: string) => {
+    setForm((prev) => {
+      const next = { ...prev, title: val };
+      if (formMode === 'create') {
+        const slug = val
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '_')
+          .replace(/^_+|_+$/g, '');
+        if (slug) next.sourceId = `src_${slug}`;
+      }
+      return next;
+    });
+  };
+
+  const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!staffUser) return;
-    if (!title.trim() || !sourceId.trim()) {
+    if (!form.title.trim() || !form.sourceId.trim()) {
       setFormError('Title and Source ID are required.');
       return;
     }
 
     setSubmitting(true);
     setFormError(null);
-
     try {
-      await createSource(staffUser, {
-        sourceId: sourceId.trim(),
-        title: title.trim(),
-        organization: organization.trim(),
-        documentTitle: documentTitle.trim() || title.trim(),
-        publicationDate,
-        referencePeriod,
-        url: url.trim() || undefined,
-        methodologyNotes: methodologyNotes.trim() || undefined,
-        verificationStatus: 'verified', // staff created sources are verified by default
-      });
+      const payload = {
+        sourceId: form.sourceId.trim(),
+        title: form.title.trim(),
+        organization: form.organization.trim(),
+        documentTitle: form.documentTitle.trim() || form.title.trim(),
+        publicationDate: form.publicationDate,
+        referencePeriod: form.referencePeriod.trim(),
+        url: form.url.trim() || undefined,
+        methodologyNotes: form.methodologyNotes.trim() || undefined,
+        license: form.license.trim() || undefined,
+        status: form.status,
+        verificationStatus: form.verificationStatus,
+      };
 
-      setShowCreateModal(false);
-      // Reset modal fields
-      setTitle('');
-      setSourceId('');
-      setUrl('');
-      setMethodologyNotes('');
-      // Reload list
+      if (formMode === 'edit') {
+        await updateSource(staffUser, payload, editingVersion);
+        setActionMessage(`Updated source “${payload.title}”.`);
+      } else {
+        await createSource(staffUser, payload);
+        setActionMessage(`Created source “${payload.title}”.`);
+      }
+
+      setFormMode(null);
       await loadData();
     } catch (err: any) {
-      setFormError(err?.message || 'Failed to create source.');
+      setFormError(err?.message || 'Failed to save source.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!staffUser || !deleteTarget) return;
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await deleteSource(staffUser, deleteTarget.sourceId, deleteTarget.version);
+      setActionMessage(`Deleted source “${deleteTarget.title}”.`);
+      setDeleteTarget(null);
+      setViewSource(null);
+      await loadData();
+    } catch (err: any) {
+      setFormError(err?.message || 'Failed to delete source. SuperAdmin permission required.');
     } finally {
       setSubmitting(false);
     }
@@ -194,21 +256,21 @@ export function AdminSourcesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div>
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <FileText className="w-5 h-5 text-purple-700 dark:text-purple-400" />
-            <span>Investment Data Sources Directory</span>
+            <span>Investment Data Sources</span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Institutional provenance, methodology notes, publication records, and license authority.
+            View, create, edit, and (superAdmin) permanently delete provenance records used by datasets and facilities.
           </p>
         </div>
 
         {canManageSources && (
           <button
-            onClick={() => setShowCreateModal(true)}
+            type="button"
+            onClick={openCreate}
             className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-purple-700 hover:bg-purple-800 text-white shadow-xs transition-colors shrink-0"
           >
             <Plus className="w-4 h-4" />
@@ -217,16 +279,24 @@ export function AdminSourcesPage() {
         )}
       </div>
 
-      {/* Filter Box */}
+      {actionMessage && (
+        <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 flex items-center justify-between gap-3">
+          <span>{actionMessage}</span>
+          <button type="button" onClick={() => setActionMessage(null)} className="font-semibold underline">
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
             <Filter className="w-3.5 h-3.5 text-purple-600" />
             <span>Filters & Search</span>
           </div>
-
           {(searchQuery || verificationFilter !== 'all' || statusFilter !== 'all') && (
             <button
+              type="button"
               onClick={resetFilters}
               className="text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 flex items-center gap-1"
             >
@@ -266,14 +336,15 @@ export function AdminSourcesPage() {
             className="py-1.5 px-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-purple-500"
           >
             <option value="all">All Statuses</option>
-            <option value="active">Active</option>
+            <option value="published">Published</option>
             <option value="draft">Draft</option>
+            <option value="review">Review</option>
+            <option value="unpublished">Unpublished</option>
             <option value="archived">Archived</option>
           </select>
         </div>
       </div>
 
-      {/* Directory Table or Empty State */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-xs text-slate-500 animate-pulse space-y-2">
@@ -281,24 +352,21 @@ export function AdminSourcesPage() {
             <p>Loading source directory from Firestore...</p>
           </div>
         ) : error ? (
-          <div className="p-8 text-center text-xs text-rose-600 dark:text-rose-400">
-            {error}
-          </div>
+          <div className="p-8 text-center text-xs text-rose-600 dark:text-rose-400">{error}</div>
         ) : filteredSources.length === 0 ? (
           <div className="py-16 px-6 text-center space-y-3">
             <div className="w-12 h-12 mx-auto rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 flex items-center justify-center">
               <FileText className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-              No investment data sources yet.
-            </h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">No investment data sources yet.</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-              Sources provide provenance for datasets, methodologies and opportunities.
+              Sources provide provenance for datasets and facilities. Create published + verified sources before attaching them.
             </p>
             {canManageSources && (
               <div className="pt-2">
                 <button
-                  onClick={() => setShowCreateModal(true)}
+                  type="button"
+                  onClick={openCreate}
                   className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-purple-700 hover:bg-purple-800 text-white shadow-xs transition-colors"
                 >
                   <Plus className="w-4 h-4" />
@@ -317,50 +385,75 @@ export function AdminSourcesPage() {
                   <th className="py-3 px-4">Publication / Period</th>
                   <th className="py-3 px-4">Verification</th>
                   <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Datasets Using Source</th>
+                  <th className="py-3 px-4">Datasets</th>
                   <th className="py-3 px-4">Updated</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {filteredSources.map((src) => {
                   const dsCount = datasetsCountMap[src.sourceId] ?? 0;
-
                   return (
-                    <tr
-                      key={src.sourceId}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
-                    >
+                    <tr key={src.sourceId} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                       <td className="py-3 px-4">
-                        <span className="font-bold text-slate-900 dark:text-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => setViewSource(src)}
+                          className="text-left font-bold text-slate-900 dark:text-slate-100 hover:text-purple-700 dark:hover:text-purple-300"
+                        >
                           {src.title}
-                        </span>
-                        <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-                          {src.sourceId}
-                        </div>
+                        </button>
+                        <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{src.sourceId}</div>
                       </td>
-
                       <td className="py-3 px-4 font-medium">{src.organization}</td>
-
                       <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
                         <div>{src.publicationDate || 'N/A'}</div>
                         <div className="text-[10px] text-slate-400">{src.referencePeriod}</div>
                       </td>
-
                       <td className="py-3 px-4">{renderVerificationBadge(src.verificationStatus)}</td>
-
                       <td className="py-3 px-4 uppercase font-mono text-[10px] font-semibold text-slate-600 dark:text-slate-400">
-                        {src.status || 'active'}
+                        {src.status || '—'}
                       </td>
-
                       <td className="py-3 px-4 font-semibold font-mono">
                         <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[11px]">
                           <Database className="w-3 h-3 text-purple-600" />
-                          <span>{dsCount} datasets</span>
+                          <span>{dsCount}</span>
                         </span>
                       </td>
-
                       <td className="py-3 px-4 text-slate-500 text-[11px]">
                         {src.updatedAt ? new Date(src.updatedAt).toLocaleDateString() : 'N/A'}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            title="View"
+                            onClick={() => setViewSource(src)}
+                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-100"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          {canManageSources && (
+                            <button
+                              type="button"
+                              title="Edit"
+                              onClick={() => openEdit(src)}
+                              className="p-1.5 rounded-lg text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              type="button"
+                              title="Delete (SuperAdmin)"
+                              onClick={() => setDeleteTarget(src)}
+                              className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -371,17 +464,26 @@ export function AdminSourcesPage() {
         )}
       </div>
 
-      {/* Create Source Modal */}
-      {showCreateModal && (
+      {viewSource && (
+        <SourceDetailModal
+          source={viewSource}
+          onClose={() => setViewSource(null)}
+          onEdit={canManageSources ? () => openEdit(viewSource) : undefined}
+          onDelete={canDelete ? () => setDeleteTarget(viewSource) : undefined}
+        />
+      )}
+
+      {formMode && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-lg w-full p-6 space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-purple-700" />
-                <span>Create Data Source Record</span>
+                <span>{formMode === 'edit' ? 'Edit Data Source' : 'Create Data Source'}</span>
               </h3>
               <button
-                onClick={() => setShowCreateModal(false)}
+                type="button"
+                onClick={() => setFormMode(null)}
                 className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
               >
                 <X className="w-4 h-4" />
@@ -395,7 +497,7 @@ export function AdminSourcesPage() {
               </div>
             )}
 
-            <form onSubmit={handleCreateSource} className="space-y-3 text-xs">
+            <form onSubmit={handleSubmitForm} className="space-y-3 text-xs">
               <div className="space-y-1">
                 <label className="font-semibold text-slate-700 dark:text-slate-300">
                   Source Title <span className="text-rose-500">*</span>
@@ -403,8 +505,7 @@ export function AdminSourcesPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Oromia Bureau of Agriculture Annual Report 2024"
-                  value={title}
+                  value={form.title}
                   onChange={(e) => handleTitleChange(e.target.value)}
                   className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
@@ -417,52 +518,87 @@ export function AdminSourcesPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. src_oromia_agri_annual_2024"
-                  value={sourceId}
-                  onChange={(e) => setSourceId(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
+                  disabled={formMode === 'edit'}
+                  value={form.sourceId}
+                  onChange={(e) => setForm((p) => ({ ...p, sourceId: e.target.value }))}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono disabled:opacity-60"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300">
-                    Organization
-                  </label>
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Organization</label>
                   <input
                     type="text"
                     required
-                    value={organization}
-                    onChange={(e) => setOrganization(e.target.value)}
+                    value={form.organization}
+                    onChange={(e) => setForm((p) => ({ ...p, organization: e.target.value }))}
                     className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
-
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300">
-                    Publication Date
-                  </label>
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Publication Date</label>
                   <input
                     type="date"
                     required
-                    value={publicationDate}
-                    onChange={(e) => setPublicationDate(e.target.value)}
+                    value={form.publicationDate}
+                    onChange={(e) => setForm((p) => ({ ...p, publicationDate: e.target.value }))}
                     className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">
-                  Reference Period
-                </label>
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Document Title</label>
+                <input
+                  type="text"
+                  value={form.documentTitle}
+                  onChange={(e) => setForm((p) => ({ ...p, documentTitle: e.target.value }))}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Reference Period</label>
                 <input
                   type="text"
                   required
-                  value={referencePeriod}
-                  onChange={(e) => setReferencePeriod(e.target.value)}
+                  value={form.referencePeriod}
+                  onChange={(e) => setForm((p) => ({ ...p, referencePeriod: e.target.value }))}
                   className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Lifecycle Status</label>
+                  <select
+                    value={form.status}
+                    onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as LifecycleStatus }))}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  >
+                    <option value="published">Published</option>
+                    <option value="draft">Draft</option>
+                    <option value="review">Review</option>
+                    <option value="unpublished">Unpublished</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Verification</label>
+                  <select
+                    value={form.verificationStatus}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, verificationStatus: e.target.value as VerificationStatus }))
+                    }
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  >
+                    <option value="verified">Verified</option>
+                    <option value="pending">Pending</option>
+                    <option value="unverified">Unverified</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -470,8 +606,18 @@ export function AdminSourcesPage() {
                 <input
                   type="url"
                   placeholder="https://..."
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  value={form.url}
+                  onChange={(e) => setForm((p) => ({ ...p, url: e.target.value }))}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">License</label>
+                <input
+                  type="text"
+                  value={form.license}
+                  onChange={(e) => setForm((p) => ({ ...p, license: e.target.value }))}
                   className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
@@ -480,32 +626,69 @@ export function AdminSourcesPage() {
                 <label className="font-semibold text-slate-700 dark:text-slate-300">Methodology Notes</label>
                 <textarea
                   rows={2}
-                  placeholder="Brief sampling notes or data collection methodology..."
-                  value={methodologyNotes}
-                  onChange={(e) => setMethodologyNotes(e.target.value)}
+                  value={form.methodologyNotes}
+                  onChange={(e) => setForm((p) => ({ ...p, methodologyNotes: e.target.value }))}
                   className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Public map provenance requires <strong>published</strong> + <strong>verified</strong>. Defaults are set for new sources.
+              </p>
+
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => setFormMode(null)}
                   className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 font-semibold text-slate-600 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
                   disabled={submitting}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-purple-700 hover:bg-purple-800 text-white font-semibold disabled:opacity-50"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>{submitting ? 'Saving...' : 'Save Source'}</span>
+                  <span>{submitting ? 'Saving...' : formMode === 'edit' ? 'Save Changes' : 'Save Source'}</span>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Delete source permanently?</h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              This removes <strong>{deleteTarget.title}</strong> ({deleteTarget.sourceId}). Datasets that still reference it
+              may fail verification until you detach the source. SuperAdmin only.
+            </p>
+            {formError && (
+              <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700">{formError}</div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setFormError(null);
+                }}
+                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold disabled:opacity-50"
+              >
+                {submitting ? 'Deleting…' : 'Delete permanently'}
+              </button>
+            </div>
           </div>
         </div>
       )}

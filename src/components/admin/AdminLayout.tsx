@@ -16,6 +16,7 @@ import {
   LogOut,
   Menu,
   Moon,
+  QrCode,
   Settings,
   Shield,
   Sun,
@@ -123,6 +124,13 @@ export const AdminLayout: React.FC = () => {
       href: '/admin/settings',
       icon: Settings,
       permission: 'settings.manage',
+    },
+    {
+      id: 'attestation',
+      label: 'Blockchain Attestation',
+      href: '/admin/attestation',
+      icon: QrCode,
+      permission: 'attestation.manage',
     },
   ];
 

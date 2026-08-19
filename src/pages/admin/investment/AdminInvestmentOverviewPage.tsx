@@ -21,17 +21,24 @@ import {
 } from '../../../services/investment/investmentDashboardService';
 import { getAuditLogs } from '../../../services/investment/investmentAuditService';
 import { InvestmentAuditLog } from '../../../types/investment';
+import { seedPrototypeInvestmentMapData, seedPrototypeInfrastructureData } from '../../../services/investment/investmentPrototypeSeedService';
 
 export function AdminInvestmentOverviewPage() {
   const { staffUser } = useStaffAuthorizationContext();
   const [counts, setCounts] = useState<DashboardSummaryCounts | null>(null);
   const [recentLogs, setRecentLogs] = useState<InvestmentAuditLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
+  const [seedMessage, setSeedMessage] = useState<string | null>(null);
+  const [seedError, setSeedError] = useState<string | null>(null);
 
   const canManageDatasets = hasPermission(staffUser, 'investment.datasets.manage');
   const canManageSources = hasPermission(staffUser, 'investment.sources.manage');
   const canManageOpps = hasPermission(staffUser, 'investment.opportunities.manage');
   const canPublish = hasPermission(staffUser, 'investment.publish');
+  const canSeedPrototype =
+    canManageDatasets &&
+    (staffUser?.role === 'superAdmin' || staffUser?.role === 'contentAdmin');
 
   const fetchData = async () => {
     setLoading(true);
@@ -52,6 +59,87 @@ export function AdminInvestmentOverviewPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (!staffUser || !canSeedPrototype || seeding) return;
+    const params = new URLSearchParams(window.location.search);
+    const seedThematic = params.get('seedPrototype') === '1';
+    const seedInfra = params.get('seedInfrastructure') === '1';
+    if (!seedThematic && !seedInfra) return;
+    let cancelled = false;
+    (async () => {
+      setSeeding(true);
+      setSeedError(null);
+      setSeedMessage(null);
+      try {
+        const messages: string[] = [];
+        if (seedThematic) {
+          const result = await seedPrototypeInvestmentMapData(staffUser);
+          messages.push(result.message);
+          params.delete('seedPrototype');
+        }
+        if (seedInfra) {
+          const result = await seedPrototypeInfrastructureData(staffUser);
+          messages.push(result.message);
+          params.delete('seedInfrastructure');
+        }
+        if (cancelled) return;
+        setSeedMessage(messages.join(' '));
+        await fetchData();
+        const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`;
+        window.history.replaceState({}, '', next);
+      } catch (err: any) {
+        if (!cancelled) setSeedError(err?.message || String(err));
+      } finally {
+        if (!cancelled) setSeeding(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [staffUser, canSeedPrototype]);
+
+  const handleSeedPrototype = async () => {
+    if (!staffUser || !canSeedPrototype) return;
+    const ok = window.confirm(
+      'Seed published coffee/wheat/maize production, suitability, and investment-potential datasets for all 22 zones?\n\nThis writes source-attributed prototype estimates to Firestore for the public /investment map.'
+    );
+    if (!ok) return;
+
+    setSeeding(true);
+    setSeedError(null);
+    setSeedMessage(null);
+    try {
+      const result = await seedPrototypeInvestmentMapData(staffUser);
+      setSeedMessage(result.message);
+      await fetchData();
+    } catch (err: any) {
+      setSeedError(err?.message || String(err));
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  const handleSeedInfrastructure = async () => {
+    if (!staffUser || !canSeedPrototype) return;
+    const ok = window.confirm(
+      'Seed ~66 published agricultural facilities across all 22 zones (warehouses, markets, processing, irrigation, livestock, labs)?\n\nCoordinates are approximate town-vicinity pins with OBoA-attributed sources.'
+    );
+    if (!ok) return;
+
+    setSeeding(true);
+    setSeedError(null);
+    setSeedMessage(null);
+    try {
+      const result = await seedPrototypeInfrastructureData(staffUser);
+      setSeedMessage(result.message);
+      await fetchData();
+    } catch (err: any) {
+      setSeedError(err?.message || String(err));
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Action Bar & Refresh */}
@@ -65,7 +153,7 @@ export function AdminInvestmentOverviewPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={fetchData}
             disabled={loading}
@@ -74,6 +162,32 @@ export function AdminInvestmentOverviewPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
+
+          {canSeedPrototype && (
+            <button
+              type="button"
+              onClick={handleSeedPrototype}
+              disabled={seeding || !staffUser}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/40 text-amber-900 dark:text-amber-100 transition-colors disabled:opacity-50"
+              title="Write 9 published datasets × 22 zones for the public map"
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${seeding ? 'animate-pulse' : ''}`} />
+              <span>{seeding ? 'Seeding…' : 'Seed prototype map data'}</span>
+            </button>
+          )}
+
+          {canSeedPrototype && (
+            <button
+              type="button"
+              onClick={handleSeedInfrastructure}
+              disabled={seeding || !staffUser}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-sky-300 dark:border-sky-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/40 dark:hover:bg-sky-900/40 text-sky-900 dark:text-sky-100 transition-colors disabled:opacity-50"
+              title="Write ~66 published facilities across all 22 zones"
+            >
+              <MapPin className={`w-3.5 h-3.5 ${seeding ? 'animate-pulse' : ''}`} />
+              <span>{seeding ? 'Seeding…' : 'Seed prototype facilities'}</span>
+            </button>
+          )}
 
           {canManageDatasets && (
             <Link
@@ -96,6 +210,27 @@ export function AdminInvestmentOverviewPage() {
           )}
         </div>
       </div>
+
+      {(seedMessage || seedError) && (
+        <div
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            seedError
+              ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200'
+              : 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
+          }`}
+        >
+          {seedError || seedMessage}
+          {!seedError && (
+            <span className="block mt-1 text-xs opacity-80">
+              Open{' '}
+              <Link className="underline font-medium" to="/investment">
+                /investment
+              </Link>{' '}
+              for thematic layers, or toggle the facilities layer for infrastructure pins.
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Summary Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

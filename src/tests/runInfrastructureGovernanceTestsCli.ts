@@ -1,4 +1,8 @@
 import { runAllInfrastructureGovernanceTests } from './infrastructureGovernanceTests';
+import { enableInvestmentApiTestMode } from '../server/investmentApi';
+
+process.env.INVESTMENT_ALLOW_TEST_AUTH = 'true';
+enableInvestmentApiTestMode(true);
 
 async function main() {
   console.log('Running Milestone P4A-1 & P4A-2A — Infrastructure Governance & Admin CMS Final Acceptance Suite...\n');
