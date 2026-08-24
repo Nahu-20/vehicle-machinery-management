@@ -18,6 +18,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
+import { isFirebaseConfigured } from '../config/env';
 import { signInAnonymously } from 'firebase/auth';
 import { StaffUser } from '../types/auth';
 import { promoteNewsMediaAsset } from './mediaPromotionService';
@@ -114,12 +115,56 @@ function reportMissingIndexError(queryName: string, error: any) {
 
 /**
  * Returns the configured public news data source ('firestore' or 'mock').
- * Strictly respects VITE_PUBLIC_NEWS_SOURCE.
+ * Respects VITE_PUBLIC_NEWS_SOURCE. When Firebase env is missing, defaults to
+ * mock so the homepage is not empty during local/demo runs.
  */
 export const getPublicNewsSourceMode = (): 'firestore' | 'mock' => {
-  const envSource = (import.meta.env?.VITE_PUBLIC_NEWS_SOURCE || (typeof process !== 'undefined' ? process.env?.VITE_PUBLIC_NEWS_SOURCE : '') || '').toLowerCase();
-  return envSource === 'mock' ? 'mock' : 'firestore';
+  const envSource = (
+    import.meta.env?.VITE_PUBLIC_NEWS_SOURCE ||
+    (typeof process !== 'undefined' ? process.env?.VITE_PUBLIC_NEWS_SOURCE : '') ||
+    ''
+  ).toLowerCase();
+  if (envSource === 'mock') return 'mock';
+  if (envSource === 'firestore') return 'firestore';
+  return isFirebaseConfigured() ? 'firestore' : 'mock';
 };
+
+/** When Firestore has no published news, show local demo articles in DEV (or when explicitly enabled). */
+function shouldFallbackToMockNews(): boolean {
+  if (import.meta.env?.DEV) return true;
+  const flag = (
+    import.meta.env?.VITE_PUBLIC_CONTENT_FALLBACK_MOCK ||
+    (typeof process !== 'undefined' ? process.env?.VITE_PUBLIC_CONTENT_FALLBACK_MOCK : '') ||
+    ''
+  ).toLowerCase();
+  return flag === 'true' || flag === '1';
+}
+
+function buildMockHomepageNews(): HomepageNewsData {
+  const validMock = mockNews
+    .map((m) => validateNewsArticle(m, m.slug))
+    .filter((a): a is NewsArticle => a !== null && a.status === 'published');
+
+  const now = Date.now();
+  const validPublished = validMock.filter((a) => {
+    if (!a.publishedAt) return false;
+    const pTime = Date.parse(a.publishedAt);
+    return !isNaN(pTime) && pTime <= now;
+  });
+
+  const featured = validPublished.find((a) => a.featured) || validPublished[0] || null;
+  const latest = validPublished
+    .filter((a) => a.slug !== featured?.slug)
+    .slice(0, 3);
+
+  return {
+    featuredArticle: featured,
+    latestArticles: latest,
+    loading: false,
+    isEmpty: !featured && latest.length === 0,
+    error: null,
+  };
+}
 
 export interface HomepageNewsData {
   featuredArticle: NewsArticle | null;
@@ -139,29 +184,7 @@ export function subscribeToHomepageNews(
   const sourceMode = getPublicNewsSourceMode();
 
   if (sourceMode === 'mock') {
-    const validMock = mockNews
-      .map((m) => validateNewsArticle(m, m.slug))
-      .filter((a): a is NewsArticle => a !== null && a.status === 'published');
-
-    const now = Date.now();
-    const validPublished = validMock.filter((a) => {
-      if (!a.publishedAt) return false;
-      const pTime = Date.parse(a.publishedAt);
-      return !isNaN(pTime) && pTime <= now;
-    });
-
-    const featured = validPublished.find((a) => a.featured) || validPublished[0] || null;
-    const latest = validPublished
-      .filter((a) => a.slug !== featured?.slug)
-      .slice(0, 3);
-
-    onUpdate({
-      featuredArticle: featured,
-      latestArticles: latest,
-      loading: false,
-      isEmpty: !featured && latest.length === 0,
-      error: null,
-    });
+    onUpdate(buildMockHomepageNews());
     return () => {};
   }
 
@@ -187,11 +210,19 @@ export function subscribeToHomepageNews(
       .filter((a) => isValidPublic(a) && a.slug !== validFeatured?.slug)
       .slice(0, 3);
 
+    const loading = !featuredLoaded || !latestLoaded;
+    const isEmpty = featuredLoaded && latestLoaded && !validFeatured && validLatest.length === 0;
+
+    if (!loading && isEmpty && shouldFallbackToMockNews()) {
+      onUpdate(buildMockHomepageNews());
+      return;
+    }
+
     onUpdate({
       featuredArticle: validFeatured,
       latestArticles: validLatest,
-      loading: !featuredLoaded || !latestLoaded,
-      isEmpty: featuredLoaded && latestLoaded && !validFeatured && validLatest.length === 0,
+      loading,
+      isEmpty,
       error: currentError,
     });
   };

@@ -235,7 +235,7 @@ export const AchievementsSection: React.FC = () => {
             )}
 
             {/* Secondary Achievement List (5 cols on lg) */}
-            <div className={`lg:col-span-${featured ? '5' : '12'} flex flex-col gap-4`}>
+            <div className={`${featured ? 'lg:col-span-5' : 'lg:col-span-12'} flex flex-col gap-4`}>
               <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>{t('achievements_in_action')}</span>
