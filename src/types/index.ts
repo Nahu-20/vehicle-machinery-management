@@ -1,4 +1,5 @@
 export * from './news';
+export type * from './about';
 export {
   validateZoneId,
   validateZoneValue,

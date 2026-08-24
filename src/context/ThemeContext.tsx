@@ -14,7 +14,7 @@ const STORAGE_KEY = 'oromia-agriculture-theme';
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 function getInitialTheme(): Theme {
-  if (typeof window === 'undefined') return 'system';
+  if (typeof window === 'undefined') return 'light';
   try {
     const saved = localStorage.getItem(STORAGE_KEY) as Theme;
     if (saved === 'light' || saved === 'dark' || saved === 'system') {
@@ -23,7 +23,7 @@ function getInitialTheme(): Theme {
   } catch {
     // ignore
   }
-  return 'system';
+  return 'light';
 }
 
 function getSystemTheme(): ResolvedTheme {

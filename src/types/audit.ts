@@ -9,6 +9,7 @@ export type AdminModule =
   | 'alerts'
   | 'market'
   | 'resources'
+  | 'about'
   | 'offices'
   | 'media'
   | 'settings'

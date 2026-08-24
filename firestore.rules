@@ -535,6 +535,159 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ---------------------------------------------------------------- ABOUT OAB CMS
+    // Institutional About content. Public may read only published documents.
+    // Staff (editor+) may create/update; contentAdmin may delete.
+    // Client services also filter status == published for public reads.
+
+    function aboutPublished() {
+      return resource != null
+        && resource.data != null
+        && resource.data.status == 'published';
+    }
+
+    function canManageAbout() {
+      return isEditor();
+    }
+
+    match /aboutOverview/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create: if canManageAbout()
+        && request.resource.data.status in ['draft', 'review'];
+      allow update: if canManageAbout() && (
+        request.resource.data.status in ['draft', 'review', 'archived']
+        || (request.resource.data.status == 'published' && isContentAdmin())
+      );
+      allow delete: if isContentAdmin();
+    }
+
+    match /aboutHistory/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create: if canManageAbout()
+        && request.resource.data.status in ['draft', 'review'];
+      allow update: if canManageAbout() && (
+        request.resource.data.status in ['draft', 'review', 'archived']
+        || (request.resource.data.status == 'published' && isContentAdmin())
+      );
+      allow delete: if isContentAdmin();
+    }
+
+    match /aboutMandateBlocks/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create: if canManageAbout()
+        && request.resource.data.status in ['draft', 'review'];
+      allow update: if canManageAbout() && (
+        request.resource.data.status in ['draft', 'review', 'archived']
+        || (request.resource.data.status == 'published' && isContentAdmin())
+      );
+      allow delete: if isContentAdmin();
+    }
+
+    match /aboutOrgNodes/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create: if canManageAbout()
+        && request.resource.data.status in ['draft', 'review'];
+      allow update: if canManageAbout() && (
+        request.resource.data.status in ['draft', 'review', 'archived']
+        || (request.resource.data.status == 'published' && isContentAdmin())
+      );
+      allow delete: if isContentAdmin();
+    }
+
+    match /aboutLeaders/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create: if canManageAbout()
+        && request.resource.data.status in ['draft', 'review'];
+      allow update: if canManageAbout() && (
+        request.resource.data.status in ['draft', 'review', 'archived']
+        || (request.resource.data.status == 'published' && isContentAdmin())
+      );
+      allow delete: if isContentAdmin();
+    }
+
+    match /aboutLeadershipMessages/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create: if canManageAbout()
+        && request.resource.data.status in ['draft', 'review'];
+      allow update: if canManageAbout() && (
+        request.resource.data.status in ['draft', 'review', 'archived']
+        || (request.resource.data.status == 'published' && isContentAdmin())
+      );
+      allow delete: if isContentAdmin();
+    }
+
+    match /aboutDepartments/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create: if canManageAbout()
+        && request.resource.data.status in ['draft', 'review'];
+      allow update: if canManageAbout() && (
+        request.resource.data.status in ['draft', 'review', 'archived']
+        || (request.resource.data.status == 'published' && isContentAdmin())
+      );
+      allow delete: if isContentAdmin();
+    }
+
+    match /aboutServiceSteps/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create: if canManageAbout()
+        && request.resource.data.status in ['draft', 'review'];
+      allow update: if canManageAbout() && (
+        request.resource.data.status in ['draft', 'review', 'archived']
+        || (request.resource.data.status == 'published' && isContentAdmin())
+      );
+      allow delete: if isContentAdmin();
+    }
+
+    match /aboutStakeholders/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create: if canManageAbout()
+        && request.resource.data.status in ['draft', 'review'];
+      allow update: if canManageAbout() && (
+        request.resource.data.status in ['draft', 'review', 'archived']
+        || (request.resource.data.status == 'published' && isContentAdmin())
+      );
+      allow delete: if isContentAdmin();
+    }
+
+    match /aboutStatistics/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create: if canManageAbout()
+        && request.resource.data.status in ['draft', 'review'];
+      allow update: if canManageAbout() && (
+        request.resource.data.status in ['draft', 'review', 'archived']
+        || (request.resource.data.status == 'published' && isContentAdmin())
+      );
+      allow delete: if isContentAdmin();
+    }
+
+    match /aboutPartners/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create: if canManageAbout()
+        && request.resource.data.status in ['draft', 'review'];
+      allow update: if canManageAbout() && (
+        request.resource.data.status in ['draft', 'review', 'archived']
+        || (request.resource.data.status == 'published' && isContentAdmin())
+      );
+      allow delete: if isContentAdmin();
+    }
+
+    match /aboutDocuments/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create: if canManageAbout()
+        && request.resource.data.status in ['draft', 'review'];
+      allow update: if canManageAbout() && (
+        request.resource.data.status in ['draft', 'review', 'archived']
+        || (request.resource.data.status == 'published' && isContentAdmin())
+      );
+      allow delete: if isContentAdmin();
+    }
+
+    match /aboutSettings/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create, update: if isContentAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
     // ---------------------------------------------------------------- FLEET
     // Vehicle and machinery register.
     //

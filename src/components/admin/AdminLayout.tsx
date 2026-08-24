@@ -84,6 +84,13 @@ export const AdminLayout: React.FC = () => {
       permission: 'alert.view',
     },
     {
+      id: 'about',
+      label: 'About OAB',
+      href: '/admin/about',
+      icon: Info,
+      permission: 'about.view',
+    },
+    {
       id: 'market',
       label: 'Market Prices',
       href: '/admin/market',

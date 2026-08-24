@@ -70,7 +70,14 @@ export type Permission =
   | 'fleet.reports.view'
   | 'fleet.driver.manage'
   | 'fleet.fuel.record'
-  | 'fleet.asset.retire';
+  | 'fleet.asset.retire'
+  | 'about.view'
+  | 'about.create'
+  | 'about.edit'
+  | 'about.review'
+  | 'about.publish'
+  | 'about.structure.manage'
+  | 'about.documents.manage';
 
 export type StaffAuthorizationStatus =
   | 'loading'

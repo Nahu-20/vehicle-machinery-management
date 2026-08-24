@@ -1,0 +1,12 @@
+export { HistoryPage } from './HistoryPage';
+export { MandatePage } from './MandatePage';
+export { StructurePage } from './StructurePage';
+export { LeadershipPage } from './LeadershipPage';
+export { LeadershipProfilePage } from './LeadershipProfilePage';
+export { LeadershipMessagePage } from './LeadershipMessagePage';
+export { DepartmentsPage } from './DepartmentsPage';
+export { DepartmentDetailPage } from './DepartmentDetailPage';
+export { HowWeServePage } from './HowWeServePage';
+export { StatisticsPage } from './StatisticsPage';
+export { PartnersPage } from './PartnersPage';
+export { DocumentsPage } from './DocumentsPage';
