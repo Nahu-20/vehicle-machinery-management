@@ -12,7 +12,6 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test:chat": "tsx src/tests/runChatTestsCli.ts",
-    "test:fleet": "tsx src/tests/runFleetTestsCli.ts",
     "test:market": "tsx src/tests/runMarketTestsCli.ts",
     "seed:investment-prototype": "tsx scripts/seed-investment-prototype.ts",
     "seed:resources-prototype": "tsx scripts/seed-resources-prototype.ts"

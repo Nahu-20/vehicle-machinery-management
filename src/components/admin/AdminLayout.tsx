@@ -16,12 +16,10 @@ import {
   LogOut,
   Menu,
   Moon,
-  QrCode,
   Settings,
   Shield,
   Sun,
   TrendingUp,
-  Truck,
   Users,
   X,
 } from 'lucide-react';
@@ -105,13 +103,6 @@ export const AdminLayout: React.FC = () => {
       permission: 'investment.view',
     },
     {
-      id: 'fleet',
-      label: 'Vehicles & Machinery',
-      href: '/admin/fleet',
-      icon: Truck,
-      permission: 'fleet.view',
-    },
-    {
       id: 'resources',
       label: 'Resources & Manuals',
       href: '/admin/resources',
@@ -131,13 +122,6 @@ export const AdminLayout: React.FC = () => {
       href: '/admin/settings',
       icon: Settings,
       permission: 'settings.manage',
-    },
-    {
-      id: 'attestation',
-      label: 'Blockchain Attestation',
-      href: '/admin/attestation',
-      icon: QrCode,
-      permission: 'attestation.manage',
     },
   ];
 
