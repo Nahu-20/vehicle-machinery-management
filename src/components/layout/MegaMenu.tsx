@@ -1,12 +1,21 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, ChevronDown, Sprout } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
-import { aboutNavGroups } from '../../data/aboutNavigation';
+import type { SiteNavSection } from '../../data/siteNavigation';
 import { useReducedMotionPreference } from '../../hooks/useReducedMotionPreference';
 
-interface AboutMegaMenuTriggerProps {
+/**
+ * Generalised from the About-only mega menu once the Bureau's navigation
+ * document arrived: the same grouped-links pattern now serves all seven
+ * doors, so About is one consumer rather than a special case.
+ */
+
+const panelId = (sectionId: string) => `mega-menu-panel-${sectionId}`;
+
+interface MegaMenuTriggerProps {
+  section: SiteNavSection;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onIntentOpen: () => void;
@@ -15,8 +24,8 @@ interface AboutMegaMenuTriggerProps {
   isActive?: boolean;
 }
 
-/** About nav control only — panel is rendered by the header nav shell. */
-export const AboutMegaMenuTrigger: React.FC<AboutMegaMenuTriggerProps> = ({
+export const MegaMenuTrigger: React.FC<MegaMenuTriggerProps> = ({
+  section,
   isOpen,
   onOpenChange,
   onIntentOpen,
@@ -25,7 +34,6 @@ export const AboutMegaMenuTrigger: React.FC<AboutMegaMenuTriggerProps> = ({
   isActive = false,
 }) => {
   const { t } = useLanguage();
-  const menuId = useId();
 
   const handleTriggerKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
@@ -37,18 +45,17 @@ export const AboutMegaMenuTrigger: React.FC<AboutMegaMenuTriggerProps> = ({
   return (
     <button
       type="button"
-      id={`${menuId}-trigger`}
       className={`${triggerClassName} inline-flex items-center gap-1 relative`}
       aria-expanded={isOpen}
       aria-haspopup="true"
-      aria-controls="about-mega-menu-panel"
+      aria-controls={panelId(section.id)}
       onClick={() => onOpenChange(!isOpen)}
       onKeyDown={handleTriggerKeyDown}
       onMouseEnter={onIntentOpen}
       onFocus={onIntentOpen}
       onMouseLeave={onIntentClose}
     >
-      <span>{t('nav_about')}</span>
+      <span>{t(section.labelKey)}</span>
       <ChevronDown
         className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
         aria-hidden="true"
@@ -63,7 +70,8 @@ export const AboutMegaMenuTrigger: React.FC<AboutMegaMenuTriggerProps> = ({
   );
 };
 
-interface AboutMegaMenuPanelProps {
+interface MegaMenuPanelProps {
+  section: SiteNavSection;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onIntentOpen: () => void;
@@ -71,10 +79,11 @@ interface AboutMegaMenuPanelProps {
 }
 
 /**
- * Positioned by the parent nav shell (full header width), not the About button.
- * Parent should be `relative`; this uses inset-x-0 + centered max-width.
+ * Positioned by the parent nav shell (full header width), not by the trigger.
+ * Parent must be `relative`; this uses inset-x-0 with a centred max width.
  */
-export const AboutMegaMenuPanel: React.FC<AboutMegaMenuPanelProps> = ({
+export const MegaMenuPanel: React.FC<MegaMenuPanelProps> = ({
+  section,
   isOpen,
   onOpenChange,
   onIntentOpen,
@@ -84,7 +93,9 @@ export const AboutMegaMenuPanel: React.FC<AboutMegaMenuPanelProps> = ({
   const isReducedMotion = useReducedMotionPreference();
   const panelRef = useRef<HTMLDivElement>(null);
   const [focusIndex, setFocusIndex] = useState(0);
-  const flatLinks = aboutNavGroups.flatMap((g) => g.links);
+
+  const groups = section.groups ?? [];
+  const flatLinks = groups.flatMap((g) => g.links);
 
   useEffect(() => {
     if (!isOpen) {
@@ -105,7 +116,7 @@ export const AboutMegaMenuPanel: React.FC<AboutMegaMenuPanelProps> = ({
       const clickedTrigger = path.some(
         (n) =>
           n instanceof HTMLElement &&
-          n.getAttribute('aria-controls') === 'about-mega-menu-panel',
+          n.getAttribute('aria-controls') === panelId(section.id),
       );
       if (panelRef.current && !panelRef.current.contains(target) && !clickedTrigger) {
         onOpenChange(false);
@@ -120,10 +131,9 @@ export const AboutMegaMenuPanel: React.FC<AboutMegaMenuPanelProps> = ({
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('touchstart', onPointerDown);
     };
-  }, [isOpen, onOpenChange]);
+  }, [isOpen, onOpenChange, section.id]);
 
   const handleMenuKeyDown = (e: React.KeyboardEvent) => {
-    const last = flatLinks.length; // include featured CTA as last focusable conceptually via links only
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
       e.preventDefault();
       setFocusIndex((i) => Math.min(i + 1, flatLinks.length - 1));
@@ -135,17 +145,26 @@ export const AboutMegaMenuPanel: React.FC<AboutMegaMenuPanelProps> = ({
       setFocusIndex(0);
     } else if (e.key === 'End') {
       e.preventDefault();
-      setFocusIndex(Math.max(0, last - 1));
+      setFocusIndex(Math.max(0, flatLinks.length - 1));
     }
   };
+
+  // Six groups is the widest door (Bureau); narrower doors keep their columns
+  // from stretching across the whole header.
+  const columnClass =
+    groups.length >= 5
+      ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-6'
+      : groups.length === 4
+        ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-5'
+        : 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4';
 
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          id="about-mega-menu-panel"
+          id={panelId(section.id)}
           role="menu"
-          aria-label={t('nav_about')}
+          aria-label={t(section.labelKey)}
           ref={panelRef}
           initial={isReducedMotion ? false : { opacity: 0, y: 8 }}
           animate={isReducedMotion ? undefined : { opacity: 1, y: 0 }}
@@ -156,10 +175,9 @@ export const AboutMegaMenuPanel: React.FC<AboutMegaMenuPanelProps> = ({
           onMouseEnter={onIntentOpen}
           onMouseLeave={onIntentClose}
         >
-          {/* Full-bleed within header shell; panel centered with viewport-safe max width */}
           <div className="mx-auto w-full max-w-[min(100%,calc(100vw-2rem),1280px)] rounded-xl border border-[#E2E8E3] dark:border-white/[0.1] bg-white dark:bg-[#0d110f] shadow-[0_12px_40px_-12px_rgba(6,61,42,0.28)] dark:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.55)] p-5 sm:p-6">
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-5 xl:gap-6">
-              {aboutNavGroups.map((group) => (
+            <div className={`grid ${columnClass} gap-5 xl:gap-6`}>
+              {groups.map((group) => (
                 <div key={group.id} className="min-w-0">
                   <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#087A4B] dark:text-[#74d62c] mb-2.5">
                     {t(group.headingKey)}
@@ -190,29 +208,32 @@ export const AboutMegaMenuPanel: React.FC<AboutMegaMenuPanelProps> = ({
                 </div>
               ))}
 
-              {/* Featured intro — large desktops only */}
-              <div className="hidden xl:flex flex-col justify-between rounded-lg bg-[#F3F7F1] dark:bg-[#14241a] border border-[#D7E5DA] dark:border-white/[0.08] p-4 min-w-0">
-                <div>
-                  <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#063D2A] dark:bg-[#74d62c] text-[#A3E635] dark:text-[#070908] mb-3">
-                    <Sprout className="h-4 w-4" aria-hidden="true" />
+              {section.featuredTitleKey && (
+                <div className="hidden xl:flex flex-col justify-between rounded-lg bg-[#F3F7F1] dark:bg-[#14241a] border border-[#D7E5DA] dark:border-white/[0.08] p-4 min-w-0">
+                  <div>
+                    <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#063D2A] dark:bg-[#74d62c] text-[#A3E635] dark:text-[#070908] mb-3">
+                      <Sprout className="h-4 w-4" aria-hidden="true" />
+                    </div>
+                    <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-[#087A4B] dark:text-[#74d62c] mb-1.5">
+                      {t(section.featuredTitleKey)}
+                    </p>
+                    {section.featuredBodyKey && (
+                      <p className="text-sm text-[#4E6155] dark:text-[#a5aba6] leading-relaxed">
+                        {t(section.featuredBodyKey)}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-[#087A4B] dark:text-[#74d62c] mb-1.5">
-                    {t('about_mega_featured_title')}
-                  </p>
-                  <p className="text-sm text-[#4E6155] dark:text-[#a5aba6] leading-relaxed">
-                    {t('about_mega_featured_body')}
-                  </p>
+                  <Link
+                    to={section.href}
+                    role="menuitem"
+                    onClick={() => onOpenChange(false)}
+                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-[#063D2A] dark:text-[#74d62c] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#087A4B] rounded"
+                  >
+                    {t('nav_view_all')}
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Link>
                 </div>
-                <Link
-                  to="/about"
-                  role="menuitem"
-                  onClick={() => onOpenChange(false)}
-                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-[#063D2A] dark:text-[#74d62c] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#087A4B] rounded"
-                >
-                  {t('about_mega_featured_cta')}
-                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                </Link>
-              </div>
+              )}
             </div>
           </div>
         </motion.div>
@@ -220,6 +241,3 @@ export const AboutMegaMenuPanel: React.FC<AboutMegaMenuPanelProps> = ({
     </AnimatePresence>
   );
 };
-
-/** @deprecated Use AboutMegaMenuTrigger + AboutMegaMenuPanel from the header shell. */
-export const AboutMegaMenu = AboutMegaMenuTrigger;

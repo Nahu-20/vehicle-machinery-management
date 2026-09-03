@@ -7,10 +7,8 @@ import { ThemeToggle } from '../common/ThemeToggle';
 import { SearchModal } from '../common/SearchModal';
 import { NotificationBell } from '../common/NotificationBell';
 import { ScrollProgress } from '../common/scroll/ScrollProgress';
-import { navigationItems } from '../../data/mockData';
-import { isAboutPath } from '../../data/aboutNavigation';
-import { aboutNavGroups } from '../../data/aboutNavigation';
-import { AboutMegaMenuTrigger, AboutMegaMenuPanel } from '../about/AboutMegaMenu';
+import { siteNavSections, siteNavDoors, findSectionByPath } from '../../data/siteNavigation';
+import { MegaMenuTrigger, MegaMenuPanel } from './MegaMenu';
 import { FARMER_HOTLINE } from '../../constants';
 import {
   Menu,
@@ -55,8 +53,8 @@ export const Header: React.FC = () => {
   const isReducedMotion = useReducedMotionPreference();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [activeDesktopMenu, setActiveDesktopMenu] = useState<'language' | 'theme' | 'about' | null>(null);
-  const [mobileAboutOpen, setMobileAboutOpen] = useState(false);
+  const [activeDesktopMenu, setActiveDesktopMenu] = useState<string | null>(null);
+  const [mobileOpenSection, setMobileOpenSection] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const aboutCloseTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -67,15 +65,15 @@ export const Header: React.FC = () => {
     }
   };
 
-  const openAboutMenu = () => {
+  const openMenu = (id: string) => {
     clearAboutCloseTimer();
-    setActiveDesktopMenu('about');
+    setActiveDesktopMenu(id);
   };
 
-  const scheduleCloseAboutMenu = () => {
+  const scheduleCloseMenu = (id: string) => {
     clearAboutCloseTimer();
     aboutCloseTimer.current = setTimeout(() => {
-      setActiveDesktopMenu((prev) => (prev === 'about' ? null : prev));
+      setActiveDesktopMenu((prev) => (prev === id ? null : prev));
     }, 140);
   };
 
@@ -370,30 +368,40 @@ export const Header: React.FC = () => {
               <div className="hidden min-[1180px]:block relative z-20 w-full pt-0.5 pb-0">
                 <nav aria-label="Primary" className="w-full flex items-center justify-center">
                   <div className="flex items-center justify-center gap-2.5 min-[1280px]:gap-3.5 min-[1440px]:gap-5 flex-wrap max-w-full">
-                    {navigationItems.map((item) => {
-                      const isAbout = item.id === 'nav-about';
-                      const isActive = isAbout
-                        ? isAboutPath(location.pathname)
-                        : location.pathname === item.href ||
-                          (item.href !== '/' && location.pathname.startsWith(item.href));
+                    {siteNavSections.map((item) => {
+                      const activeSection = findSectionByPath(location.pathname);
+                      const isActive =
+                        item.href === '/'
+                          ? location.pathname === '/'
+                          : activeSection?.id === item.id ||
+                            (item.groups ?? []).some((g) =>
+                              g.links.some(
+                                (l) =>
+                                  location.pathname === l.href.split('#')[0] ||
+                                  (l.href !== '/' && location.pathname.startsWith(`${l.href}/`)),
+                              ),
+                            );
 
-                      if (isAbout) {
+                      const triggerClass = `px-2 py-1 text-nav transition-colors rounded-lg ${
+                        isActive
+                          ? 'text-[#063D2A] dark:text-[#74d62c] font-extrabold'
+                          : 'text-[#111310] dark:text-[#a5aba6] hover:text-[#063D2A] dark:hover:text-[#f5f6f3]'
+                      }`;
+
+                      if (item.groups && item.groups.length > 0) {
                         return (
                           <div key={item.id} className="relative">
-                            <AboutMegaMenuTrigger
-                              isOpen={activeDesktopMenu === 'about'}
+                            <MegaMenuTrigger
+                              section={item}
+                              isOpen={activeDesktopMenu === item.id}
                               onOpenChange={(open) => {
                                 clearAboutCloseTimer();
-                                setActiveDesktopMenu(open ? 'about' : null);
+                                setActiveDesktopMenu(open ? item.id : null);
                               }}
-                              onIntentOpen={openAboutMenu}
-                              onIntentClose={scheduleCloseAboutMenu}
+                              onIntentOpen={() => openMenu(item.id)}
+                              onIntentClose={() => scheduleCloseMenu(item.id)}
                               isActive={isActive}
-                              triggerClassName={`px-2 py-1 text-[13px] min-[1280px]:text-sm min-[1440px]:text-[15px] font-semibold transition-colors rounded-lg ${
-                                isActive
-                                  ? 'text-[#063D2A] dark:text-[#74d62c] font-extrabold'
-                                  : 'text-[#111310] dark:text-[#a5aba6] hover:text-[#063D2A] dark:hover:text-[#f5f6f3]'
-                              }`}
+                              triggerClassName={triggerClass}
                             />
                           </div>
                         );
@@ -404,13 +412,9 @@ export const Header: React.FC = () => {
                           <NavLink
                             to={item.href}
                             onMouseEnter={() => {
-                              if (activeDesktopMenu === 'about') scheduleCloseAboutMenu();
+                              if (activeDesktopMenu) scheduleCloseMenu(activeDesktopMenu);
                             }}
-                            className={`px-2 py-1 text-[13px] min-[1280px]:text-sm min-[1440px]:text-[15px] font-semibold transition-colors rounded-lg block relative ${
-                              isActive
-                                ? 'text-[#063D2A] dark:text-[#74d62c] font-extrabold'
-                                : 'text-[#111310] dark:text-[#a5aba6] hover:text-[#063D2A] dark:hover:text-[#f5f6f3]'
-                            }`}
+                            className={`${triggerClass} block relative`}
                           >
                             <span>{t(item.labelKey)}</span>
 
@@ -431,15 +435,19 @@ export const Header: React.FC = () => {
                   </div>
                 </nav>
 
-                <AboutMegaMenuPanel
-                  isOpen={activeDesktopMenu === 'about'}
-                  onOpenChange={(open) => {
-                    clearAboutCloseTimer();
-                    setActiveDesktopMenu(open ? 'about' : null);
-                  }}
-                  onIntentOpen={openAboutMenu}
-                  onIntentClose={scheduleCloseAboutMenu}
-                />
+                {siteNavDoors.map((door) => (
+                  <MegaMenuPanel
+                    key={door.id}
+                    section={door}
+                    isOpen={activeDesktopMenu === door.id}
+                    onOpenChange={(open) => {
+                      clearAboutCloseTimer();
+                      setActiveDesktopMenu(open ? door.id : null);
+                    }}
+                    onIntentOpen={() => openMenu(door.id)}
+                    onIntentClose={() => scheduleCloseMenu(door.id)}
+                  />
+                ))}
               </div>
 
             </div>
@@ -547,30 +555,32 @@ export const Header: React.FC = () => {
                   {/* Mobile Navigation Links */}
                   <nav className="space-y-1">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#56635B] dark:text-[#737b75] px-2 block mb-1">
-                      Main Navigation
+                      {t('nav_main_heading')}
                     </span>
                     <ul className="space-y-1">
-                      {navigationItems.map((item) => {
-                        if (item.id === 'nav-about') {
+                      {siteNavSections.map((item) => {
+                        if (item.groups && item.groups.length > 0) {
+                          const isOpen = mobileOpenSection === item.id;
+                          const isActive = findSectionByPath(location.pathname)?.id === item.id;
                           return (
                             <li key={item.id}>
                               <button
                                 type="button"
-                                aria-expanded={mobileAboutOpen}
-                                onClick={() => setMobileAboutOpen((o) => !o)}
-                                className={`flex w-full items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
-                                  isAboutPath(location.pathname)
+                                aria-expanded={isOpen}
+                                onClick={() => setMobileOpenSection((o) => (o === item.id ? null : item.id))}
+                                className={`flex w-full items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all min-h-[44px] ${
+                                  isActive
                                     ? 'bg-[#063d28] dark:bg-[#74d62c] text-white dark:text-[#070908] shadow-xs'
                                     : 'text-[#111310] dark:text-[#f5f6f3] hover:bg-[#F6F7F3] dark:hover:bg-[#111613]'
                                 }`}
                               >
                                 <span>{t(item.labelKey)}</span>
                                 <ChevronRight
-                                  className={`h-4 w-4 opacity-60 transition-transform ${mobileAboutOpen ? 'rotate-90' : ''}`}
+                                  className={`h-4 w-4 opacity-60 transition-transform ${isOpen ? 'rotate-90' : ''}`}
                                 />
                               </button>
                               <AnimatePresence>
-                                {mobileAboutOpen && (
+                                {isOpen && (
                                   <motion.ul
                                     initial={isReducedMotion ? undefined : { height: 0, opacity: 0 }}
                                     animate={isReducedMotion ? undefined : { height: 'auto', opacity: 1 }}
@@ -578,7 +588,7 @@ export const Header: React.FC = () => {
                                     transition={{ duration: 0.2 }}
                                     className="overflow-hidden pl-3 mt-1 space-y-3"
                                   >
-                                    {aboutNavGroups.map((group) => (
+                                    {item.groups.map((group) => (
                                       <li key={group.id}>
                                         <p className="px-3 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-[#087A4B] dark:text-[#74d62c]">
                                           {t(group.headingKey)}
@@ -589,9 +599,9 @@ export const Header: React.FC = () => {
                                               <NavLink
                                                 to={link.href}
                                                 onClick={() => setMobileMenuOpen(false)}
-                                                className={({ isActive }) =>
-                                                  `block px-3 py-2.5 rounded-lg text-xs font-semibold min-h-[40px] ${
-                                                    isActive
+                                                className={({ isActive: linkActive }) =>
+                                                  `block px-3 py-2.5 rounded-lg text-sm font-semibold min-h-[40px] ${
+                                                    linkActive
                                                       ? 'bg-[#E8F5EC] dark:bg-[#14241a] text-[#063D2A] dark:text-[#74d62c]'
                                                       : 'text-[#33443A] dark:text-[#c5cbc4] hover:bg-[#F6F7F3] dark:hover:bg-[#111613]'
                                                   }`
@@ -617,7 +627,7 @@ export const Header: React.FC = () => {
                               to={item.href}
                               onClick={() => setMobileMenuOpen(false)}
                               className={({ isActive }) =>
-                                `flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
+                                `flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all min-h-[44px] ${
                                   isActive
                                     ? 'bg-[#063d28] dark:bg-[#74d62c] text-white dark:text-[#070908] shadow-xs'
                                     : 'text-[#111310] dark:text-[#f5f6f3] hover:bg-[#F6F7F3] dark:hover:bg-[#111613] hover:text-[#087A4B] dark:hover:text-[#74d62c]'

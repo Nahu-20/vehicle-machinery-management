@@ -31,6 +31,7 @@ import { AchievementsPage } from './pages/AchievementsPage';
 import { AchievementDetailPage } from './pages/AchievementDetailPage';
 import { InvestmentPage } from './pages/InvestmentPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { SectionLandingPage } from './pages/SectionLandingPage';
 import { ChatLauncher } from './components/chat/ChatLauncher';
 import { ChatPanel } from './components/chat/ChatPanel';
 import { ChatMessage } from './services/chatService';
@@ -642,6 +643,13 @@ export default function App() {
                     <Route path="/alerts/:alertSlug" element={<AlertDetailPage />} />
                     <Route path="/resources" element={<ResourcesPage />} />
                     <Route path="/news" element={<NewsPage />} />
+                    {/* Declared before :newsSlug — otherwise the slug route
+                        would swallow these fixed paths. */}
+                    <Route path="/news/events" element={<SectionLandingPage />} />
+                    <Route path="/news/success-stories" element={<SectionLandingPage />} />
+                    <Route path="/news/photos" element={<SectionLandingPage />} />
+                    <Route path="/news/videos" element={<SectionLandingPage />} />
+                    <Route path="/news/publications" element={<SectionLandingPage />} />
                     <Route path="/news/:newsSlug" element={<NewsDetailPage />} />
                     <Route
                       path="/investment/map-lab"
@@ -660,6 +668,20 @@ export default function App() {
                     />
                     <Route path="/investment/*" element={<InvestmentPage />} />
                     <Route path="/contact" element={<ContactPage />} />
+                    {/* The Bureau's navigation document, sections 3-8 and 10.
+                        SectionLandingPage renders each from siteNavigation, so
+                        no menu entry can point at a 404. CMS-backed pages take
+                        these routes over as they come online. */}
+                    <Route path="/sectors" element={<SectionLandingPage />} />
+                    <Route path="/sectors/*" element={<SectionLandingPage />} />
+                    <Route path="/initiatives/*" element={<SectionLandingPage />} />
+                    <Route path="/services/*" element={<SectionLandingPage />} />
+                    <Route path="/plans" element={<SectionLandingPage />} />
+                    <Route path="/plans/*" element={<SectionLandingPage />} />
+                    <Route path="/digital" element={<SectionLandingPage />} />
+                    <Route path="/digital/*" element={<SectionLandingPage />} />
+                    <Route path="/opportunities/*" element={<SectionLandingPage />} />
+                    <Route path="/resources/*" element={<SectionLandingPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Route>
                 </Routes>

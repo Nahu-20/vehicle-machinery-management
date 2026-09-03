@@ -1,5 +1,4 @@
 import type {
-  NavigationItem,
   AgriculturalAlert,
   Service,
   Program,
@@ -15,20 +14,6 @@ import type {
   ImpactReport,
   BeforeAfterItem,
 } from '../types/index.js';
-
-export const navigationItems: NavigationItem[] = [
-  { id: 'nav-home', labelKey: 'nav_home', href: '/' },
-  { id: 'nav-services', labelKey: 'nav_services', href: '/services' },
-  { id: 'nav-programs', labelKey: 'nav_programs', href: '/programs' },
-  { id: 'nav-products', labelKey: 'nav_products', href: '/products' },
-  { id: 'nav-investment', labelKey: 'nav_investment', href: '/investment/map' },
-  { id: 'nav-achievements', labelKey: 'nav_achievements', href: '/achievements' },
-  { id: 'nav-alerts', labelKey: 'nav_alerts', href: '/alerts', badge: 'Active' },
-  { id: 'nav-resources', labelKey: 'nav_resources', href: '/resources' },
-  { id: 'nav-news', labelKey: 'nav_news', href: '/news' },
-  { id: 'nav-about', labelKey: 'nav_about', href: '/about' },
-  { id: 'nav-contact', labelKey: 'nav_contact', href: '/contact' },
-];
 
 export const mockAlerts: AgriculturalAlert[] = [
   {

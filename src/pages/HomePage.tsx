@@ -10,6 +10,7 @@ import { InvestorsPartnersSection } from '../components/home/InvestorsPartnersSe
 import { FarmerResourcesSection } from '../components/home/FarmerResourcesSection';
 import { ContactFeedbackCTA } from '../components/home/ContactFeedbackCTA';
 import { FromTheFieldSection } from '../components/home/FromTheFieldSection';
+import { QuickAccessBar } from '../components/home/QuickAccessBar';
 
 export const HomePage: React.FC = () => {
   return (
@@ -17,7 +18,10 @@ export const HomePage: React.FC = () => {
       {/* 1. Hero section */}
       <HeroSection />
 
-      {/* 2. From the field — photographs as testimony (note 03) */}
+      {/* 2. The eight quick-access shortcuts the Bureau asked for */}
+      <QuickAccessBar />
+
+      {/* 3. From the field — photographs as testimony (note 03) */}
       <FromTheFieldSection />
 
       {/* 3. Featured Agricultural Products */}

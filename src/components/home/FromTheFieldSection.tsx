@@ -1,17 +1,22 @@
 import React from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { FieldPhoto } from '../common/FieldPhoto';
+import coffeeHarvestImg from '../../assets/images/oromia_coffee_harvest_1785782724559.jpg';
+import irrigationImg from '../../assets/images/oromia_irrigation_program_1785782711113.jpg';
+import farmlandImg from '../../assets/images/oromia_hero_farmland_1785782697065.jpg';
 
 /**
  * Note 03: "Families, kebeles, cluster plots, and extension work would make
  * each image feel like proof of the Bureau's work on the ground."
  *
- * Every entry below is a placeholder awaiting a Bureau photograph. To publish
- * a real one, import the image and pass it as `src` — nothing else changes.
+ * These use the Bureau's own Oromia photographs where we have them. Swapping
+ * any of them later is a one-line change — or an edit in the admin, once the
+ * section is CMS-backed.
  */
 const fieldStories = [
   {
     id: 'cluster-wheat',
+    image: irrigationImg,
     placeKey: 'field_photo_1_place',
     cropKey: 'field_photo_1_crop',
     seasonKey: 'field_photo_1_season',
@@ -19,6 +24,7 @@ const fieldStories = [
   },
   {
     id: 'coffee-family',
+    image: coffeeHarvestImg,
     placeKey: 'field_photo_2_place',
     cropKey: 'field_photo_2_crop',
     seasonKey: 'field_photo_2_season',
@@ -26,6 +32,7 @@ const fieldStories = [
   },
   {
     id: 'extension-visit',
+    image: farmlandImg,
     placeKey: 'field_photo_3_place',
     cropKey: 'field_photo_3_crop',
     seasonKey: 'field_photo_3_season',
@@ -62,6 +69,7 @@ export const FromTheFieldSection: React.FC = () => {
           {fieldStories.map((story) => (
             <FieldPhoto
               key={story.id}
+              src={story.image}
               place={t(story.placeKey)}
               crop={t(story.cropKey)}
               season={t(story.seasonKey)}
