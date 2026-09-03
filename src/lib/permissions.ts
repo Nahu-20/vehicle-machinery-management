@@ -58,6 +58,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   'fleet.driver.manage',
   'fleet.fuel.record',
   'fleet.asset.retire',
+  'about.view',
+  'about.create',
+  'about.edit',
+  'about.review',
+  'about.publish',
+  'about.structure.manage',
+  'about.documents.manage',
 ];
 
 export const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
@@ -96,6 +103,13 @@ export const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
     'investment.datasets.manage',
     'investment.opportunities.manage',
     'investment.config.manage',
+    'about.view',
+    'about.create',
+    'about.edit',
+    'about.review',
+    'about.publish',
+    'about.structure.manage',
+    'about.documents.manage',
   ],
   editor: [
     'dashboard.view',
@@ -117,6 +131,10 @@ export const ROLE_PERMISSIONS_MAP: Record<StaffRole, Permission[]> = {
     'investment.sources.manage',
     'investment.datasets.manage',
     'investment.opportunities.manage',
+    'about.view',
+    'about.create',
+    'about.edit',
+    'about.review',
   ],
   marketOfficer: [
     'dashboard.view',

@@ -35,7 +35,6 @@ import { BlockchainTraceabilityPage } from './pages/BlockchainTraceabilityPage';
 import { ChatLauncher } from './components/chat/ChatLauncher';
 import { ChatPanel } from './components/chat/ChatPanel';
 import { ChatMessage } from './services/chatService';
-
 // Admin Auth & Authorization Guards
 import { AdminSignInPage } from './pages/admin/AdminSignInPage';
 import { AttestationAdminPage } from './pages/admin/attestation/AttestationAdminPage';
@@ -100,6 +99,76 @@ import { AdminFacilityDetailPage } from './pages/admin/investment/AdminFacilityD
 import { AdminMapConfigPage } from './pages/admin/investment/AdminMapConfigPage';
 import { AdminInvestmentActivityPage } from './pages/admin/investment/AdminInvestmentActivityPage';
 import { AdminInvestmentTestsPage } from './pages/admin/investment/AdminInvestmentTestsPage';
+import {
+  AboutAdminLayout,
+  AdminAboutOverviewPage,
+  AdminAboutLandingEditorPage,
+  AdminAboutHistoryPage,
+  AdminAboutMandatePage,
+  AdminAboutStructurePage,
+  AdminAboutLeadershipPage,
+  AdminAboutMessagesPage,
+  AdminAboutDepartmentsPage,
+  AdminAboutHowWeServePage,
+  AdminAboutStatisticsPage,
+  AdminAboutPartnersPage,
+  AdminAboutDocumentsPage,
+  AdminAboutSettingsPage,
+} from './pages/admin/about';
+
+const HistoryPage = lazy(() =>
+  import('./pages/about/HistoryPage').then((m) => ({ default: m.HistoryPage })),
+);
+const MandatePage = lazy(() =>
+  import('./pages/about/MandatePage').then((m) => ({ default: m.MandatePage })),
+);
+const StructurePage = lazy(() =>
+  import('./pages/about/StructurePage').then((m) => ({ default: m.StructurePage })),
+);
+const LeadershipPage = lazy(() =>
+  import('./pages/about/LeadershipPage').then((m) => ({ default: m.LeadershipPage })),
+);
+const LeadershipProfilePage = lazy(() =>
+  import('./pages/about/LeadershipProfilePage').then((m) => ({
+    default: m.LeadershipProfilePage,
+  })),
+);
+const LeadershipMessagePage = lazy(() =>
+  import('./pages/about/LeadershipMessagePage').then((m) => ({
+    default: m.LeadershipMessagePage,
+  })),
+);
+const DepartmentsPage = lazy(() =>
+  import('./pages/about/DepartmentsPage').then((m) => ({ default: m.DepartmentsPage })),
+);
+const DepartmentDetailPage = lazy(() =>
+  import('./pages/about/DepartmentDetailPage').then((m) => ({
+    default: m.DepartmentDetailPage,
+  })),
+);
+const HowWeServePage = lazy(() =>
+  import('./pages/about/HowWeServePage').then((m) => ({ default: m.HowWeServePage })),
+);
+const StatisticsPage = lazy(() =>
+  import('./pages/about/StatisticsPage').then((m) => ({ default: m.StatisticsPage })),
+);
+const PartnersPage = lazy(() =>
+  import('./pages/about/PartnersPage').then((m) => ({ default: m.PartnersPage })),
+);
+const DocumentsPage = lazy(() =>
+  import('./pages/about/DocumentsPage').then((m) => ({ default: m.DocumentsPage })),
+);
+
+function AboutRouteFallback() {
+  return (
+    <div className="min-h-[40vh] flex items-center justify-center p-8 bg-[#F8F7F2] dark:bg-[#070908] text-[#56635B] dark:text-[#a5aba6]">
+      <div className="flex items-center gap-3">
+        <div className="w-6 h-6 border-2 border-[#087A4B] border-t-transparent rounded-full animate-spin" />
+        <span>Loading…</span>
+      </div>
+    </div>
+  );
+}
 
 function PublicLayout() {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -478,6 +547,34 @@ export default function App() {
                         element={<Navigate to="/admin/fleet/register?view=map" replace />}
                       />
                     </Route>
+
+                    {/* About OAB CMS */}
+                    <Route
+                      path="about"
+                      element={
+                        <RequirePermission
+                          requiredPermission="about.view"
+                          moduleTitle="About OAB CMS"
+                        >
+                          <AboutAdminLayout />
+                        </RequirePermission>
+                      }
+                    >
+                      <Route index element={<AdminAboutOverviewPage />} />
+                      <Route path="landing" element={<AdminAboutLandingEditorPage />} />
+                      <Route path="history" element={<AdminAboutHistoryPage />} />
+                      <Route path="mandate" element={<AdminAboutMandatePage />} />
+                      <Route path="structure" element={<AdminAboutStructurePage />} />
+                      <Route path="leadership" element={<AdminAboutLeadershipPage />} />
+                      <Route path="messages" element={<AdminAboutMessagesPage />} />
+                      <Route path="departments" element={<AdminAboutDepartmentsPage />} />
+                      <Route path="how-we-serve" element={<AdminAboutHowWeServePage />} />
+                      <Route path="statistics" element={<AdminAboutStatisticsPage />} />
+                      <Route path="partners" element={<AdminAboutPartnersPage />} />
+                      <Route path="documents" element={<AdminAboutDocumentsPage />} />
+                      <Route path="settings" element={<AdminAboutSettingsPage />} />
+                    </Route>
+
                     <Route
                       path="settings"
                       element={
@@ -495,6 +592,102 @@ export default function App() {
                   <Route element={<PublicLayout />}>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/about" element={<AboutPage />} />
+                    <Route
+                      path="/about/history"
+                      element={
+                        <Suspense fallback={<AboutRouteFallback />}>
+                          <HistoryPage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/about/mandate"
+                      element={
+                        <Suspense fallback={<AboutRouteFallback />}>
+                          <MandatePage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/about/structure"
+                      element={
+                        <Suspense fallback={<AboutRouteFallback />}>
+                          <StructurePage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/about/leadership/message"
+                      element={
+                        <Suspense fallback={<AboutRouteFallback />}>
+                          <LeadershipMessagePage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/about/leadership"
+                      element={
+                        <Suspense fallback={<AboutRouteFallback />}>
+                          <LeadershipPage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/about/leadership/:slug"
+                      element={
+                        <Suspense fallback={<AboutRouteFallback />}>
+                          <LeadershipProfilePage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/about/departments"
+                      element={
+                        <Suspense fallback={<AboutRouteFallback />}>
+                          <DepartmentsPage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/about/departments/:slug"
+                      element={
+                        <Suspense fallback={<AboutRouteFallback />}>
+                          <DepartmentDetailPage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/about/how-we-serve"
+                      element={
+                        <Suspense fallback={<AboutRouteFallback />}>
+                          <HowWeServePage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/about/statistics"
+                      element={
+                        <Suspense fallback={<AboutRouteFallback />}>
+                          <StatisticsPage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/about/partners"
+                      element={
+                        <Suspense fallback={<AboutRouteFallback />}>
+                          <PartnersPage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/about/documents"
+                      element={
+                        <Suspense fallback={<AboutRouteFallback />}>
+                          <DocumentsPage />
+                        </Suspense>
+                      }
+                    />
                     <Route path="/services" element={<ServicesPage />} />
                     <Route path="/products" element={<ProductsPage />} />
                     <Route path="/products/:productSlug" element={<ProductDetailPage />} />

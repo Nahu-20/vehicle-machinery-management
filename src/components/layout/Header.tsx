@@ -8,6 +8,9 @@ import { SearchModal } from '../common/SearchModal';
 import { NotificationBell } from '../common/NotificationBell';
 import { ScrollProgress } from '../common/scroll/ScrollProgress';
 import { navigationItems } from '../../data/mockData';
+import { isAboutPath } from '../../data/aboutNavigation';
+import { aboutNavGroups } from '../../data/aboutNavigation';
+import { AboutMegaMenuTrigger, AboutMegaMenuPanel } from '../about/AboutMegaMenu';
 import { FARMER_HOTLINE } from '../../constants';
 import {
   Menu,
@@ -52,7 +55,30 @@ export const Header: React.FC = () => {
   const isReducedMotion = useReducedMotionPreference();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [activeDesktopMenu, setActiveDesktopMenu] = useState<'language' | 'theme' | null>(null);
+  const [activeDesktopMenu, setActiveDesktopMenu] = useState<'language' | 'theme' | 'about' | null>(null);
+  const [mobileAboutOpen, setMobileAboutOpen] = useState(false);
+  const aboutCloseTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearAboutCloseTimer = () => {
+    if (aboutCloseTimer.current) {
+      clearTimeout(aboutCloseTimer.current);
+      aboutCloseTimer.current = null;
+    }
+  };
+
+  const openAboutMenu = () => {
+    clearAboutCloseTimer();
+    setActiveDesktopMenu('about');
+  };
+
+  const scheduleCloseAboutMenu = () => {
+    clearAboutCloseTimer();
+    aboutCloseTimer.current = setTimeout(() => {
+      setActiveDesktopMenu((prev) => (prev === 'about' ? null : prev));
+    }, 140);
+  };
+
+  useEffect(() => () => clearAboutCloseTimer(), []);
 
   // Global Keyboard Shortcut: ⌘K or Ctrl+K triggers Search Modal
   useEffect(() => {
@@ -103,8 +129,8 @@ export const Header: React.FC = () => {
       <header className="relative z-40 w-full transition-all duration-300">
         
         {/* LAYER 1: FULL-WIDTH DARK-GREEN REGIONAL UTILITY BAR */}
-        <div className="w-full bg-[linear-gradient(105deg,#063d28_0%,#0c5634_45%,#347622_100%)] text-white py-1.5 sm:py-2 px-4 sm:px-6 lg:px-8 border-b border-[#042d1e] relative z-30 shadow-xs">
-          <div className="max-w-[1860px] mx-auto flex items-center justify-between gap-4 text-xs font-medium">
+        <div className="w-full bg-[linear-gradient(105deg,#063d28_0%,#0c5634_45%,#347622_100%)] text-white py-1 px-4 sm:px-6 lg:px-8 border-b border-[#042d1e] relative z-30">
+          <div className="max-w-[1860px] mx-auto flex items-center justify-between gap-3 text-[11px] sm:text-xs font-medium">
             
             {/* Left Side: Institutional Identity */}
             <div className="flex items-center gap-2.5 min-w-0">
@@ -179,8 +205,8 @@ export const Header: React.FC = () => {
         </div>
 
         {/* LAYER 2: ROUNDED MAIN BUREAU NAVIGATION PANEL */}
-        <div className="px-2 sm:px-3.5 lg:px-5 py-2 sm:py-2.5 transition-all duration-300">
-          <div className="w-[calc(100%-0.5rem)] sm:w-[calc(100%-1rem)] max-w-[1860px] mx-auto rounded-[24px] sm:rounded-[30px] lg:rounded-[36px] bg-[linear-gradient(110deg,#ffffff_0%,#ffffff_48%,#f1f8ec_100%)] dark:bg-[linear-gradient(110deg,#0d110f_0%,#0d110f_50%,#090d0b_100%)] border border-[#14502D]/10 dark:border-white/[0.09] shadow-xs dark:shadow-2xl relative p-3.5 sm:p-4 lg:p-4.5 transition-all duration-300">
+        <div className="px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 transition-all duration-300">
+          <div className="w-[calc(100%-0.5rem)] sm:w-[calc(100%-1rem)] max-w-[1860px] mx-auto rounded-2xl sm:rounded-[28px] bg-[linear-gradient(110deg,#ffffff_0%,#ffffff_48%,#f1f8ec_100%)] dark:bg-[linear-gradient(110deg,#0d110f_0%,#0d110f_50%,#090d0b_100%)] border border-[#14502D]/10 dark:border-white/[0.09] shadow-xs dark:shadow-xl relative overflow-visible p-2.5 sm:p-3 lg:p-3.5 transition-all duration-300">
             
             {/* SUBTLE BOTANICAL DECORATION ARTWORK (RIGHT SIDE ONLY) */}
             <div
@@ -216,54 +242,55 @@ export const Header: React.FC = () => {
             </div>
 
             {/* PANEL CONTENT RELATIVE Z-10 */}
-            <div className="relative z-10 flex flex-col gap-2.5 sm:gap-3">
+            <div className="relative z-10 flex flex-col gap-1.5 sm:gap-2">
               
-              {/* ROW 1: BUREAU IDENTITY (LEFT) & CONTROLS/SEARCH/CTA (RIGHT) - HIGHER Z-INDEX FOR DROPDOWNS */}
-              <div className="relative z-30 flex flex-col min-[1180px]:flex-row items-start min-[1180px]:items-center justify-between gap-3 pb-2.5 border-b border-[#14502D]/10 dark:border-white/[0.08]">
+              {/* ROW 1: BUREAU IDENTITY (LEFT) & CONTROLS/SEARCH/CTA (RIGHT) */}
+              <div className="relative z-30 flex flex-col min-[1180px]:flex-row items-start min-[1180px]:items-center justify-between gap-2 sm:gap-2.5 pb-2 border-b border-[#14502D]/10 dark:border-white/[0.08]">
                 
                 {/* LEFT: BUREAU IDENTITY LOGO & TITLE */}
-                <Link to="/" className="flex items-center gap-3 sm:gap-4 group focus:outline-none shrink-0 min-w-0">
+                <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group focus:outline-none shrink-0 min-w-0">
                   <img
                     src={officialLogoUrl}
                     alt="Official Oromia Bureau of Agriculture Seal"
-                    className="h-14 w-14 sm:h-18 sm:w-18 lg:h-20 lg:w-20 object-contain shrink-0 transition-transform duration-300 group-hover:scale-[1.02]"
-                    style={{ maxHeight: '84px' }}
+                    className="h-11 w-11 sm:h-12 sm:w-12 lg:h-14 lg:w-14 object-contain shrink-0 transition-transform duration-300 group-hover:scale-[1.02]"
                   />
                   <div className="flex flex-col min-w-0">
-                    <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-extrabold text-[#0A1912] dark:text-[#f5f6f3] tracking-tight leading-tight min-[1180px]:whitespace-nowrap">
+                    <h1 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-extrabold text-[#0A1912] dark:text-[#f5f6f3] tracking-tight leading-tight min-[1180px]:whitespace-nowrap">
                       {t('bureau_title')}
                     </h1>
-                    <p className="text-xs sm:text-sm lg:text-base font-semibold text-[#56635B] dark:text-[#a5aba6] mt-0.5 truncate">
+                    <p className="text-[11px] sm:text-xs lg:text-sm font-semibold text-[#56635B] dark:text-[#a5aba6] mt-0.5 truncate">
                       {t('bureau_sub_title') || 'Regional Government of Oromia'}
                     </p>
                   </div>
                 </Link>
 
                 {/* RIGHT CONTROLS (DESKTOP ≥1180px) */}
-                <div className="hidden min-[1180px]:flex items-center gap-2 lg:gap-2.5 shrink-0">
+                <div className="hidden min-[1180px]:flex items-center gap-1.5 lg:gap-2 shrink-0">
                   
                   {/* THEME CONTROL */}
-                  <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} className="relative z-40">
+                  <div className="relative z-40 opacity-90">
                     <ThemeToggle
                       compact
                       isOpen={activeDesktopMenu === 'theme'}
                       onToggle={(open) => setActiveDesktopMenu(open ? 'theme' : null)}
                     />
-                  </motion.div>
+                  </div>
 
                   {/* LANGUAGE SELECTOR */}
-                  <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} className="relative z-40">
+                  <div className="relative z-40 opacity-90">
                     <LanguageSelector
                       compact
                       isOpen={activeDesktopMenu === 'language'}
                       onToggle={(open) => setActiveDesktopMenu(open ? 'language' : null)}
                     />
-                  </motion.div>
+                  </div>
 
                   {/* NOTIFICATION BELL */}
-                  <NotificationBell />
+                  <div className="opacity-90">
+                    <NotificationBell />
+                  </div>
 
-                  {/* SEARCH FIELD TRIGGER */}
+                  {/* SEARCH — collapses gracefully; full placeholder only on wide screens */}
                   <button
                     type="button"
                     onClick={() => {
@@ -271,28 +298,26 @@ export const Header: React.FC = () => {
                       setIsSearchModalOpen(true);
                     }}
                     aria-label={t('search_title')}
-                    className="flex items-center gap-2.5 rounded-full border border-gray-200 dark:border-white/[0.09] bg-white/90 dark:bg-[#111613] px-3.5 py-1.5 text-xs font-semibold text-[#56635B] dark:text-[#a5aba6] hover:border-[#087A4B] dark:hover:border-[#74d62c]/50 hover:bg-white dark:hover:bg-[#161d18] transition-all h-10 w-44 lg:w-56 xl:w-72 shrink min-w-[150px] justify-between shadow-xs"
+                    className="flex items-center gap-2 rounded-full border border-gray-200 dark:border-white/[0.09] bg-white/90 dark:bg-[#111613] px-2.5 xl:px-3 py-1.5 text-xs font-semibold text-[#56635B] dark:text-[#a5aba6] hover:border-[#087A4B] dark:hover:border-[#74d62c]/50 hover:bg-white dark:hover:bg-[#161d18] transition-all h-9 w-9 xl:w-44 min-[1440px]:w-56 justify-center xl:justify-between shadow-xs shrink-0"
                   >
-                    <div className="flex items-center gap-2 truncate">
+                    <div className="flex items-center gap-2 min-w-0">
                       <Search className="h-4 w-4 text-[#087A4B] dark:text-[#74d62c] shrink-0" />
-                      <span className="truncate">{t('search_placeholder')}</span>
+                      <span className="hidden xl:inline truncate">{t('search_short')}</span>
                     </div>
-                    <kbd className="rounded-md bg-gray-100 dark:bg-[#161d18] px-1.5 py-0.5 text-[10px] text-[#56635B] dark:text-[#a5aba6] border border-gray-200 dark:border-white/[0.08] shrink-0 font-mono">
+                    <kbd className="hidden xl:inline rounded-md bg-gray-100 dark:bg-[#161d18] px-1.5 py-0.5 text-[10px] text-[#56635B] dark:text-[#a5aba6] border border-gray-200 dark:border-white/[0.08] shrink-0 font-mono">
                       ⌘K
                     </kbd>
                   </button>
 
-                  {/* E-SERVICES PORTAL CTA */}
-                  <motion.a
+                  {/* E-SERVICES PORTAL CTA — primary action */}
+                  <a
                     href="#services"
-                    whileHover={{ y: -2, scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ duration: 0.15 }}
-                    className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(110deg,#003d27,#006338)] hover:bg-[linear-gradient(110deg,#002c1c,#004f2d)] dark:bg-[linear-gradient(110deg,#74d62c,#5ebd20)] dark:hover:bg-[linear-gradient(110deg,#8be63a,#74d62c)] text-white dark:text-[#070908] px-3.5 xl:px-4.5 py-2 text-xs font-extrabold transition-all duration-200 shadow-xs group h-10 shrink-0"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[linear-gradient(110deg,#003d27,#006338)] hover:bg-[linear-gradient(110deg,#002c1c,#004f2d)] dark:bg-[linear-gradient(110deg,#74d62c,#5ebd20)] dark:hover:bg-[linear-gradient(110deg,#8be63a,#74d62c)] text-white dark:text-[#070908] px-3.5 min-[1440px]:px-4 py-2 text-xs font-extrabold transition-all duration-200 shadow-sm group h-9 shrink-0"
                   >
-                    <span>{t('eservices_btn') || 'e-Services Portal'}</span>
-                    <ArrowUpRight className="h-4 w-4 text-[#A3E635] dark:text-[#070908] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 stroke-[2.5]" />
-                  </motion.a>
+                    <span className="hidden min-[1280px]:inline">{t('eservices_btn') || 'e-Services Portal'}</span>
+                    <span className="min-[1280px]:hidden">{t('eservices_btn_short')}</span>
+                    <ArrowUpRight className="h-3.5 w-3.5 text-[#A3E635] dark:text-[#070908] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 stroke-[2.5]" />
+                  </a>
                 </div>
 
                 {/* MOBILE CONTROLS (<1180px) */}
@@ -321,23 +346,47 @@ export const Header: React.FC = () => {
                 </div>
               </div>
 
-              {/* ROW 2: PRIMARY NAVIGATION LINKS - HORIZONTALLY CENTERED (DESKTOP ≥1180px) - LOWER Z-INDEX */}
-              <div className="hidden min-[1180px]:flex items-center justify-center w-full pt-1 pb-0.5 relative z-10">
-                <nav className="w-full flex items-center justify-center">
-                  <div className="flex items-center justify-center gap-6 xl:gap-9 flex-wrap max-w-full">
+              {/* ROW 2: PRIMARY NAV — mega panel anchored to this full-width shell */}
+              <div className="hidden min-[1180px]:block relative z-20 w-full pt-0.5 pb-0">
+                <nav aria-label="Primary" className="w-full flex items-center justify-center">
+                  <div className="flex items-center justify-center gap-2.5 min-[1280px]:gap-3.5 min-[1440px]:gap-5 flex-wrap max-w-full">
                     {navigationItems.map((item) => {
-                      const isActive = location.pathname === item.href;
+                      const isAbout = item.id === 'nav-about';
+                      const isActive = isAbout
+                        ? isAboutPath(location.pathname)
+                        : location.pathname === item.href ||
+                          (item.href !== '/' && location.pathname.startsWith(item.href));
+
+                      if (isAbout) {
+                        return (
+                          <div key={item.id} className="relative">
+                            <AboutMegaMenuTrigger
+                              isOpen={activeDesktopMenu === 'about'}
+                              onOpenChange={(open) => {
+                                clearAboutCloseTimer();
+                                setActiveDesktopMenu(open ? 'about' : null);
+                              }}
+                              onIntentOpen={openAboutMenu}
+                              onIntentClose={scheduleCloseAboutMenu}
+                              isActive={isActive}
+                              triggerClassName={`px-2 py-1 text-[13px] min-[1280px]:text-sm min-[1440px]:text-[15px] font-semibold transition-colors rounded-lg ${
+                                isActive
+                                  ? 'text-[#063D2A] dark:text-[#74d62c] font-extrabold'
+                                  : 'text-[#111310] dark:text-[#a5aba6] hover:text-[#063D2A] dark:hover:text-[#f5f6f3]'
+                              }`}
+                            />
+                          </div>
+                        );
+                      }
 
                       return (
-                        <motion.div
-                          key={item.id}
-                          whileHover={isReducedMotion ? undefined : { y: -1 }}
-                          transition={{ duration: 0.15 }}
-                          className="relative"
-                        >
+                        <div key={item.id} className="relative">
                           <NavLink
                             to={item.href}
-                            className={`px-2.5 py-1 text-sm xl:text-[15px] font-semibold transition-colors rounded-lg block relative ${
+                            onMouseEnter={() => {
+                              if (activeDesktopMenu === 'about') scheduleCloseAboutMenu();
+                            }}
+                            className={`px-2 py-1 text-[13px] min-[1280px]:text-sm min-[1440px]:text-[15px] font-semibold transition-colors rounded-lg block relative ${
                               isActive
                                 ? 'text-[#063D2A] dark:text-[#74d62c] font-extrabold'
                                 : 'text-[#111310] dark:text-[#a5aba6] hover:text-[#063D2A] dark:hover:text-[#f5f6f3]'
@@ -345,7 +394,6 @@ export const Header: React.FC = () => {
                           >
                             <span>{t(item.labelKey)}</span>
 
-                            {/* Active Link Bright Green Underline Pill (Centered) */}
                             {isActive && (
                               <motion.div
                                 layoutId="activeNavIndicator"
@@ -353,15 +401,25 @@ export const Header: React.FC = () => {
                                 animate={isReducedMotion ? undefined : { scaleX: 1 }}
                                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                                 style={{ transformOrigin: 'center' }}
-                                className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 sm:w-9 h-1 rounded-full bg-[#347622] dark:bg-[#74d62c]"
+                                className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-7 sm:w-8 h-0.5 rounded-full bg-[#347622] dark:bg-[#74d62c]"
                               />
                             )}
                           </NavLink>
-                        </motion.div>
+                        </div>
                       );
                     })}
                   </div>
                 </nav>
+
+                <AboutMegaMenuPanel
+                  isOpen={activeDesktopMenu === 'about'}
+                  onOpenChange={(open) => {
+                    clearAboutCloseTimer();
+                    setActiveDesktopMenu(open ? 'about' : null);
+                  }}
+                  onIntentOpen={openAboutMenu}
+                  onIntentClose={scheduleCloseAboutMenu}
+                />
               </div>
 
             </div>
@@ -472,24 +530,86 @@ export const Header: React.FC = () => {
                       Main Navigation
                     </span>
                     <ul className="space-y-1">
-                      {navigationItems.map((item) => (
-                        <li key={item.id}>
-                          <NavLink
-                            to={item.href}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className={({ isActive }) =>
-                              `flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
-                                isActive
-                                  ? 'bg-[#063d28] dark:bg-[#74d62c] text-white dark:text-[#070908] shadow-xs'
-                                  : 'text-[#111310] dark:text-[#f5f6f3] hover:bg-[#F6F7F3] dark:hover:bg-[#111613] hover:text-[#087A4B] dark:hover:text-[#74d62c]'
-                              }`
-                            }
-                          >
-                            <span>{t(item.labelKey)}</span>
-                            <ChevronRight className="h-4 w-4 opacity-60" />
-                          </NavLink>
-                        </li>
-                      ))}
+                      {navigationItems.map((item) => {
+                        if (item.id === 'nav-about') {
+                          return (
+                            <li key={item.id}>
+                              <button
+                                type="button"
+                                aria-expanded={mobileAboutOpen}
+                                onClick={() => setMobileAboutOpen((o) => !o)}
+                                className={`flex w-full items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
+                                  isAboutPath(location.pathname)
+                                    ? 'bg-[#063d28] dark:bg-[#74d62c] text-white dark:text-[#070908] shadow-xs'
+                                    : 'text-[#111310] dark:text-[#f5f6f3] hover:bg-[#F6F7F3] dark:hover:bg-[#111613]'
+                                }`}
+                              >
+                                <span>{t(item.labelKey)}</span>
+                                <ChevronRight
+                                  className={`h-4 w-4 opacity-60 transition-transform ${mobileAboutOpen ? 'rotate-90' : ''}`}
+                                />
+                              </button>
+                              <AnimatePresence>
+                                {mobileAboutOpen && (
+                                  <motion.ul
+                                    initial={isReducedMotion ? undefined : { height: 0, opacity: 0 }}
+                                    animate={isReducedMotion ? undefined : { height: 'auto', opacity: 1 }}
+                                    exit={isReducedMotion ? undefined : { height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="overflow-hidden pl-3 mt-1 space-y-3"
+                                  >
+                                    {aboutNavGroups.map((group) => (
+                                      <li key={group.id}>
+                                        <p className="px-3 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-[#087A4B] dark:text-[#74d62c]">
+                                          {t(group.headingKey)}
+                                        </p>
+                                        <ul className="space-y-0.5">
+                                          {group.links.map((link) => (
+                                            <li key={link.id}>
+                                              <NavLink
+                                                to={link.href}
+                                                onClick={() => setMobileMenuOpen(false)}
+                                                className={({ isActive }) =>
+                                                  `block px-3 py-2.5 rounded-lg text-xs font-semibold min-h-[40px] ${
+                                                    isActive
+                                                      ? 'bg-[#E8F5EC] dark:bg-[#14241a] text-[#063D2A] dark:text-[#74d62c]'
+                                                      : 'text-[#33443A] dark:text-[#c5cbc4] hover:bg-[#F6F7F3] dark:hover:bg-[#111613]'
+                                                  }`
+                                                }
+                                              >
+                                                {t(link.labelKey)}
+                                              </NavLink>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </li>
+                                    ))}
+                                  </motion.ul>
+                                )}
+                              </AnimatePresence>
+                            </li>
+                          );
+                        }
+
+                        return (
+                          <li key={item.id}>
+                            <NavLink
+                              to={item.href}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className={({ isActive }) =>
+                                `flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
+                                  isActive
+                                    ? 'bg-[#063d28] dark:bg-[#74d62c] text-white dark:text-[#070908] shadow-xs'
+                                    : 'text-[#111310] dark:text-[#f5f6f3] hover:bg-[#F6F7F3] dark:hover:bg-[#111613] hover:text-[#087A4B] dark:hover:text-[#74d62c]'
+                                }`
+                              }
+                            >
+                              <span>{t(item.labelKey)}</span>
+                              <ChevronRight className="h-4 w-4 opacity-60" />
+                            </NavLink>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </nav>
                 </div>

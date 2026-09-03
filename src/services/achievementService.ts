@@ -18,6 +18,7 @@ import {
   QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
+import { isFirebaseConfigured } from '../config/env';
 import { signInAnonymously } from 'firebase/auth';
 import { StaffUser } from '../types/auth';
 import { hasPermission } from '../lib/permissions';
@@ -159,7 +160,8 @@ function reportMissingIndexError(queryName: string, error: any) {
 
 /**
  * Returns the configured public achievement data source ('firestore' or 'mock').
- * Respects VITE_PUBLIC_ACHIEVEMENT_SOURCE environment variable.
+ * Respects VITE_PUBLIC_ACHIEVEMENT_SOURCE. When Firebase env is missing, defaults
+ * to mock so the homepage is not empty during local/demo runs.
  */
 export const getPublicAchievementSourceMode = (): 'firestore' | 'mock' => {
   const envSource = (
@@ -167,8 +169,46 @@ export const getPublicAchievementSourceMode = (): 'firestore' | 'mock' => {
     (typeof process !== 'undefined' ? process.env?.VITE_PUBLIC_ACHIEVEMENT_SOURCE : '') ||
     ''
   ).toLowerCase();
-  return envSource === 'mock' ? 'mock' : 'firestore';
+  if (envSource === 'mock') return 'mock';
+  if (envSource === 'firestore') return 'firestore';
+  return isFirebaseConfigured() ? 'firestore' : 'mock';
 };
+
+function shouldFallbackToMockAchievements(): boolean {
+  if (import.meta.env?.DEV) return true;
+  const flag = (
+    import.meta.env?.VITE_PUBLIC_CONTENT_FALLBACK_MOCK ||
+    (typeof process !== 'undefined' ? process.env?.VITE_PUBLIC_CONTENT_FALLBACK_MOCK : '') ||
+    ''
+  ).toLowerCase();
+  return flag === 'true' || flag === '1';
+}
+
+function buildMockHomepageAchievements(): HomepageAchievementsData {
+  const validMock = mockAchievements
+    .map((m) => validateAchievement(m, m.slug))
+    .filter((a): a is Achievement => a !== null && a.status === 'published');
+
+  const now = Date.now();
+  const validPublished = validMock.filter((a) => {
+    if (!a.publishedAt) return true;
+    const pTime = Date.parse(a.publishedAt);
+    return isNaN(pTime) || pTime <= now;
+  });
+
+  const featured = validPublished.find((a) => a.featured) || validPublished[0] || null;
+  const latest = validPublished
+    .filter((a) => a.slug !== featured?.slug)
+    .slice(0, 3);
+
+  return {
+    featuredAchievement: featured ? toPublicAchievement(featured) : null,
+    latestAchievements: latest.map(toPublicAchievement),
+    loading: false,
+    isEmpty: !featured && latest.length === 0,
+    error: null,
+  };
+}
 
 export interface HomepageAchievementsData {
   featuredAchievement: PublicAchievement | null;
@@ -187,29 +227,7 @@ export function subscribeToHomepageAchievements(
   const sourceMode = getPublicAchievementSourceMode();
 
   if (sourceMode === 'mock') {
-    const validMock = mockAchievements
-      .map((m) => validateAchievement(m, m.slug))
-      .filter((a): a is Achievement => a !== null && a.status === 'published');
-
-    const now = Date.now();
-    const validPublished = validMock.filter((a) => {
-      if (!a.publishedAt) return true; // mock items without timestamp are visible
-      const pTime = Date.parse(a.publishedAt);
-      return isNaN(pTime) || pTime <= now;
-    });
-
-    const featured = validPublished.find((a) => a.featured) || validPublished[0] || null;
-    const latest = validPublished
-      .filter((a) => a.slug !== featured?.slug)
-      .slice(0, 3);
-
-    onUpdate({
-      featuredAchievement: featured ? toPublicAchievement(featured) : null,
-      latestAchievements: latest.map(toPublicAchievement),
-      loading: false,
-      isEmpty: !featured && latest.length === 0,
-      error: null,
-    });
+    onUpdate(buildMockHomepageAchievements());
     return () => {};
   }
 
@@ -233,13 +251,25 @@ export function subscribeToHomepageAchievements(
     };
 
     const validFeatured = isValidPublic(featuredDoc) ? toPublicAchievement(featuredDoc) : null;
-    const validLatest = latestDocs.filter(isValidPublic).map(toPublicAchievement);
+    const validLatest = latestDocs
+      .filter(isValidPublic)
+      .filter((a) => a.slug !== validFeatured?.slug)
+      .map(toPublicAchievement);
+
+    const loading = !(featuredLoaded && latestLoaded);
+    const isEmpty =
+      featuredLoaded && latestLoaded && !validFeatured && validLatest.length === 0;
+
+    if (!loading && isEmpty && shouldFallbackToMockAchievements()) {
+      onUpdate(buildMockHomepageAchievements());
+      return;
+    }
 
     onUpdate({
       featuredAchievement: validFeatured,
       latestAchievements: validLatest.slice(0, 3),
-      loading: !(featuredLoaded && latestLoaded),
-      isEmpty: featuredLoaded && latestLoaded && !validFeatured && validLatest.length === 0,
+      loading,
+      isEmpty,
       error: currentError,
     });
   };
