@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
+  LayoutList,
   Award,
   Bell,
   Building2,
@@ -101,6 +102,13 @@ export const AdminLayout: React.FC = () => {
       href: '/admin/investment',
       icon: Database,
       permission: 'investment.view',
+    },
+    {
+      id: 'section-content',
+      label: 'Section Content',
+      href: '/admin/section-content',
+      icon: LayoutList,
+      permission: 'content.view',
     },
     {
       id: 'resources',

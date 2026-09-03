@@ -559,6 +559,20 @@ service cloud.firestore {
       return isEditor();
     }
 
+    // Section content — Agricultural Initiatives, Plans/Programs & Projects,
+    // Opportunities & Engagement, and Resource & Statistics. One collection,
+    // keyed by sectionId; the public may only ever read published entries.
+    match /sectionContent/{docId} {
+      allow get, list: if isCurrentActiveStaff() || aboutPublished();
+      allow create: if canManageAbout()
+        && request.resource.data.status in ['draft', 'review'];
+      allow update: if canManageAbout() && (
+        request.resource.data.status in ['draft', 'review', 'archived']
+        || (request.resource.data.status == 'published' && isContentAdmin())
+      );
+      allow delete: if isContentAdmin();
+    }
+
     match /aboutOverview/{docId} {
       allow get, list: if isCurrentActiveStaff() || aboutPublished();
       allow create: if canManageAbout()

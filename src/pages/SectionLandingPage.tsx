@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ExternalLink, CalendarDays } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { siteNavSections, allNavLinks, type SiteNavSection } from '../data/siteNavigation';
 import { FARMER_HOTLINE } from '../constants';
+import { topicOfPath } from '../data/contentTopics';
+import { listContentPublished } from '../services/contentCmsService';
+import type { ContentEntry } from '../types/content';
 
 /**
  * One data-driven landing page serving every door in the Bureau's new
@@ -19,7 +22,7 @@ import { FARMER_HOTLINE } from '../constants';
  * this stays the fallback for the rest.
  */
 export const SectionLandingPage: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, currentLang } = useLanguage();
   const { pathname } = useLocation();
 
   const subLink = allNavLinks.find((l) => l.href.split('#')[0] === pathname);
@@ -38,6 +41,32 @@ export const SectionLandingPage: React.FC = () => {
   // A sub-topic page shows its own title; a door shows its whole tree.
   const titleKey = subLink?.labelKey ?? section?.labelKey ?? 'nav_bureau';
   const groups = subLink ? [] : (section?.groups ?? []);
+
+  // Topics in the four CMS-backed sections show whatever the Bureau has
+  // published for them; the topic list is the fallback until they do.
+  const cmsTopic = topicOfPath(pathname);
+  const [entries, setEntries] = useState<ContentEntry[]>([]);
+  const [loadingEntries, setLoadingEntries] = useState(Boolean(cmsTopic));
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!cmsTopic) {
+      setEntries([]);
+      setLoadingEntries(false);
+      return;
+    }
+    setLoadingEntries(true);
+    listContentPublished(cmsTopic.sectionId, cmsTopic.topic.id)
+      .then((rows) => {
+        if (!cancelled) setEntries(rows);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingEntries(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cmsTopic?.sectionId, cmsTopic?.topic.id]);
 
   return (
     <div className="min-h-[60vh]">
@@ -124,9 +153,51 @@ export const SectionLandingPage: React.FC = () => {
                 ))}
               </div>
             </>
+          ) : entries.length > 0 ? (
+            <ul className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {entries.map((entry) => {
+                const title = entry.title[currentLang] || entry.title.en;
+                const summary = entry.summary[currentLang] || entry.summary.en;
+                return (
+                  <li
+                    key={entry.id}
+                    className="hv-lift rounded-2xl border border-[#E2E8E3] dark:border-white/[0.09] bg-white dark:bg-[#111613] p-6"
+                  >
+                    <h3 className="text-xl font-extrabold text-[#0A1912] dark:text-white">
+                      {title}
+                    </h3>
+                    {summary && (
+                      <p className="mt-2 text-reading text-[#56635B] dark:text-[#a5aba6]">
+                        {summary}
+                      </p>
+                    )}
+                    <div className="mt-4 flex flex-wrap items-center gap-4">
+                      {entry.effectiveDate && (
+                        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#56635B] dark:text-[#a5aba6]">
+                          <CalendarDays className="h-4 w-4" aria-hidden="true" />
+                          {entry.effectiveDate}
+                          {entry.expiresAt && ` – ${entry.expiresAt}`}
+                        </span>
+                      )}
+                      {entry.externalUrl && (
+                        <a
+                          href={entry.externalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hv-underline inline-flex items-center gap-1.5 text-sm font-bold text-[#087A4B] dark:text-[#74d62c]"
+                        >
+                          {t('nav_view_all')}
+                          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           ) : (
             <p className="text-reading text-[#56635B] dark:text-[#a5aba6] max-w-2xl">
-              {t('section_coming')}
+              {loadingEntries ? '…' : t('section_coming')}
             </p>
           )}
         </div>

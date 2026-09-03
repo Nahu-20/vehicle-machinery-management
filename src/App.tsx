@@ -32,6 +32,7 @@ import { AchievementDetailPage } from './pages/AchievementDetailPage';
 import { InvestmentPage } from './pages/InvestmentPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { SectionLandingPage } from './pages/SectionLandingPage';
+import { SectionContentAdminPage } from './pages/admin/content/SectionContentAdminPage';
 import { ChatLauncher } from './components/chat/ChatLauncher';
 import { ChatPanel } from './components/chat/ChatPanel';
 import { ChatMessage } from './services/chatService';
@@ -434,6 +435,17 @@ export default function App() {
                           moduleTitle="Market Commodity Management"
                         >
                           <MarketManagementPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="section-content"
+                      element={
+                        <RequirePermission
+                          requiredPermission="content.view"
+                          moduleTitle="Section Content Management"
+                        >
+                          <SectionContentAdminPage />
                         </RequirePermission>
                       }
                     />

@@ -10,6 +10,7 @@ export type AdminModule =
   | 'market'
   | 'resources'
   | 'about'
+  | 'content'
   | 'offices'
   | 'media'
   | 'settings'
