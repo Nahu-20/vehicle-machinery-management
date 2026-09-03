@@ -57,6 +57,7 @@ export const Header: React.FC = () => {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [activeDesktopMenu, setActiveDesktopMenu] = useState<'language' | 'theme' | 'about' | null>(null);
   const [mobileAboutOpen, setMobileAboutOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const aboutCloseTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearAboutCloseTimer = () => {
@@ -79,6 +80,15 @@ export const Header: React.FC = () => {
   };
 
   useEffect(() => () => clearAboutCloseTimer(), []);
+
+  // Note 12: keep the navigation with the reader, but condense it once
+  // they have moved past the masthead so it never crowds the page.
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 72);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Global Keyboard Shortcut: ⌘K or Ctrl+K triggers Search Modal
   useEffect(() => {
@@ -125,11 +135,15 @@ export const Header: React.FC = () => {
         {t('skip_to_content')}
       </a>
 
-      {/* NON-STICKY HEADER WRAPPER CONTAINER */}
-      <header className="relative z-40 w-full transition-all duration-300">
+      {/* STICKY HEADER WRAPPER — note 12 */}
+      <header className="sticky top-0 z-40 w-full transition-all duration-300">
         
         {/* LAYER 1: FULL-WIDTH DARK-GREEN REGIONAL UTILITY BAR */}
-        <div className="w-full bg-[linear-gradient(105deg,#063d28_0%,#0c5634_45%,#347622_100%)] text-white py-1 px-4 sm:px-6 lg:px-8 border-b border-[#042d1e] relative z-30">
+        <div
+          className={`w-full bg-[linear-gradient(105deg,#063d28_0%,#0c5634_45%,#347622_100%)] text-white px-4 sm:px-6 lg:px-8 border-b border-[#042d1e] relative z-30 overflow-hidden transition-all duration-300 ${
+            isScrolled ? 'max-h-0 py-0 opacity-0 border-b-0' : 'max-h-20 py-1.5 opacity-100'
+          }`}
+        >
           <div className="max-w-[1860px] mx-auto flex items-center justify-between gap-3 text-[11px] sm:text-xs font-medium">
             
             {/* Left Side: Institutional Identity */}
@@ -142,7 +156,7 @@ export const Header: React.FC = () => {
               </span>
               <span className="text-emerald-300/40 font-light hidden sm:inline" aria-hidden="true">|</span>
               <span className="hidden sm:inline text-emerald-100/90 text-xs font-normal truncate">
-                Agriculture for Prosperity, Food for the Future
+                {t('tagline_motto')}
               </span>
             </div>
 
@@ -150,12 +164,15 @@ export const Header: React.FC = () => {
             <div className="flex items-center gap-3 sm:gap-4 shrink-0">
               <a
                 href={`tel:${FARMER_HOTLINE}`}
-                title={`Hotline: ${FARMER_HOTLINE}`}
-                className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100 hover:text-white transition-colors"
+                title={`${t('hotline_label')}: ${FARMER_HOTLINE}`}
+                className="group flex items-center gap-2 rounded-full bg-white/[0.14] hover:bg-white/25 ring-1 ring-[#A3E635]/45 hover:ring-[#A3E635] px-2.5 py-1 transition-all duration-200"
               >
-                <PhoneCall className="h-3.5 w-3.5 text-[#A3E635] shrink-0" />
-                <span>
-                  Hotline: <strong className="text-white font-extrabold text-xs tracking-wider">{FARMER_HOTLINE}</strong>
+                <PhoneCall className="h-4 w-4 text-[#A3E635] shrink-0" />
+                <span className="flex items-baseline gap-1.5 leading-none">
+                  <strong className="text-white font-extrabold text-sm sm:text-base tracking-wider">{FARMER_HOTLINE}</strong>
+                  <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-wide text-[#A3E635]">
+                    {t('hotline_free')}
+                  </span>
                 </span>
               </a>
 
@@ -206,7 +223,9 @@ export const Header: React.FC = () => {
 
         {/* LAYER 2: ROUNDED MAIN BUREAU NAVIGATION PANEL */}
         <div className="px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 transition-all duration-300">
-          <div className="w-[calc(100%-0.5rem)] sm:w-[calc(100%-1rem)] max-w-[1860px] mx-auto rounded-2xl sm:rounded-[28px] bg-[linear-gradient(110deg,#ffffff_0%,#ffffff_48%,#f1f8ec_100%)] dark:bg-[linear-gradient(110deg,#0d110f_0%,#0d110f_50%,#090d0b_100%)] border border-[#14502D]/10 dark:border-white/[0.09] shadow-xs dark:shadow-xl relative overflow-visible p-2.5 sm:p-3 lg:p-3.5 transition-all duration-300">
+          <div className={`w-[calc(100%-0.5rem)] sm:w-[calc(100%-1rem)] max-w-[1860px] mx-auto rounded-2xl sm:rounded-[28px] bg-[linear-gradient(110deg,#ffffff_0%,#ffffff_48%,#f1f8ec_100%)] dark:bg-[linear-gradient(110deg,#0d110f_0%,#0d110f_50%,#090d0b_100%)] border border-[#14502D]/10 dark:border-white/[0.09] shadow-xs dark:shadow-xl relative overflow-visible transition-all duration-300 ${
+            isScrolled ? 'p-1.5 sm:p-2' : 'p-2.5 sm:p-3 lg:p-3.5'
+          }`}>
             
             {/* SUBTLE BOTANICAL DECORATION ARTWORK (RIGHT SIDE ONLY) */}
             <div
@@ -249,16 +268,26 @@ export const Header: React.FC = () => {
                 
                 {/* LEFT: BUREAU IDENTITY LOGO & TITLE */}
                 <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group focus:outline-none shrink-0 min-w-0">
-                  <img
-                    src={officialLogoUrl}
-                    alt="Official Oromia Bureau of Agriculture Seal"
-                    className="h-11 w-11 sm:h-12 sm:w-12 lg:h-14 lg:w-14 object-contain shrink-0 transition-transform duration-300 group-hover:scale-[1.02]"
-                  />
+                  <span className="relative shrink-0 inline-flex items-center justify-center rounded-full bg-white ring-2 ring-[#D7A928] shadow-sm p-1.5 sm:p-2 transition-transform duration-300 group-hover:scale-[1.03]">
+                    <img
+                      src={officialLogoUrl}
+                      alt="Official Oromia Bureau of Agriculture Seal"
+                      className={`object-contain transition-all duration-300 ${
+                        isScrolled
+                          ? 'h-9 w-9 sm:h-10 sm:w-10'
+                          : 'h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16'
+                      }`}
+                    />
+                  </span>
                   <div className="flex flex-col min-w-0">
-                    <h1 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-extrabold text-[#0A1912] dark:text-[#f5f6f3] tracking-tight leading-tight min-[1180px]:whitespace-nowrap">
+                    <h1 className={`font-extrabold text-[#0A1912] dark:text-[#f5f6f3] tracking-tight leading-tight min-[1180px]:whitespace-nowrap transition-all duration-300 ${
+                      isScrolled ? 'text-sm sm:text-base lg:text-lg' : 'text-base sm:text-lg lg:text-xl xl:text-2xl'
+                    }`}>
                       {t('bureau_title')}
                     </h1>
-                    <p className="text-[11px] sm:text-xs lg:text-sm font-semibold text-[#56635B] dark:text-[#a5aba6] mt-0.5 truncate">
+                    <p className={`text-[11px] sm:text-xs lg:text-sm font-semibold text-[#56635B] dark:text-[#a5aba6] mt-0.5 truncate transition-all duration-300 ${
+                      isScrolled ? 'hidden' : 'block'
+                    }`}>
                       {t('bureau_sub_title') || 'Regional Government of Oromia'}
                     </p>
                   </div>
@@ -267,15 +296,6 @@ export const Header: React.FC = () => {
                 {/* RIGHT CONTROLS (DESKTOP ≥1180px) */}
                 <div className="hidden min-[1180px]:flex items-center gap-1.5 lg:gap-2 shrink-0">
                   
-                  {/* THEME CONTROL */}
-                  <div className="relative z-40 opacity-90">
-                    <ThemeToggle
-                      compact
-                      isOpen={activeDesktopMenu === 'theme'}
-                      onToggle={(open) => setActiveDesktopMenu(open ? 'theme' : null)}
-                    />
-                  </div>
-
                   {/* LANGUAGE SELECTOR */}
                   <div className="relative z-40 opacity-90">
                     <LanguageSelector
@@ -302,7 +322,7 @@ export const Header: React.FC = () => {
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <Search className="h-4 w-4 text-[#087A4B] dark:text-[#74d62c] shrink-0" />
-                      <span className="hidden xl:inline truncate">{t('search_short')}</span>
+                      <span className="hidden xl:inline truncate">{t('search_prompt_short')}</span>
                     </div>
                     <kbd className="hidden xl:inline rounded-md bg-gray-100 dark:bg-[#161d18] px-1.5 py-0.5 text-[10px] text-[#56635B] dark:text-[#a5aba6] border border-gray-200 dark:border-white/[0.08] shrink-0 font-mono">
                       ⌘K

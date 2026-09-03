@@ -14,7 +14,7 @@ export const FeaturedProgramsSection: React.FC = () => {
   const isReducedMotion = useReducedMotionPreference();
 
   return (
-    <section id="programs" className="relative bg-[#F6F7F3] dark:bg-[#0B1912] py-16 lg:py-24 border-b border-[#E2E8E3] dark:border-[#183327] transition-colors duration-200">
+    <section id="programs" className="relative band-cream motif-contour py-16 lg:py-24 border-b border-[#E2E8E3] dark:border-[#183327] transition-colors duration-200">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 space-y-16 lg:space-y-24">
         {/* Section Header */}
         <motion.div

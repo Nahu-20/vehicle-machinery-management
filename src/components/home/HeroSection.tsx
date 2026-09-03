@@ -55,16 +55,22 @@ export const HeroSection: React.FC = () => {
               {t('hero_headline')}
             </h1>
 
-            {/* Supporting paragraph */}
-            <p className="text-base sm:text-lg text-[#56635B] dark:text-[#A7F3D0]/80 max-w-2xl leading-relaxed font-normal">
+            {/* Supporting paragraph — note 14: a second voice beside the
+                heading, not a whisper under it. */}
+            <p className="hero-lede text-[#56635B] dark:text-[#A7F3D0]/85 font-normal">
               {t('hero_supporting')}
+            </p>
+
+            {/* Note 14: a plain-language line about what to do next */}
+            <p className="text-reading font-semibold text-[#063D2A] dark:text-[#A3E635] max-w-2xl">
+              {t('hero_next_step')}
             </p>
 
             {/* Reference-style Button Duo: [ Main CTA ] + [ Circular Arrow ] */}
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-2">
               <a
                 href="/services"
-                className="inline-flex items-center justify-center gap-2.5 rounded-full bg-[#A3E635] hover:bg-[#92D022] text-[#0A1912] font-extrabold text-base h-13 px-8 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0"
+                className="btn-primary hv-lift"
               >
                 <span>{t('hero_btn_services')}</span>
               </a>
@@ -72,14 +78,14 @@ export const HeroSection: React.FC = () => {
               <a
                 href="/services"
                 className="inline-flex items-center justify-center rounded-full bg-[#0A1912] dark:bg-emerald-800 hover:bg-[#063D2A] text-[#A3E635] h-13 w-13 transition-all duration-200 transform hover:scale-105 shadow-sm"
-                aria-label="Explore Services"
+                aria-label={t('hero_explore_services_aria')}
               >
                 <ArrowUpRight className="h-6 w-6 stroke-[2.5]" />
               </a>
 
               <a
                 href="#programs"
-                className="ml-2 inline-flex items-center gap-2 text-sm font-bold text-[#063D2A] dark:text-emerald-300 hover:text-[#087A4B] dark:hover:text-emerald-200 transition-colors py-2 px-4 rounded-full border border-gray-200 dark:border-emerald-800/80 bg-white/80 dark:bg-black/20"
+                className="btn-outline"
               >
                 <span>{t('hero_btn_programs')}</span>
               </a>
@@ -91,8 +97,8 @@ export const HeroSection: React.FC = () => {
                 <p className="text-2xl sm:text-3xl font-extrabold text-[#111310] dark:text-white tracking-tight">
                   <CountUpStat value="12.4M+" />
                 </p>
-                <p className="text-xs text-[#56635B] dark:text-emerald-300/80 font-medium mt-1">
-                  Farming Families
+                <p className="text-sm sm:text-base text-[#56635B] dark:text-emerald-300/85 font-semibold mt-1.5">
+                  {t('hero_stat_families')}
                 </p>
               </div>
 
@@ -100,8 +106,8 @@ export const HeroSection: React.FC = () => {
                 <p className="text-2xl sm:text-3xl font-extrabold text-[#087A4B] dark:text-[#A3E635] tracking-tight">
                   <CountUpStat value="21" />
                 </p>
-                <p className="text-xs text-[#56635B] dark:text-emerald-300/80 font-medium mt-1">
-                  Zonal Hubs
+                <p className="text-sm sm:text-base text-[#56635B] dark:text-emerald-300/85 font-semibold mt-1.5">
+                  {t('hero_stat_hubs')}
                 </p>
               </div>
 
@@ -109,8 +115,8 @@ export const HeroSection: React.FC = () => {
                 <p className="text-2xl sm:text-3xl font-extrabold text-[#111310] dark:text-white tracking-tight">
                   <CountUpStat value="15,000+" />
                 </p>
-                <p className="text-xs text-[#56635B] dark:text-emerald-300/80 font-medium mt-1">
-                  Extension Agents
+                <p className="text-sm sm:text-base text-[#56635B] dark:text-emerald-300/85 font-semibold mt-1.5">
+                  {t('hero_stat_agents')}
                 </p>
               </div>
             </div>
@@ -134,21 +140,21 @@ export const HeroSection: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <CloudSun className="h-4 w-4 text-[#A3E635]" />
                     <span className="text-xs font-bold uppercase tracking-wider text-[#A3E635]">
-                      Live Regional Network
+                      {t('hero_live_network')}
                     </span>
                   </div>
                   <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full font-medium text-emerald-200">
-                    Oromia Wide
+                    {t('hero_oromia_wide')}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between pt-1">
                   <div>
-                    <p className="text-xs text-gray-300">Seasonal Advisory Window</p>
-                    <p className="text-sm font-semibold text-white">Wheat & Maize Sowing</p>
+                    <p className="text-xs text-gray-300">{t('hero_advisory_window')}</p>
+                    <p className="text-sm font-semibold text-white">{t('hero_advisory_crop')}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-300">Optimal Moisture</p>
+                    <p className="text-xs text-gray-300">{t('hero_optimal_moisture')}</p>
                     <p className="text-sm font-bold text-[#A3E635]">Arsi & Shewa</p>
                   </div>
                 </div>
@@ -159,7 +165,7 @@ export const HeroSection: React.FC = () => {
                     {t('hero_trust_text')}
                   </span>
                   <a href="#market" className="text-[#A3E635] font-semibold hover:underline flex items-center gap-0.5 text-[11px]">
-                    Market Rates <ArrowUpRight className="h-3 w-3" />
+                    {t('hero_market_rates')} <ArrowUpRight className="h-3 w-3" />
                   </a>
                 </div>
               </div>

@@ -380,3 +380,160 @@ html.dark .card-hover:hover {
   }
 }
 
+
+/* ============================================================
+   BUREAU LOOK-AND-FEEL NOTES (29 Aug 2026)
+   Answers notes 01, 02, 04, 05, 07, 08, 14.
+   Appended so the origin of each rule stays legible; later
+   rules of equal specificity win, which is what we want here.
+   ============================================================ */
+
+/* --- Note 01/14: everyday text was too small to read comfortably --- */
+:root {
+  --reading-size: clamp(1rem, 0.955rem + 0.22vw, 1.125rem);   /* 16 -> 18px */
+  --reading-leading: 1.65;
+  --nav-size: clamp(0.9375rem, 0.9rem + 0.18vw, 1.0625rem);   /* 15 -> 17px */
+  --eyebrow-size: 0.8125rem;
+
+  /* Note 04: a warmer band palette, alongside the existing greens */
+  --color-cream: #F6F2E8;
+  --color-cream-deep: #EFE7D6;
+  --color-soil: #4A3423;
+  --color-soil-soft: #6B4E32;
+}
+
+body {
+  font-size: calc(var(--reading-size) * var(--font-size-multiplier, 1));
+  line-height: var(--reading-leading);
+}
+
+/* Body copy needs room to breathe; headings stay tight and proud. */
+p, li, dd, figcaption, blockquote {
+  line-height: var(--reading-leading);
+}
+
+.text-reading { font-size: calc(var(--reading-size) * var(--font-size-multiplier, 1)); }
+.text-nav     { font-size: calc(var(--nav-size) * var(--font-size-multiplier, 1)); font-weight: 600; }
+.text-eyebrow { font-size: var(--eyebrow-size); letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* The hero's supporting line and the figures under it (note 14) */
+.hero-lede {
+  font-size: clamp(1.0625rem, 1rem + 0.4vw, 1.375rem);
+  line-height: 1.6;
+  max-width: 62ch;
+}
+
+/* --- Note 04: alternating cream / forest / soil section bands --- */
+.band-cream  { background-color: var(--color-cream); color: var(--color-text-primary); }
+.band-forest { background-color: var(--color-forest); color: #F3F7F2; }
+.band-soil   { background-color: var(--color-soil); color: #F6EFE6; }
+.band-forest a:not([class*="bg-"]), .band-soil a:not([class*="bg-"]) { color: var(--color-lime); }
+
+html.dark .band-cream  { background-color: var(--dark-surface-2, #111613); color: var(--dark-text); }
+html.dark .band-forest { background-color: #08170F; color: var(--dark-text); }
+html.dark .band-soil   { background-color: #1A120B; color: var(--dark-text); }
+
+/* --- Note 02: a quiet agricultural motif, not a decoration --- */
+.motif-contour {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cg fill='none' stroke='%23063D2A' stroke-opacity='0.055' stroke-width='1.3'%3E%3Cpath d='M-20 35 Q 35 12 70 35 T 160 35'/%3E%3Cpath d='M-20 70 Q 35 47 70 70 T 160 70'/%3E%3Cpath d='M-20 105 Q 35 82 70 105 T 160 105'/%3E%3Cpath d='M-20 140 Q 35 117 70 140 T 160 140'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+.motif-terrace {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='80' viewBox='0 0 160 80'%3E%3Cg fill='none' stroke='%23063D2A' stroke-opacity='0.05' stroke-width='1.2'%3E%3Cpath d='M0 20 H60 Q75 20 75 34 H160'/%3E%3Cpath d='M0 50 H30 Q45 50 45 64 H160'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+html.dark .motif-contour, html.dark .motif-terrace { opacity: 0.55; }
+
+/* Soft organic edge between bands */
+.band-edge-top {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 28px);
+          mask-image: linear-gradient(to bottom, transparent, #000 28px);
+}
+
+/* --- Note 07: one fill-versus-outline language, in every language --- */
+.btn-primary,
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.8125rem 1.625rem;          /* was too tight to read as a button */
+  border-radius: 9999px;
+  font-size: calc(var(--nav-size) * var(--font-size-multiplier, 1));
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  border: 2px solid transparent;
+  transition: background-color .22s ease, color .22s ease,
+              border-color .22s ease, transform .22s ease, box-shadow .22s ease;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: #FFFFFF;
+  box-shadow: 0 8px 20px -10px rgba(8, 122, 75, 0.65);
+}
+.btn-primary:hover { background-color: var(--color-forest); }
+
+/* The outlined neighbour read as a label, not an invitation (note 07) */
+.btn-outline {
+  background-color: transparent;
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.btn-outline:hover { background-color: var(--color-soft-green); border-color: var(--color-forest); color: var(--color-forest); }
+
+html.dark .btn-primary { background-color: var(--oab-green); color: #0A1912; box-shadow: 0 8px 20px -10px rgba(116, 214, 44, 0.5); }
+html.dark .btn-primary:hover { background-color: var(--oab-green-hover); }
+html.dark .btn-outline { color: var(--oab-green); border-color: var(--oab-green); }
+html.dark .btn-outline:hover { background-color: var(--oab-green-soft); color: var(--oab-green-hover); }
+
+/* On a dark band the outline has to invert or it disappears */
+.band-forest .btn-outline, .band-soil .btn-outline { color: #F3F7F2; border-color: rgba(243, 247, 242, 0.55); }
+.band-forest .btn-outline:hover, .band-soil .btn-outline:hover { background-color: rgba(255,255,255,0.1); color: #FFFFFF; border-color: #FFFFFF; }
+
+/* --- Notes 05 + 08: one family of gentle movements --- */
+@media (hover: hover) and (pointer: fine) {
+  .hv-lift { transition: transform .28s cubic-bezier(.22,.61,.36,1), box-shadow .28s ease; }
+  .hv-lift:hover { transform: translateY(-4px); box-shadow: 0 16px 32px -18px rgba(6, 61, 42, 0.42); }
+
+  .hv-zoom { overflow: hidden; }
+  .hv-zoom img { transition: transform .5s cubic-bezier(.22,.61,.36,1); }
+  .hv-zoom:hover img { transform: scale(1.045); }
+
+  .hv-underline { position: relative; }
+  .hv-underline::after {
+    content: ''; position: absolute; left: 0; bottom: -3px;
+    width: 0; height: 2px; background-color: currentColor; border-radius: 2px;
+    transition: width .26s cubic-bezier(.22,.61,.36,1);
+  }
+  .hv-underline:hover::after { width: 100%; }
+
+  .hv-warm { transition: background-color .22s ease, color .22s ease; }
+}
+
+/* A stem that grows as the reader arrives (note 05) */
+@keyframes oab-grow {
+  from { transform: scaleY(0); opacity: 0; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+.grow-in { transform-origin: bottom center; animation: oab-grow .7s cubic-bezier(.22,.61,.36,1) both; }
+
+@keyframes oab-draw { to { stroke-dashoffset: 0; } }
+.draw-in { stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: oab-draw 1.6s ease-out forwards; }
+
+/* People who prefer less movement are respected (note 05) */
+@media (prefers-reduced-motion: reduce) {
+  .hv-lift:hover, .hv-zoom:hover img { transform: none; }
+  .hv-underline::after { transition: none; }
+  .grow-in, .draw-in { animation: none; transform: none; stroke-dashoffset: 0; opacity: 1; }
+}
+
+/* Note 12: `overflow-x: hidden` on the body makes it a scroll container,
+   which stops `position: sticky` on the header from ever sticking.
+   `clip` prevents the same horizontal scroll without that side effect. */
+body {
+  overflow-x: clip;
+}

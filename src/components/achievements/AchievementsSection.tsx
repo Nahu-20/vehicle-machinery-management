@@ -69,7 +69,7 @@ export const AchievementsSection: React.FC = () => {
   ];
 
   return (
-    <section id="achievements-impact" className="py-16 md:py-24 bg-slate-50 dark:bg-slate-900/50 transition-colors duration-200">
+    <section id="achievements-impact" className="py-16 md:py-24 band-cream motif-terrace transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}

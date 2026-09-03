@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { LanguageSelector } from '../../common/LanguageSelector';
+import { ThemeToggle } from '../../common/ThemeToggle';
 import { FooterLegalModals, LegalModalType } from './FooterLegalModals';
 
 export const FooterLegal: React.FC = () => {
@@ -45,9 +46,11 @@ export const FooterLegal: React.FC = () => {
           </button>
         </div>
 
-        {/* Right: Language Selector */}
+        {/* Right: Language, then the theme switch — which steps back from the
+            header so the hotline and advisories can lead there (note 16). */}
         <div className="flex items-center gap-2">
           <LanguageSelector compact dropdownDirection="up" />
+          <ThemeToggle compact dropdownDirection="up" />
         </div>
       </div>
 

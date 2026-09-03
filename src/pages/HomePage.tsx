@@ -9,6 +9,7 @@ import { NewsAnnouncementsSection } from '../components/home/NewsAnnouncementsSe
 import { InvestorsPartnersSection } from '../components/home/InvestorsPartnersSection';
 import { FarmerResourcesSection } from '../components/home/FarmerResourcesSection';
 import { ContactFeedbackCTA } from '../components/home/ContactFeedbackCTA';
+import { FromTheFieldSection } from '../components/home/FromTheFieldSection';
 
 export const HomePage: React.FC = () => {
   return (
@@ -16,7 +17,10 @@ export const HomePage: React.FC = () => {
       {/* 1. Hero section */}
       <HeroSection />
 
-      {/* 2. Featured Agricultural Products */}
+      {/* 2. From the field — photographs as testimony (note 03) */}
+      <FromTheFieldSection />
+
+      {/* 3. Featured Agricultural Products */}
       <AgriculturalProductsSection />
 
       {/* 3. Featured programs */}

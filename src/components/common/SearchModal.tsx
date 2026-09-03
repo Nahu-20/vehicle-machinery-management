@@ -62,9 +62,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('search_placeholder')}
+            placeholder={t('search_prompt_full')}
             autoFocus
-            className="w-full bg-transparent text-sm font-semibold text-[#14251D] dark:text-[#f5f6f3] placeholder-[#637069] dark:placeholder-[#737b75] focus:outline-none"
+            className="w-full bg-transparent text-reading font-semibold text-[#14251D] dark:text-[#f5f6f3] placeholder-[#637069] dark:placeholder-[#737b75] focus:outline-none"
           />
           <button
             onClick={onClose}
@@ -74,6 +74,21 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {!query.trim() && (
+          <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/[0.08]">
+            {(['search_chip_seed', 'search_chip_rust', 'search_chip_voucher', 'search_chip_hotline'] as const).map((chipKey) => (
+              <button
+                key={chipKey}
+                type="button"
+                onClick={() => setQuery(t(chipKey))}
+                className="hv-warm rounded-full border border-[#C4D1C7] dark:border-white/[0.12] bg-white dark:bg-[#161d18] px-3.5 py-1.5 text-sm font-semibold text-[#087A4B] dark:text-[#74d62c] hover:bg-[#EFF8F2] dark:hover:bg-[#1c241f] cursor-pointer"
+              >
+                {t(chipKey)}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="max-h-[70vh] overflow-y-auto p-4 space-y-4">
           {/* Services */}

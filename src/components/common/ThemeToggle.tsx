@@ -5,12 +5,14 @@ import { Sun, Moon, Monitor, Check, ChevronDown } from 'lucide-react';
 
 interface ThemeToggleProps {
   compact?: boolean;
+  dropdownDirection?: 'up' | 'down';
   isOpen?: boolean;
   onToggle?: (isOpen: boolean) => void;
 }
 
 export const ThemeToggle: React.FC<ThemeToggleProps> = ({
   compact = false,
+  dropdownDirection = 'down',
   isOpen: externalIsOpen,
   onToggle,
 }) => {
@@ -108,7 +110,9 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           role="menu"
           aria-orientation="vertical"
           aria-label={t('theme_title')}
-          className="absolute right-0 mt-2 min-w-[180px] sm:min-w-[190px] origin-top-right rounded-2xl border border-emerald-200/90 dark:border-white/[0.12] bg-white dark:bg-[#181c19] p-2 shadow-2xl ring-1 ring-black/10 dark:ring-white/5 focus:outline-none z-[100] animate-in fade-in slide-in-from-top-2 duration-150"
+          className={`absolute right-0 min-w-[180px] sm:min-w-[190px] rounded-2xl border border-emerald-200/90 dark:border-white/[0.12] bg-white dark:bg-[#181c19] p-2 shadow-2xl ring-1 ring-black/10 dark:ring-white/5 focus:outline-none z-[100] animate-in fade-in slide-in-from-top-2 duration-150 ${
+            dropdownDirection === 'up' ? 'bottom-full mb-2 origin-bottom-right' : 'top-full mt-2 origin-top-right'
+          }`}
         >
           <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-800/70 dark:text-[#737b75] border-b border-emerald-100 dark:border-white/[0.08] mb-1">
             HAALA HALLUU / THEME
