@@ -152,7 +152,7 @@ export const AlertsPage: React.FC = () => {
             <div className="space-y-1">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F0F7EE] dark:bg-white/10 text-[#075B36] dark:text-[#A3E635] text-xs font-black uppercase tracking-wider">
                 <Bell className="h-3.5 w-3.5" />
-                <span>Regional Advisory Bulletins</span>
+                <span>{t('alerts_regional_bulletins')}</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-[#0A1912] dark:text-white tracking-tight">
                 Active Notices & Historical Advisories
@@ -168,7 +168,7 @@ export const AlertsPage: React.FC = () => {
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-white/10 text-xs font-bold text-[#075B36] dark:text-[#A3E635] border border-[#D5E8D0] dark:border-white/10 hover:bg-[#F0F7EE] transition-all shrink-0 self-start sm:self-auto shadow-2xs"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                <span>Reset All Filters</span>
+                <span>{t('ui_reset_all_filters')}</span>
               </button>
             )}
           </div>
@@ -267,7 +267,7 @@ export const AlertsPage: React.FC = () => {
               className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#075B36] hover:bg-[#054629] px-5 py-2.5 text-xs font-black text-white shadow-md transition-all"
             >
               <RotateCcw className="h-4 w-4 text-[#A3E635]" />
-              <span>Reset Search Filters</span>
+              <span>{t('ui_reset_search_filters')}</span>
             </button>
           </div>
         ) : (

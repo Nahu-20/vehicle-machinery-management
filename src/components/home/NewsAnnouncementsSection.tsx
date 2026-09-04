@@ -69,7 +69,7 @@ export const NewsAnnouncementsSection: React.FC = () => {
   };
 
   return (
-    <section id="news" className="bg-white dark:bg-[#0B1912] py-16 lg:py-24 border-b border-[#E2E8E3] dark:border-[#183327] transition-colors duration-200">
+    <section id="news" className="motif-terrace bg-white dark:bg-[#0B1912] py-16 lg:py-24 border-b border-[#E2E8E3] dark:border-[#183327] transition-colors duration-200">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Row */}
         <motion.div
@@ -99,7 +99,7 @@ export const NewsAnnouncementsSection: React.FC = () => {
                 to="/news"
                 className="inline-flex items-center gap-2.5 rounded-full bg-[#0A1912] dark:bg-emerald-800 text-white hover:bg-[#063D2A] px-6 py-3.5 text-sm font-extrabold transition-all duration-200 shadow-sm"
               >
-                <span>View All News</span>
+                <span>{t('ui_view_all_news')}</span>
               </Link>
             </motion.div>
             <motion.div {...(isReducedMotion ? {} : buttonHoverTap)}>
@@ -204,7 +204,7 @@ export const NewsAnnouncementsSection: React.FC = () => {
 
                     <div className="pt-2">
                       <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#063D2A] dark:text-[#A3E635] group-hover:underline">
-                        <span>Read Story</span>
+                        <span>{t('ui_read_story')}</span>
                         <motion.span
                           initial={{ x: 0 }}
                           whileHover={{ x: 3 }}
@@ -284,7 +284,7 @@ export const NewsAnnouncementsSection: React.FC = () => {
 
                           <div className="pt-1">
                             <span className="inline-flex items-center gap-1 text-xs font-bold text-[#063D2A] dark:text-[#A3E635]">
-                              <span>Read Story</span>
+                              <span>{t('ui_read_story')}</span>
                               <ArrowUpRight className="h-3.5 w-3.5 stroke-[2.5]" />
                             </span>
                           </div>
@@ -331,7 +331,7 @@ export const NewsAnnouncementsSection: React.FC = () => {
                         className="inline-flex items-center gap-1 text-[11px] font-extrabold text-[#087A4B] dark:text-[#A3E635] hover:underline"
                       >
                         <Download className="h-3 w-3" />
-                        <span>Download Official Document</span>
+                        <span>{t('ui_download_official_doc')}</span>
                       </a>
                     </div>
                   ))}

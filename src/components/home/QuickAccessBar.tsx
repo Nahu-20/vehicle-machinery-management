@@ -34,7 +34,7 @@ export const QuickAccessBar: React.FC = () => {
   return (
     <section
       aria-labelledby="quick-access-heading"
-      className="border-b border-[#E2E8E3] dark:border-[#183327] bg-white dark:bg-[#0B1912] py-8 lg:py-10"
+      className="motif-contour border-b border-[#E2E8E3] dark:border-[#183327] bg-white dark:bg-[#0B1912] py-8 lg:py-10"
     >
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <h2

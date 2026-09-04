@@ -237,7 +237,7 @@ export const ResourcesPage: React.FC = () => {
               className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#075B36] hover:bg-[#054829] px-5 py-2.5 text-xs font-black text-white shadow-md transition-all"
             >
               <RotateCcw className="h-4 w-4 text-[#A3E635]" />
-              <span>Reset All Filters</span>
+              <span>{t('ui_reset_all_filters')}</span>
             </button>
           </div>
         ) : (

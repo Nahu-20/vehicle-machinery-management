@@ -32,7 +32,7 @@ export const ProgramCard: React.FC<ProgramCardProps> = ({ program, onOpenDossier
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: (index % 4) * 0.1 }}
       id={`program-card-${program.id}`}
-      className="bg-white dark:bg-[#111613] rounded-3xl border border-[#E2EFE0] dark:border-white/[0.08] shadow-[0_10px_35px_rgba(0,0,0,0.04)] dark:shadow-[0_15px_35px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col justify-between group transition-all duration-300 hover:shadow-xl hover:border-[#74d62c]/50"
+      className="hv-lift bg-white dark:bg-[#111613] rounded-3xl border border-[#E2EFE0] dark:border-white/[0.08] shadow-[0_10px_35px_rgba(0,0,0,0.04)] dark:shadow-[0_15px_35px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col justify-between group transition-all duration-300 hover:shadow-xl hover:border-[#74d62c]/50"
     >
       {/* Top Image & Badge Header */}
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-gray-100 dark:bg-gray-800">

@@ -46,7 +46,7 @@ export const AlertsCTA: React.FC<AlertsCTAProps> = ({ onOpenReportModal }) => {
               className="inline-flex items-center gap-2.5 rounded-2xl bg-[#A3E635] text-[#0A1912] hover:bg-[#92D022] px-6 py-3.5 text-sm font-black transition-all shadow-lg hover:scale-105"
             >
               <PlusCircle className="h-4 w-4" />
-              <span>Report Incident Online</span>
+              <span>{t('alerts_report_online')}</span>
             </button>
 
             <Link
@@ -54,7 +54,7 @@ export const AlertsCTA: React.FC<AlertsCTAProps> = ({ onOpenReportModal }) => {
               className="inline-flex items-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white px-6 py-3.5 text-sm font-bold backdrop-blur-md border border-white/20 transition-all"
             >
               <Building2 className="h-4 w-4 text-[#A3E635]" />
-              <span>Woreda Agriculture Desks</span>
+              <span>{t('alerts_woreda_desks_full')}</span>
               <ArrowRight className="h-4 w-4 ml-1" />
             </Link>
           </div>

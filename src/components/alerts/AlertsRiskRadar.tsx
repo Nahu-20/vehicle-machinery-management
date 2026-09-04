@@ -239,7 +239,7 @@ export const AlertsRiskRadar: React.FC<AlertsRiskRadarProps> = ({ onFilterByZone
             <div className="p-4 rounded-2xl bg-white dark:bg-[#181F1B] border border-[#E2EFE0] dark:border-white/10 space-y-2">
               <span className="text-xs font-black text-[#075B36] dark:text-[#A3E635] flex items-center gap-1.5">
                 <Info className="h-3.5 w-3.5" />
-                <span>Surveillance Summary</span>
+                <span>{t('alerts_surveillance_summary')}</span>
               </span>
               <p className="text-xs text-[#3E4D43] dark:text-white/80 leading-relaxed font-normal">
                 {currentCorridor.advisoryNote}
@@ -315,7 +315,7 @@ export const AlertsRiskRadar: React.FC<AlertsRiskRadarProps> = ({ onFilterByZone
             <div className="p-4 sm:p-5 rounded-2xl bg-[#075B36] text-white space-y-2 shadow-md">
               <div className="flex items-center gap-2 text-xs font-black text-[#A3E635] uppercase tracking-wider">
                 <ShieldCheck className="h-4 w-4" />
-                <span>Standard Agronomic Action Protocol</span>
+                <span>{t('alerts_agronomic_protocol')}</span>
               </div>
               <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed font-normal">
                 {currentCorridor.recommendedAction}

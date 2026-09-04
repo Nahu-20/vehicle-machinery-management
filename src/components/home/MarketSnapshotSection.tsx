@@ -238,7 +238,7 @@ export const MarketSnapshotSection: React.FC = () => {
   );
 
   return (
-    <section className="bg-white dark:bg-[#0B1912] py-12 lg:py-20 border-b border-[#DDE8E1] dark:border-emerald-900/60 w-full max-w-full overflow-hidden transition-colors duration-200">
+    <section className="motif-contour bg-white dark:bg-[#0B1912] py-12 lg:py-20 border-b border-[#DDE8E1] dark:border-emerald-900/60 w-full max-w-full overflow-hidden transition-colors duration-200">
       <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 w-full min-w-0">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 min-w-0">
@@ -246,7 +246,7 @@ export const MarketSnapshotSection: React.FC = () => {
             eyebrow={
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D7A928]/20 dark:bg-[#D7A928]/30 text-[#063D2A] dark:text-[#FDE68A] text-xs font-extrabold border border-[#D7A928]/30">
                 <Sparkles className="h-3.5 w-3.5 text-[#D7A928]" />
-                <span>Oromia Regional Market Intelligence</span>
+                <span>{t('home_market_intelligence')}</span>
               </div>
             }
             title={

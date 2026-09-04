@@ -16,7 +16,7 @@ export const ServicesCTA: React.FC = () => {
         <div className="relative z-10 max-w-3xl space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-extrabold text-[#A3E635] backdrop-blur-md border border-white/15">
             <Sparkles className="h-4 w-4" />
-            <span>Dedicated Regional Support</span>
+            <span>{t('svc_regional_support')}</span>
           </div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
@@ -41,7 +41,7 @@ export const ServicesCTA: React.FC = () => {
               className="inline-flex items-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white px-6 py-3.5 text-sm font-bold backdrop-blur-md border border-white/20 transition-all"
             >
               <Building2 className="h-4 w-4 text-[#A3E635]" />
-              <span>Locate Woreda Desk</span>
+              <span>{t('svc_locate_desk')}</span>
               <ArrowRight className="h-4 w-4 ml-1" />
             </Link>
           </div>

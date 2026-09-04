@@ -52,7 +52,7 @@ export const FarmerResourcesSection: React.FC = () => {
             to="/resources"
             className="inline-flex items-center gap-2.5 rounded-full bg-[#0A1912] dark:bg-emerald-800 text-white hover:bg-[#063D2A] px-6 py-3.5 text-sm font-extrabold transition-all duration-200 shadow-sm shrink-0"
           >
-            <span>Browse Full Library</span>
+            <span>{t('ui_browse_library')}</span>
             <ArrowUpRight className="h-4 w-4 text-[#A3E635]" />
           </Link>
         </div>

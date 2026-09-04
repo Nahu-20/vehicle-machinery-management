@@ -133,7 +133,7 @@ export const ResourceVideoModal: React.FC<ResourceVideoModalProps> = ({
             <div className="space-y-3 pt-4 border-t border-white/10">
               <h3 className="text-xs font-black uppercase tracking-wider text-[#A3E635] flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
-                <span>Jump to Key Chapter Timestamps</span>
+                <span>{t('res_chapter_jump')}</span>
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {publication.tableOfContents.map((chapter, idx) => (

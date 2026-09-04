@@ -364,7 +364,7 @@ export const NewsPage: React.FC = () => {
                           className="inline-flex items-center gap-1 text-[11px] font-bold text-[#075D3A] dark:text-emerald-400 hover:underline"
                         >
                           <Download className="h-3 w-3" />
-                          <span>Download Packet</span>
+                          <span>{t('ui_download_packet')}</span>
                         </a>
                       </div>
                     ))}
@@ -376,7 +376,7 @@ export const NewsPage: React.FC = () => {
                   <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
                     <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-amber-500" />
-                      <span>Next Regional Event</span>
+                      <span>{t('news_next_event')}</span>
                     </h3>
                     <button
                       type="button"

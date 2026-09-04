@@ -237,26 +237,26 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ service,
                         onChange={(e) => setSelectedZone(e.target.value)}
                         className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#111613] border border-[#D5E8D0] dark:border-white/10 text-[#0A1912] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#075B36]"
                       >
-                        <option value="Arsi">Arsi Zone</option>
-                        <option value="West Arsi">West Arsi Zone</option>
-                        <option value="Bale">Bale Zone</option>
-                        <option value="East Bale">East Bale Zone</option>
-                        <option value="East Shewa">East Shewa Zone</option>
-                        <option value="West Shewa">West Shewa Zone</option>
-                        <option value="North Shewa">North Shewa Zone</option>
-                        <option value="South West Shewa">South West Shewa Zone</option>
-                        <option value="Jimma">Jimma Zone</option>
-                        <option value="Illu Abba Boora">Illu Abba Boora Zone</option>
-                        <option value="Buno Bedele">Buno Bedele Zone</option>
-                        <option value="East Hararghe">East Hararghe Zone</option>
-                        <option value="West Hararghe">West Hararghe Zone</option>
-                        <option value="Guji">Guji Zone</option>
-                        <option value="West Guji">West Guji Zone</option>
-                        <option value="Borena">Borena Zone</option>
-                        <option value="East Wollega">East Wollega Zone</option>
-                        <option value="West Wollega">West Wollega Zone</option>
-                        <option value="Horo Guduru Wollega">Horo Guduru Wollega Zone</option>
-                        <option value="Kelem Wollega">Kelem Wollega Zone</option>
+                        <option value="Arsi">{t('zone_arsi')}</option>
+                        <option value="West Arsi">{t('zone_west_arsi_z')}</option>
+                        <option value="Bale">{t('zone_bale')}</option>
+                        <option value="East Bale">{t('zone_east_bale')}</option>
+                        <option value="East Shewa">{t('zone_east_shewa_z')}</option>
+                        <option value="West Shewa">{t('zone_west_shewa_z')}</option>
+                        <option value="North Shewa">{t('zone_north_shewa_z')}</option>
+                        <option value="South West Shewa">{t('zone_sw_shewa')}</option>
+                        <option value="Jimma">{t('zone_jimma')}</option>
+                        <option value="Illu Abba Boora">{t('zone_illu')}</option>
+                        <option value="Buno Bedele">{t('zone_buno_bedele')}</option>
+                        <option value="East Hararghe">{t('zone_east_hararghe_z')}</option>
+                        <option value="West Hararghe">{t('zone_west_hararghe_z')}</option>
+                        <option value="Guji">{t('zone_guji')}</option>
+                        <option value="West Guji">{t('zone_west_guji')}</option>
+                        <option value="Borena">{t('zone_borena')}</option>
+                        <option value="East Wollega">{t('zone_east_wollega_z')}</option>
+                        <option value="West Wollega">{t('zone_west_wollega_z')}</option>
+                        <option value="Horo Guduru Wollega">{t('zone_horo_guduru_z')}</option>
+                        <option value="Kelem Wollega">{t('zone_kelem_wollega')}</option>
                       </select>
                     </div>
 
@@ -279,7 +279,7 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ service,
                     className="w-full py-2.5 px-4 rounded-xl bg-[#075B36] hover:bg-[#054629] text-white font-black flex items-center justify-center gap-2 transition-colors shadow-md"
                   >
                     <Send className="h-3.5 w-3.5 text-[#A3E635]" />
-                    <span>Submit Service Request</span>
+                    <span>{t('svc_submit_request')}</span>
                   </button>
                 </form>
               )}

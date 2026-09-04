@@ -45,7 +45,7 @@ export const ServicesProcessWorkflow: React.FC = () => {
           <div className="text-center max-w-3xl mx-auto space-y-3">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 text-[#A3E635] text-xs font-black uppercase tracking-wider backdrop-blur-md border border-white/15">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Standard Operating Procedure</span>
+              <span>{t('svc_sop')}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
               How Oromia Farmers Access Agricultural Services

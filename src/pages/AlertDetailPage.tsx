@@ -43,7 +43,7 @@ export const AlertDetailPage: React.FC = () => {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-100 dark:bg-white/10 text-red-600">
             <AlertTriangle className="h-8 w-8" />
           </div>
-          <h2 className="text-xl font-black text-[#0A1912] dark:text-white">Advisory Notice Not Found</h2>
+          <h2 className="text-xl font-black text-[#0A1912] dark:text-white">{t('alerts_not_found')}</h2>
           <p className="text-xs text-[#56635B] dark:text-white/60">
             The requested early warning advisory broadcast could not be located or has expired.
           </p>
@@ -52,7 +52,7 @@ export const AlertDetailPage: React.FC = () => {
             className="inline-flex items-center gap-2 rounded-xl bg-[#075B36] hover:bg-[#054629] px-5 py-2.5 text-xs font-black text-white"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Return to Alerts Portal</span>
+            <span>{t('alerts_return_portal')}</span>
           </button>
         </div>
       </div>
@@ -134,7 +134,7 @@ export const AlertDetailPage: React.FC = () => {
             className="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-[#111613] border border-[#E2EFE0] dark:border-white/10 px-4 py-2 text-xs font-bold text-[#075B36] dark:text-[#A3E635] hover:bg-[#F0F7EE] dark:hover:bg-white/15 transition-all shadow-2xs"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Back to All Alerts</span>
+            <span>{t('alerts_back_all')}</span>
           </Link>
 
           <div className="flex items-center gap-2">
@@ -144,7 +144,7 @@ export const AlertDetailPage: React.FC = () => {
               className="inline-flex items-center gap-1.5 rounded-xl border border-[#E2EFE0] dark:border-white/10 bg-white dark:bg-[#111613] px-3.5 py-2 text-xs font-bold text-[#0A1912] dark:text-white hover:bg-gray-50 dark:hover:bg-white/10 shadow-2xs"
             >
               <Printer className="h-4 w-4 text-[#075B36] dark:text-[#A3E635]" />
-              <span>Print Bulletin</span>
+              <span>{t('ui_print_bulletin')}</span>
             </button>
 
             <button
@@ -319,7 +319,7 @@ export const AlertDetailPage: React.FC = () => {
                 to="/about#offices"
                 className="inline-flex items-center gap-1.5 rounded-xl border border-[#D5E8D0] dark:border-white/10 bg-white dark:bg-white/10 px-3.5 py-2 text-xs font-bold text-[#075B36] dark:text-[#A3E635] hover:bg-[#F0F7EE] transition-all"
               >
-                <span>Woreda Desks</span>
+                <span>{t('alerts_woreda_desks')}</span>
                 <ChevronRight className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -331,7 +331,7 @@ export const AlertDetailPage: React.FC = () => {
           <div className="space-y-4 pt-4 print:hidden">
             <h3 className="text-base font-extrabold text-[#0A1912] dark:text-white flex items-center gap-2">
               <Bell className="h-4 w-4 text-[#075B36] dark:text-[#A3E635]" />
-              <span>Related Active Early Warning Broadcasts</span>
+              <span>{t('alerts_related')}</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

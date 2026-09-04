@@ -26,6 +26,8 @@ export interface FieldPhotoProps {
   className?: string;
   /** Tailwind aspect utility; defaults to a landscape field shot. */
   aspect?: string;
+  /** Light caption text, for use on the forest and soil bands. */
+  onDark?: boolean;
 }
 
 export const FieldPhoto: React.FC<FieldPhotoProps> = ({
@@ -36,6 +38,7 @@ export const FieldPhoto: React.FC<FieldPhotoProps> = ({
   subject,
   className = '',
   aspect = 'aspect-[4/3]',
+  onDark = false,
 }) => {
   const { t } = useLanguage();
 
@@ -68,11 +71,16 @@ export const FieldPhoto: React.FC<FieldPhotoProps> = ({
 
       {/* The caption is the testimony: place, crop, season. */}
       <figcaption className="mt-3 space-y-1">
-        <p className="flex items-center gap-1.5 text-sm font-bold text-[#0A1912] dark:text-[#f5f6f3]">
-          <MapPin className="h-3.5 w-3.5 shrink-0 text-[#087A4B] dark:text-[#74d62c]" aria-hidden="true" />
+        <p className={`flex items-center gap-1.5 text-sm font-bold ${
+          onDark ? 'text-[#F3F7F2]' : 'text-[#0A1912] dark:text-[#f5f6f3]'
+        }`}>
+          <MapPin
+            className={`h-3.5 w-3.5 shrink-0 ${onDark ? 'text-[#A3E635]' : 'text-[#087A4B] dark:text-[#74d62c]'}`}
+            aria-hidden="true"
+          />
           {place}
         </p>
-        <p className="text-sm text-[#56635B] dark:text-[#a5aba6]">
+        <p className={`text-sm ${onDark ? 'text-[#C9D8CC]' : 'text-[#56635B] dark:text-[#a5aba6]'}`}>
           {crop} · {season}
         </p>
       </figcaption>

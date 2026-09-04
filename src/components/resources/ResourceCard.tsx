@@ -91,7 +91,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
     return (
       <div
         onClick={() => onPreview(publication)}
-        className="group cursor-pointer rounded-2xl border border-[#E2EFE0] dark:border-white/10 bg-white dark:bg-[#111813] p-4 sm:p-5 hover:border-[#075B36] dark:hover:border-[#A3E635] hover:shadow-md transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        className="hv-lift group cursor-pointer rounded-2xl border border-[#E2EFE0] dark:border-white/10 bg-white dark:bg-[#111813] p-4 sm:p-5 hover:border-[#075B36] dark:hover:border-[#A3E635] hover:shadow-md transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div className="flex items-start gap-4 min-w-0 flex-1">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#EAF5EE] dark:bg-emerald-950/60 text-[#075B36] dark:text-[#A3E635]">
@@ -133,7 +133,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black shadow-xs transition-all"
             >
               <PlayCircle className="h-3.5 w-3.5" />
-              <span>Watch Video</span>
+              <span>{t('ui_watch_video')}</span>
             </button>
           ) : (
             <button

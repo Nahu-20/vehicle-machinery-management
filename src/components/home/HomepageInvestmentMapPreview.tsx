@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, ArrowRight, Compass, ShieldCheck, Loader2 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 import { loadAndValidateOromiaGeoJSON } from '../../features/investment-map/services/gisLoader';
 import {
   OromiaGeoJSONCollection,
@@ -95,6 +96,7 @@ function featureToSvgPath(feature: OromiaZoneFeature, bbox = OROMIA_BBOX): strin
 export const HomepageInvestmentMapPreview: React.FC<HomepageInvestmentMapPreviewProps> = ({
   className = '',
 }) => {
+  const { t } = useLanguage();
   const [gisData, setGisData] = useState<OromiaGeoJSONCollection | null>(null);
   const [validationResult, setValidationResult] = useState<GisValidationResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -181,7 +183,7 @@ export const HomepageInvestmentMapPreview: React.FC<HomepageInvestmentMapPreview
           to={selectedZoneId ? `/investment/map?zone=${selectedZoneId}` : '/investment/map'}
           className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-[#A3E635] text-xs font-bold border border-emerald-700/50 transition-all hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
         >
-          <span>Explore Full Investment Map</span>
+          <span>{t('home_full_investment_map')}</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
@@ -322,7 +324,7 @@ export const HomepageInvestmentMapPreview: React.FC<HomepageInvestmentMapPreview
           to={selectedZoneId ? `/investment/map?zone=${selectedZoneId}` : '/investment/map'}
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#063D2A] hover:bg-[#0c5634] text-white text-xs font-extrabold border border-emerald-500/40 shadow-lg transition-all hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
         >
-          <span>Explore Full Investment Map</span>
+          <span>{t('home_full_investment_map')}</span>
           <ArrowRight className="w-4 h-4 text-[#A3E635]" />
         </Link>
       </div>

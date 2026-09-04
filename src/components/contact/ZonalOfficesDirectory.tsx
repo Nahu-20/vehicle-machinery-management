@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export const ZonalOfficesDirectory: React.FC = () => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const { showToast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -196,7 +196,7 @@ Address: ${office.address}`;
               }}
               className="px-4 py-2 rounded-xl bg-[#075D3A] text-white text-xs font-bold"
             >
-              Reset Filters
+              {t('ui_reset_filters')}
             </button>
           </div>
         ) : (
@@ -306,7 +306,7 @@ Address: ${office.address}`;
                       ) : (
                         <>
                           <Copy className="w-3.5 h-3.5" />
-                          <span>Copy Info</span>
+                          <span>{t('ui_copy_info')}</span>
                         </>
                       )}
                     </button>

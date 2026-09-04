@@ -25,7 +25,7 @@ export const TenderDetailModal: React.FC<TenderDetailModalProps> = ({
   tender,
   onClose,
 }) => {
-  const { getLocalizedText } = useLanguage();
+  const { getLocalizedText, t } = useLanguage();
   const { showToast } = useToast();
 
   if (!tender) return null;
@@ -74,22 +74,22 @@ export const TenderDetailModal: React.FC<TenderDetailModalProps> = ({
         <div className="p-6 overflow-y-auto space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 space-y-1">
-              <span className="text-[11px] font-bold text-gray-500 uppercase">Procuring Entity</span>
+              <span className="text-[11px] font-bold text-gray-500 uppercase">{t('tender_entity')}</span>
               <p className="text-xs font-bold text-gray-900 dark:text-white">{entity}</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 space-y-1">
-              <span className="text-[11px] font-bold text-gray-500 uppercase">Bid Security Requirement</span>
+              <span className="text-[11px] font-bold text-gray-500 uppercase">{t('tender_bid_security')}</span>
               <p className="text-xs font-bold text-amber-700 dark:text-amber-400">{tender.bidSecurityETB}</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 space-y-1">
-              <span className="text-[11px] font-bold text-gray-500 uppercase">Published Date</span>
+              <span className="text-[11px] font-bold text-gray-500 uppercase">{t('tender_published_date')}</span>
               <p className="text-xs font-bold text-gray-900 dark:text-white">{tender.publishedDate}</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 space-y-1">
-              <span className="text-[11px] font-bold text-gray-500 uppercase">Closing Deadline</span>
+              <span className="text-[11px] font-bold text-gray-500 uppercase">{t('tender_deadline')}</span>
               <p className="text-xs font-bold text-red-600 dark:text-red-400">{tender.closingDate} at {tender.closingTime}</p>
             </div>
           </div>
@@ -141,7 +141,7 @@ export const TenderDetailModal: React.FC<TenderDetailModalProps> = ({
               className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#075D3A] hover:bg-[#05482d] text-white text-xs font-bold transition-all shadow-md active:scale-95"
             >
               <Download className="w-4 h-4" />
-              <span>Download Bidding Pack</span>
+              <span>{t('ui_download_bidding_pack')}</span>
             </button>
           </div>
         </div>

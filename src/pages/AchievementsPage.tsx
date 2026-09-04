@@ -419,7 +419,7 @@ export const AchievementsPage: React.FC = () => {
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  <span>Previous Page</span>
+                  <span>{t('ui_prev_page')}</span>
                 </button>
 
                 <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
@@ -431,7 +431,7 @@ export const AchievementsPage: React.FC = () => {
                   disabled={!hasMore}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  <span>Next Page</span>
+                  <span>{t('ui_next_page')}</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -444,7 +444,7 @@ export const AchievementsPage: React.FC = () => {
           <div className="max-w-3xl mb-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-2">
               <Calendar className="w-3.5 h-3.5" />
-              <span>Historical Milestones</span>
+              <span>{t('ach_milestones')}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
               {t('achievement_timeline')}
@@ -482,7 +482,7 @@ export const AchievementsPage: React.FC = () => {
                     to={`/achievements/${item.achievementSlug}`}
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
                   >
-                    <span>Read detailed report</span>
+                    <span>{t('ui_read_detailed_report')}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
@@ -640,7 +640,7 @@ export const AchievementsPage: React.FC = () => {
                   to="/achievements/improving-wheat-productivity-bale-zone"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-emerald-950 hover:bg-emerald-100 font-bold text-sm transition-colors shadow"
                 >
-                  <span>Read Full Case Study</span>
+                  <span>{t('ui_read_case_study')}</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -654,7 +654,7 @@ export const AchievementsPage: React.FC = () => {
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold uppercase tracking-wider mb-2">
                 <FileText className="w-3.5 h-3.5" />
-                <span>Impact Assessment Documentation</span>
+                <span>{t('ach_impact_docs')}</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
                 {t('reports_evidence')}

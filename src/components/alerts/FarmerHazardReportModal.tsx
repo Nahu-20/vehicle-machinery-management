@@ -89,7 +89,7 @@ export const FarmerHazardReportModal: React.FC<FarmerHazardReportModalProps> = (
             <div className="space-y-2 pr-8">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/20 text-red-400 text-xs font-black uppercase tracking-wider border border-red-500/30">
                 <Radio className="h-3.5 w-3.5 animate-pulse text-red-400" />
-                <span>Field Incident Dispatch Desk</span>
+                <span>{t('alerts_incident_desk')}</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-white leading-tight">
                 Report Pest Sighting or Agricultural Hazard
@@ -181,20 +181,20 @@ export const FarmerHazardReportModal: React.FC<FarmerHazardReportModalProps> = (
                       className="w-full px-3 py-2.5 rounded-xl border border-[#D5E8D0] dark:border-white/15 bg-[#FAFAF7] dark:bg-white/5 text-[#0A1912] dark:text-white font-medium focus:outline-none focus:border-[#075B36]"
                     >
                       <option value="Arsi">Arsi</option>
-                      <option value="West Arsi">West Arsi</option>
+                      <option value="West Arsi">{t('zone_west_arsi')}</option>
                       <option value="Bale">Bale</option>
-                      <option value="East Shewa">East Shewa</option>
-                      <option value="West Shewa">West Shewa</option>
-                      <option value="North Shewa">North Shewa</option>
+                      <option value="East Shewa">{t('zone_east_shewa')}</option>
+                      <option value="West Shewa">{t('zone_west_shewa')}</option>
+                      <option value="North Shewa">{t('zone_north_shewa')}</option>
                       <option value="Jimma">Jimma</option>
                       <option value="Illubabor">Illubabor</option>
-                      <option value="East Hararghe">East Hararghe</option>
-                      <option value="West Hararghe">West Hararghe</option>
+                      <option value="East Hararghe">{t('zone_east_hararghe')}</option>
+                      <option value="West Hararghe">{t('zone_west_hararghe')}</option>
                       <option value="Borena">Borena</option>
                       <option value="Guji">Guji</option>
-                      <option value="East Wollega">East Wollega</option>
-                      <option value="West Wollega">West Wollega</option>
-                      <option value="Horo Guduru">Horo Guduru</option>
+                      <option value="East Wollega">{t('zone_east_wollega')}</option>
+                      <option value="West Wollega">{t('zone_west_wollega')}</option>
+                      <option value="Horo Guduru">{t('zone_horo_guduru')}</option>
                     </select>
                   </div>
 
@@ -279,7 +279,7 @@ export const FarmerHazardReportModal: React.FC<FarmerHazardReportModalProps> = (
                 <div className="p-3.5 rounded-2xl bg-[#F0F7EE] dark:bg-white/5 border border-[#D5E8D0] dark:border-white/10 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 text-xs font-bold text-[#075B36] dark:text-[#A3E635]">
                     <Camera className="h-4 w-4" />
-                    <span>Attach Field Photo</span>
+                    <span>{t('alerts_attach_photo')}</span>
                   </div>
                   <label className="inline-flex items-center gap-2 cursor-pointer">
                     <input
@@ -313,7 +313,7 @@ export const FarmerHazardReportModal: React.FC<FarmerHazardReportModalProps> = (
                       className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black shadow-md transition-all"
                     >
                       <Send className="h-3.5 w-3.5" />
-                      <span>Transmit Dispatch Report</span>
+                      <span>{t('alerts_transmit_report')}</span>
                     </button>
                   </div>
                 </div>

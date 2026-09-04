@@ -100,7 +100,7 @@ export const ServicesCalculator: React.FC = () => {
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F0F7EE] dark:bg-white/10 text-[#075B36] dark:text-[#A3E635] text-xs font-black uppercase tracking-wider">
               <Calculator className="h-3.5 w-3.5" />
-              <span>Smart Agricultural Decision Support</span>
+              <span>{t('svc_decision_support')}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0A1912] dark:text-white tracking-tight leading-tight">
               Interactive Input & Soil Lime Calculators
@@ -217,7 +217,7 @@ export const ServicesCalculator: React.FC = () => {
                 {/* Seed Required Card */}
                 <div className="p-5 rounded-2xl bg-white dark:bg-[#181F1B] border border-[#E2EFE0] dark:border-white/10 shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#56635B] dark:text-white/60">Certified Seed Required</span>
+                    <span className="text-xs font-bold text-[#56635B] dark:text-white/60">{t('svc_certified_seed')}</span>
                     <PackageCheck className="h-4 w-4 text-[#075B36] dark:text-[#A3E635]" />
                   </div>
                   <div className="text-2xl sm:text-3xl font-black text-[#0A1912] dark:text-white">
@@ -231,7 +231,7 @@ export const ServicesCalculator: React.FC = () => {
                 {/* Blended NPSB Fertilizer */}
                 <div className="p-5 rounded-2xl bg-white dark:bg-[#181F1B] border border-[#E2EFE0] dark:border-white/10 shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#56635B] dark:text-white/60">Blended NPSB Fertilizer</span>
+                    <span className="text-xs font-bold text-[#56635B] dark:text-white/60">{t('svc_npsb')}</span>
                     <FlaskConical className="h-4 w-4 text-[#075B36] dark:text-[#A3E635]" />
                   </div>
                   <div className="text-2xl sm:text-3xl font-black text-[#0A1912] dark:text-white">
@@ -259,7 +259,7 @@ export const ServicesCalculator: React.FC = () => {
                 {/* Expected Yield Potential */}
                 <div className="p-5 rounded-2xl bg-gradient-to-br from-[#075B36] to-[#04331E] text-white shadow-md space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-200">Expected Yield Potential</span>
+                    <span className="text-xs font-bold text-emerald-200">{t('svc_expected_yield')}</span>
                     <TrendingUp className="h-4 w-4 text-[#A3E635]" />
                   </div>
                   <div className="text-2xl sm:text-3xl font-black text-[#A3E635]">
@@ -359,11 +359,11 @@ export const ServicesCalculator: React.FC = () => {
                 {/* Total Lime Tons */}
                 <div className="p-5 rounded-2xl bg-white dark:bg-[#181F1B] border border-[#E2EFE0] dark:border-white/10 shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#56635B] dark:text-white/60">Total Agricultural Lime Required</span>
+                    <span className="text-xs font-bold text-[#56635B] dark:text-white/60">{t('svc_lime_required')}</span>
                     <Scale className="h-4 w-4 text-[#075B36] dark:text-[#A3E635]" />
                   </div>
                   <div className="text-2xl sm:text-3xl font-black text-[#0A1912] dark:text-white">
-                    {totalLimeTons} <span className="text-sm font-bold text-[#56635B]">Metric Tons</span>
+                    {totalLimeTons} <span className="text-sm font-bold text-[#56635B]">{t('svc_metric_tons')}</span>
                   </div>
                   <p className="text-[11px] text-[#075B36] dark:text-[#A3E635] font-semibold">
                     Equals {totalLimeQuintals} Quintals (100kg bags)
@@ -373,7 +373,7 @@ export const ServicesCalculator: React.FC = () => {
                 {/* Application Rate Per Ha */}
                 <div className="p-5 rounded-2xl bg-white dark:bg-[#181F1B] border border-[#E2EFE0] dark:border-white/10 shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#56635B] dark:text-white/60">Application Rate</span>
+                    <span className="text-xs font-bold text-[#56635B] dark:text-white/60">{t('svc_application_rate')}</span>
                     <FlaskConical className="h-4 w-4 text-[#075B36] dark:text-[#A3E635]" />
                   </div>
                   <div className="text-2xl sm:text-3xl font-black text-[#0A1912] dark:text-white">

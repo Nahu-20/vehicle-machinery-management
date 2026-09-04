@@ -77,7 +77,7 @@ export const ProgramsHero: React.FC<ProgramsHeroProps> = ({
             Home
           </Link>
           <ChevronRight className="h-3.5 w-3.5 text-emerald-400" />
-          <span className="text-[#A3E635] font-bold">Strategic Flagship Programs</span>
+          <span className="text-[#A3E635] font-bold">{t('prog_flagship')}</span>
         </nav>
 
         {/* Hero Grid: Left Content & Right Highlights Banner */}
@@ -105,7 +105,7 @@ export const ProgramsHero: React.FC<ProgramsHeroProps> = ({
               </div>
               <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15">
                 <CheckCircle2 className="h-4 w-4 text-[#A3E635]" />
-                <span>Triple Harvest Irrigation</span>
+                <span>{t('prog_triple_harvest')}</span>
               </div>
               <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15">
                 <CheckCircle2 className="h-4 w-4 text-[#A3E635]" />
@@ -135,7 +135,7 @@ export const ProgramsHero: React.FC<ProgramsHeroProps> = ({
                     <Tractor className="h-4 w-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-white">Mechanized Cluster Farming</h4>
+                    <h4 className="text-xs font-bold text-white">{t('prog_mechanized_cluster')}</h4>
                     <p className="text-[11px] text-emerald-200/80 leading-snug">
                       Consolidated smallholder acreage with subsidized combine harvesters and high-yield seeds.
                     </p>

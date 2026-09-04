@@ -109,7 +109,7 @@ export const StrategicPriorities: React.FC = () => {
             to="/programs"
             className="inline-flex items-center gap-2 text-sm sm:text-base font-bold text-[#075B36] dark:text-[#74d62c] hover:underline underline-offset-4 shrink-0"
           >
-            <span>View All Programs</span>
+            <span>{t('ui_view_all_programs')}</span>
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>

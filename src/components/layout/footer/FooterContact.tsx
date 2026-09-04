@@ -38,7 +38,7 @@ export const FooterContact: React.FC = () => {
           </div>
           <a
             href="mailto:info@oab.gov.et"
-            className="font-medium hover:text-[#075B36] dark:hover:text-[#74d62c] underline underline-offset-2 transition-colors dark:text-[#f5f6f3]"
+            className="hv-underline font-medium hover:text-[#075B36] dark:hover:text-[#74d62c] transition-colors dark:text-[#f5f6f3]"
           >
             {t('footer_email')}
           </a>

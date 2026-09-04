@@ -24,7 +24,7 @@ interface InquiryFormProps {
 }
 
 export const InquiryFormSection: React.FC<InquiryFormProps> = ({ onSuccess }) => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const { showToast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -259,7 +259,7 @@ export const InquiryFormSection: React.FC<InquiryFormProps> = ({ onSuccess }) =>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Tracking Code</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('contact_tracking_code')}</div>
                   <div className="text-xl sm:text-2xl font-black font-mono text-[#075D3A] dark:text-emerald-400">
                     {submittedTicket.id}
                   </div>

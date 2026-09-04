@@ -109,7 +109,7 @@ export const AlertsHero: React.FC<AlertsHeroProps> = ({
           <div className="lg:col-span-8 space-y-4">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.1]">
               Agricultural Early Warning & <br className="hidden sm:inline" />
-              <span className="text-[#A3E635]">Rapid Response Advisories</span>
+              <span className="text-[#A3E635]">{t('alerts_rapid_response')}</span>
             </h1>
             <p className="text-sm sm:text-base text-emerald-100/90 max-w-2xl leading-relaxed font-normal">
               Real-time agro-meteorological bulletins, pest outbreak alerts, stripe rust warnings, and livestock health dispatches protecting smallholder harvests across all 22 administrative zones.
@@ -131,12 +131,12 @@ export const AlertsHero: React.FC<AlertsHeroProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 rounded-2xl bg-red-950/50 border border-red-500/30 text-left">
                 <span className="text-2xl font-black text-red-400 block">{criticalCount}</span>
-                <span className="text-[11px] font-bold text-red-200">Critical Red Alerts</span>
+                <span className="text-[11px] font-bold text-red-200">{t('alerts_critical_red')}</span>
               </div>
 
               <div className="p-3 rounded-2xl bg-amber-950/50 border border-amber-500/30 text-left">
                 <span className="text-2xl font-black text-amber-300 block">{warningCount}</span>
-                <span className="text-[11px] font-bold text-amber-200">Warning Advisories</span>
+                <span className="text-[11px] font-bold text-amber-200">{t('alerts_warning_advisories')}</span>
               </div>
             </div>
 

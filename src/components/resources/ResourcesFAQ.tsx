@@ -4,7 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { ChevronDown, HelpCircle, Sparkles } from 'lucide-react';
 
 export const ResourcesFAQ: React.FC = () => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [openId, setOpenId] = useState<string | null>('faq-1');
 
   const toggleFAQ = (id: string) => {
@@ -17,7 +17,7 @@ export const ResourcesFAQ: React.FC = () => {
         <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EAF5EE] dark:bg-emerald-950/60 border border-[#D5E8D0] dark:border-emerald-800/40 text-[#075B36] dark:text-[#A3E635] text-xs font-black uppercase tracking-wider">
             <HelpCircle className="h-3.5 w-3.5" />
-            <span>Public Document Access Guidance</span>
+            <span>{t('res_access_guidance')}</span>
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-black text-[#0A1912] dark:text-white tracking-tight">

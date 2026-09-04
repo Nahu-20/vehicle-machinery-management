@@ -84,7 +84,7 @@ export const ProgramsPage: React.FC = () => {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#E5EFE2] dark:bg-white/10 hover:bg-[#D5E6D1] text-[#075B36] dark:text-[#A3E635] text-xs font-bold transition-colors"
             >
               <RefreshCcw className="h-3.5 w-3.5" />
-              <span>Reset Filters</span>
+              <span>{t('ui_reset_filters')}</span>
             </button>
           )}
         </div>

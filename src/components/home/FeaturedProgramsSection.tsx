@@ -25,7 +25,7 @@ export const FeaturedProgramsSection: React.FC = () => {
           className="text-center max-w-3xl mx-auto space-y-3"
         >
           <AgriPillBadge variant="lime" icon={<Sparkles className="h-3.5 w-3.5 text-[#0A1912]" />}>
-            Strategic Flagship Programs
+            {t('prog_flagship')}
           </AgriPillBadge>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#111310] dark:text-white tracking-tight">
@@ -114,7 +114,7 @@ export const FeaturedProgramsSection: React.FC = () => {
                         to="/programs"
                         className="inline-flex items-center gap-2.5 rounded-full bg-[#0A1912] dark:bg-emerald-800 text-white hover:bg-[#063D2A] px-6 py-3.5 text-sm font-extrabold transition-all duration-200 shadow-sm group"
                       >
-                        <span>Explore Program Brief</span>
+                        <span>{t('home_program_brief')}</span>
                         <ArrowUpRight className="h-4 w-4 text-[#A3E635] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                       </Link>
                     </motion.div>

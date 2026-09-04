@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 export const ResourcesSMSKnowledgeHub: React.FC = () => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const { showToast } = useToast();
   const [copiedKeyword, setCopiedKeyword] = useState<string | null>(null);
 
@@ -114,7 +114,7 @@ export const ResourcesSMSKnowledgeHub: React.FC = () => {
                   ) : (
                     <>
                       <Copy className="h-3.5 w-3.5" />
-                      <span>Copy SMS Code</span>
+                      <span>{t('res_copy_sms')}</span>
                     </>
                   )}
                 </button>

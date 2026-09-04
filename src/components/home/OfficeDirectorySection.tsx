@@ -122,7 +122,7 @@ export const OfficeDirectorySection: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-base font-extrabold text-[#14251D] dark:text-emerald-100">{selectedOffice.zoneKey}</h3>
-                  <span className="text-xs text-[#637069] dark:text-emerald-400/80">Oromia Zonal Agricultural Office</span>
+                  <span className="text-xs text-[#637069] dark:text-emerald-400/80">{t('home_zonal_office')}</span>
                 </div>
               </div>
               <button onClick={() => setSelectedOffice(null)} className="p-1 text-gray-400 dark:text-emerald-400 hover:text-black dark:hover:text-white rounded-lg">

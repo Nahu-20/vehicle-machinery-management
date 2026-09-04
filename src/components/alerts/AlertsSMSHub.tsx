@@ -53,7 +53,7 @@ export const AlertsSMSHub: React.FC = () => {
           <div className="lg:col-span-6 space-y-5">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 text-[#A3E635] text-xs font-black uppercase tracking-wider backdrop-blur-md border border-white/15">
               <Smartphone className="h-3.5 w-3.5" />
-              <span>Direct Mobile Broadcast Service</span>
+              <span>{t('alerts_sms_service')}</span>
             </div>
 
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight">
@@ -103,7 +103,7 @@ export const AlertsSMSHub: React.FC = () => {
             ) : (
               <form onSubmit={handleSubscribe} className="space-y-4 text-xs">
                 <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                  <span className="font-extrabold text-white text-sm">Farmer Alert Registration</span>
+                  <span className="font-extrabold text-white text-sm">{t('alerts_registration')}</span>
                   <span className="text-[11px] text-[#A3E635] font-bold">Quick Setup (30s)</span>
                 </div>
 
@@ -125,32 +125,32 @@ export const AlertsSMSHub: React.FC = () => {
                 {/* Zone and Language selection */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="font-bold text-white">Select Your Zone</label>
+                    <label className="font-bold text-white">{t('alerts_select_zone')}</label>
                     <select
                       value={selectedZone}
                       onChange={(e) => setSelectedZone(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-xl bg-black/40 border border-white/20 text-white font-medium focus:outline-none focus:border-[#A3E635]"
                     >
                       <option value="Arsi">Arsi</option>
-                      <option value="West Arsi">West Arsi</option>
+                      <option value="West Arsi">{t('zone_west_arsi')}</option>
                       <option value="Bale">Bale</option>
-                      <option value="East Shewa">East Shewa</option>
-                      <option value="West Shewa">West Shewa</option>
-                      <option value="North Shewa">North Shewa</option>
+                      <option value="East Shewa">{t('zone_east_shewa')}</option>
+                      <option value="West Shewa">{t('zone_west_shewa')}</option>
+                      <option value="North Shewa">{t('zone_north_shewa')}</option>
                       <option value="Jimma">Jimma</option>
                       <option value="Illubabor">Illubabor</option>
-                      <option value="East Hararghe">East Hararghe</option>
-                      <option value="West Hararghe">West Hararghe</option>
+                      <option value="East Hararghe">{t('zone_east_hararghe')}</option>
+                      <option value="West Hararghe">{t('zone_west_hararghe')}</option>
                       <option value="Borena">Borena</option>
                       <option value="Guji">Guji</option>
-                      <option value="East Wollega">East Wollega</option>
-                      <option value="West Wollega">West Wollega</option>
-                      <option value="Horo Guduru">Horo Guduru</option>
+                      <option value="East Wollega">{t('zone_east_wollega')}</option>
+                      <option value="West Wollega">{t('zone_west_wollega')}</option>
+                      <option value="Horo Guduru">{t('zone_horo_guduru')}</option>
                     </select>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-white">Preferred Language</label>
+                    <label className="font-bold text-white">{t('alerts_preferred_language')}</label>
                     <select
                       value={selectedLanguage}
                       onChange={(e) => setSelectedLanguage(e.target.value)}
@@ -194,7 +194,7 @@ export const AlertsSMSHub: React.FC = () => {
                     className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#A3E635] hover:bg-[#92D022] text-[#0A1912] font-black text-sm transition-all shadow-lg hover:scale-[1.02]"
                   >
                     <BellRing className="h-4 w-4" />
-                    <span>Activate Free SMS Alert Subscription</span>
+                    <span>{t('alerts_activate_sms')}</span>
                   </button>
                 </div>
               </form>

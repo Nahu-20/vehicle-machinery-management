@@ -149,7 +149,7 @@ export const TendersSection: React.FC<TendersSectionProps> = ({
                   onClick={() => onOpenTenderModal(tnd)}
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-4 py-2.5 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 >
-                  <span>View Details</span>
+                  <span>{t('ui_view_details')}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>

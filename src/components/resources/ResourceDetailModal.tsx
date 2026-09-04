@@ -103,7 +103,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
           <div className="space-y-2">
             <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#075B36] dark:text-[#A3E635] flex items-center gap-1.5">
               <BookOpen className="h-3.5 w-3.5" />
-              <span>Official Executive Summary</span>
+              <span>{t('res_exec_summary')}</span>
             </h3>
             <p className="text-sm text-[#56635B] dark:text-white/80 leading-relaxed">
               {publication.previewSummary || description}
@@ -115,7 +115,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
             <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 space-y-2">
               <h4 className="text-xs font-black text-amber-900 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
                 <FileCheck className="h-3.5 w-3.5" />
-                <span>Submission Instructions for Applicants</span>
+                <span>{t('res_submission_instructions')}</span>
               </h4>
               <ul className="space-y-1.5 text-xs text-amber-800 dark:text-amber-200/90 font-medium">
                 {publication.formInstructions.map((inst, idx) => (

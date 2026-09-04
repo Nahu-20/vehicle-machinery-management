@@ -51,7 +51,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onOpenModal, 
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.4, delay: (index % 3) * 0.08 }}
-      className="group relative bg-white dark:bg-[#111613] rounded-3xl border border-[#E2EFE0] dark:border-white/10 hover:border-[#075B36] dark:hover:border-[#A3E635] shadow-[0_4px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden"
+      className="hv-lift group relative bg-white dark:bg-[#111613] rounded-3xl border border-[#E2EFE0] dark:border-white/10 hover:border-[#075B36] dark:hover:border-[#A3E635] shadow-[0_4px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden"
     >
       {/* Top Header Row with Category & Badges */}
       <div className="p-6 sm:p-7 space-y-4">

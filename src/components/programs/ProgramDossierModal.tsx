@@ -109,7 +109,7 @@ export const ProgramDossierModal: React.FC<ProgramDossierModalProps> = ({ progra
               <div className="md:col-span-7 space-y-4">
                 <h3 className="text-lg font-black text-[#075B36] dark:text-[#A3E635] uppercase tracking-wide flex items-center gap-2">
                   <Sparkles className="h-4 w-4" />
-                  <span>Program Executive Summary</span>
+                  <span>{t('prog_exec_summary')}</span>
                 </h3>
                 <p className="text-sm sm:text-base text-[#46534B] dark:text-white/80 leading-relaxed">
                   {t(program.descriptionKey)}
@@ -117,11 +117,11 @@ export const ProgramDossierModal: React.FC<ProgramDossierModalProps> = ({ progra
 
                 <div className="grid grid-cols-2 gap-4 pt-3 border-t border-[#E8EFE5] dark:border-white/10">
                   <div className="bg-[#F6FAF4] dark:bg-white/5 p-3 rounded-xl">
-                    <span className="text-xs text-[#56635B] dark:text-white/60 font-semibold block">Target Geographic Scope</span>
+                    <span className="text-xs text-[#56635B] dark:text-white/60 font-semibold block">{t('prog_geo_scope')}</span>
                     <span className="text-xs sm:text-sm font-black text-[#075B36] dark:text-white mt-0.5 block">{program.targetArea}</span>
                   </div>
                   <div className="bg-[#F6FAF4] dark:bg-white/5 p-3 rounded-xl">
-                    <span className="text-xs text-[#56635B] dark:text-white/60 font-semibold block">Beneficiaries Reached</span>
+                    <span className="text-xs text-[#56635B] dark:text-white/60 font-semibold block">{t('prog_beneficiaries')}</span>
                     <span className="text-xs sm:text-sm font-black text-[#075B36] dark:text-white mt-0.5 block">{program.beneficiaries}</span>
                   </div>
                 </div>

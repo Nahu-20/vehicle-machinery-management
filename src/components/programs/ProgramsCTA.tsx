@@ -23,7 +23,7 @@ export const ProgramsCTA: React.FC = () => {
           <div className="relative z-10 max-w-3xl space-y-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#A3E635] text-xs font-black uppercase tracking-wider">
               <ShieldCheck className="h-4 w-4" />
-              <span>Oromia Bureau of Agriculture Direct Support</span>
+              <span>{t('prog_direct_support')}</span>
             </div>
 
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
@@ -48,7 +48,7 @@ export const ProgramsCTA: React.FC = () => {
                 className="px-6 py-3.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-sm border border-white/20 transition-colors flex items-center gap-2"
               >
                 <Building className="h-4 w-4 text-[#A3E635]" />
-                <span>Contact Program Directors</span>
+                <span>{t('prog_contact_directors')}</span>
               </Link>
             </div>
           </div>

@@ -208,8 +208,8 @@ export const ProgramsZonalMatrix: React.FC = () => {
               </div>
 
               <div className="pt-2 border-t border-white/15 flex items-center justify-between text-xs text-emerald-200">
-                <span>Bureau Directorate Coordination</span>
-                <span className="font-bold text-white">Full Zonal Alignment</span>
+                <span>{t('prog_directorate_coord')}</span>
+                <span className="font-bold text-white">{t('prog_zonal_alignment')}</span>
               </div>
             </div>
           </div>

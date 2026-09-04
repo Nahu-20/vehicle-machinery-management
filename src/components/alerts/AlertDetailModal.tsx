@@ -265,7 +265,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({ alert, onClo
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-white/10 hover:bg-[#F0F7EE] text-xs font-bold text-[#0A1912] dark:text-white border border-[#D5E8D0] dark:border-white/10 transition-colors"
               >
                 <Printer className="h-3.5 w-3.5 text-[#075B36] dark:text-[#A3E635]" />
-                <span>Print Dossier</span>
+                <span>{t('ui_print_dossier')}</span>
               </button>
 
               <button
@@ -282,7 +282,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({ alert, onClo
                 to={`/alerts/${alert.slug}`}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#075B36] hover:bg-[#054629] text-white text-xs font-black transition-all shadow-xs"
               >
-                <span>Open Full Page</span>
+                <span>{t('ui_open_full_page')}</span>
                 <ExternalLink className="h-3.5 w-3.5 text-[#A3E635]" />
               </Link>
             </div>

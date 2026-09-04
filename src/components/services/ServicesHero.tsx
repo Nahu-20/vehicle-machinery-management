@@ -153,7 +153,7 @@ export const ServicesHero: React.FC<ServicesHeroProps> = ({
                     <PackageCheck className="h-4 w-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-white">Digital Input Voucher Redemption</h4>
+                    <h4 className="text-xs font-bold text-white">{t('svc_voucher')}</h4>
                     <p className="text-[11px] text-emerald-200/80 leading-snug">
                       Validate subsidized NPSB/Urea fertilizer allocations directly at Primary Cooperative Union depots.
                     </p>

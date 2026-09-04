@@ -239,7 +239,7 @@ export const ProgramsEnrollmentGuide: React.FC = () => {
               to="/contact"
               className="px-6 py-3 rounded-xl bg-[#A3E635] hover:bg-[#8CD823] text-[#0A1912] font-black text-xs sm:text-sm whitespace-nowrap transition-colors flex items-center gap-2 shadow-md"
             >
-              <span>Locate Your Woreda Office</span>
+              <span>{t('prog_locate_woreda')}</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

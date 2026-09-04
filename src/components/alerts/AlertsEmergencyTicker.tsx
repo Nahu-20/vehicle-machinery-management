@@ -136,7 +136,7 @@ export const AlertsEmergencyTicker: React.FC<AlertsEmergencyTickerProps> = ({
               onClick={() => onOpenAlertModal?.(currentAlert)}
               className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#A3E635] text-[#0A1912] hover:bg-[#92D022] font-black text-[11px] transition-colors shadow-xs"
             >
-              <span>View Dossier</span>
+              <span>{t('ui_view_dossier')}</span>
               <ChevronRight className="h-3 w-3" />
             </button>
           </div>

@@ -65,7 +65,7 @@ export const FeaturedResourceSpotlight: React.FC<FeaturedResourceSpotlightProps>
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-5 text-white">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#A3E635] text-[#053B23] text-[11px] font-black w-fit mb-2 shadow-xs">
                 <Sparkles className="h-3 w-3" />
-                <span>Season Spotlight</span>
+                <span>{t('res_season_spotlight')}</span>
               </span>
               <div className="text-xs font-bold text-emerald-200">
                 {publication.pagesOrDuration || 'Complete Edition'}

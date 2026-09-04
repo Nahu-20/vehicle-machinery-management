@@ -487,7 +487,7 @@ export const NewsDetailPage: React.FC = () => {
                   <span className="font-semibold text-gray-900 dark:text-white">Finfinnee, Oromia, Ethiopia</span>
                 </div>
                 <div className="p-2.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <span className="block text-gray-500 dark:text-gray-400 font-medium">Official Hotline</span>
+                  <span className="block text-gray-500 dark:text-gray-400 font-medium">{t('news_official_hotline')}</span>
                   <span className="font-semibold text-gray-900 dark:text-white">+251 11 551 7000 / 8844</span>
                 </div>
               </div>

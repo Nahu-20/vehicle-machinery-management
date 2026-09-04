@@ -145,7 +145,7 @@ export const AgriculturalInvestmentSection: React.FC = () => {
                 </div>
 
                 <div className="pt-3 border-t border-gray-100 dark:border-emerald-900/40 flex items-center justify-between">
-                  <span className="text-xs text-gray-500 dark:text-emerald-300/60 font-medium">Regional Dataset</span>
+                  <span className="text-xs text-gray-500 dark:text-emerald-300/60 font-medium">{t('home_regional_dataset')}</span>
                   <Link
                     to="/investment/production"
                     className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-[#063D2A] dark:text-[#A3E635] group-hover:underline"
@@ -197,7 +197,7 @@ export const AgriculturalInvestmentSection: React.FC = () => {
                 </div>
 
                 <div className="pt-3 border-t border-gray-100 dark:border-emerald-900/40 flex items-center justify-between">
-                  <span className="text-xs text-gray-500 dark:text-emerald-300/60 font-medium">Infrastructure Map</span>
+                  <span className="text-xs text-gray-500 dark:text-emerald-300/60 font-medium">{t('home_infrastructure_map')}</span>
                   <Link
                     to="/investment/infrastructure"
                     className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-[#063D2A] dark:text-[#A3E635] group-hover:underline"
@@ -252,7 +252,7 @@ export const AgriculturalInvestmentSection: React.FC = () => {
               </div>
 
               <div className="pt-3 border-t border-gray-100 dark:border-emerald-900/40 flex items-center justify-between">
-                <span className="text-xs text-gray-500 dark:text-emerald-300/60 font-medium">Pipeline Projects</span>
+                <span className="text-xs text-gray-500 dark:text-emerald-300/60 font-medium">{t('home_pipeline_projects')}</span>
                 <Link
                   to="/investment/opportunities"
                   className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-[#063D2A] dark:text-[#A3E635] group-hover:underline"
@@ -346,7 +346,7 @@ export const AgriculturalInvestmentSection: React.FC = () => {
                 <ul className="space-y-2 text-xs font-medium text-[#2C3B32] dark:text-emerald-200/90 mb-4">
                   <li className="flex items-center gap-2">
                     <FileCheck2 className="w-3.5 h-3.5 text-[#347622] dark:text-[#A3E635] shrink-0" />
-                    <span>Official Bureau Investment Guidelines</span>
+                    <span>{t('home_investment_guidelines')}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <FileCheck2 className="w-3.5 h-3.5 text-[#347622] dark:text-[#A3E635] shrink-0" />
@@ -356,7 +356,7 @@ export const AgriculturalInvestmentSection: React.FC = () => {
               </div>
 
               <div className="pt-3 border-t border-gray-100 dark:border-emerald-900/40 flex items-center justify-between">
-                <span className="text-xs text-gray-500 dark:text-emerald-300/60 font-medium">Investor Gateway</span>
+                <span className="text-xs text-gray-500 dark:text-emerald-300/60 font-medium">{t('home_investor_gateway')}</span>
                 <Link
                   to="/investment/requirements"
                   className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-[#063D2A] dark:text-[#A3E635] group-hover:underline"

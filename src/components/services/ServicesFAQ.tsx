@@ -45,7 +45,7 @@ export const ServicesFAQ: React.FC = () => {
         <div className="max-w-2xl space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F0F7EE] dark:bg-white/10 text-[#075B36] dark:text-[#A3E635] text-xs font-black uppercase tracking-wider">
             <HelpCircle className="h-3.5 w-3.5" />
-            <span>Frequently Asked Questions</span>
+            <span>{t('svc_faq')}</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black text-[#0A1912] dark:text-white tracking-tight leading-tight">
             Agricultural Service Inquiries & Guidelines

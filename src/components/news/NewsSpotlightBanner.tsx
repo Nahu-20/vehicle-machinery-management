@@ -130,14 +130,14 @@ export const NewsSpotlightBanner: React.FC<NewsSpotlightBannerProps> = ({
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               <Share2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Share Story</span>
+              <span>{t('ui_share_story')}</span>
             </button>
 
             <Link
               to={`/news/${article.slug}`}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-[#075D3A] hover:bg-[#05482D] dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-all shadow-md hover:shadow-lg transform active:scale-95"
             >
-              <span>Read Full Story</span>
+              <span>{t('ui_read_full_story')}</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>

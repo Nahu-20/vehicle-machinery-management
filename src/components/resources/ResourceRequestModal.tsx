@@ -175,7 +175,7 @@ export const ResourceRequestModal: React.FC<ResourceRequestModalProps> = ({
                 >
                   <option value="farmer">Smallholder Farmer / Cluster Group</option>
                   <option value="da">Development Agent (DA) / FTC Staff</option>
-                  <option value="cooperative">Cooperative Union Leader</option>
+                  <option value="cooperative">{t('form_coop_leader')}</option>
                   <option value="student">Student / Agricultural Researcher</option>
                   <option value="ngo">NGO / Development Partner</option>
                 </select>
@@ -192,8 +192,8 @@ export const ResourceRequestModal: React.FC<ResourceRequestModalProps> = ({
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#152019] text-xs text-[#111310] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#075B36]"
                 >
                   <option value="print">Printed Hard Copies for Kebele / FTC</option>
-                  <option value="translation">Request Specific Language Translation</option>
-                  <option value="custom">Request Customized Training Curriculum</option>
+                  <option value="translation">{t('res_request_translation')}</option>
+                  <option value="custom">{t('res_request_curriculum')}</option>
                 </select>
               </div>
             </div>
@@ -275,7 +275,7 @@ export const ResourceRequestModal: React.FC<ResourceRequestModalProps> = ({
                 className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#075B36] hover:bg-[#054829] text-white text-xs font-black shadow-md transition-all"
               >
                 <Send className="h-3.5 w-3.5 text-[#A3E635]" />
-                <span>Submit Official Request</span>
+                <span>{t('res_submit_request')}</span>
               </button>
             </div>
           </form>

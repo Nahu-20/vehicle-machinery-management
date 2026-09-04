@@ -22,7 +22,7 @@ interface EventRSVPModalProps {
 }
 
 export const EventRSVPModal: React.FC<EventRSVPModalProps> = ({ event, onClose }) => {
-  const { getLocalizedText } = useLanguage();
+  const { getLocalizedText, t } = useLanguage();
   const { showToast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -180,7 +180,7 @@ export const EventRSVPModal: React.FC<EventRSVPModalProps> = ({ event, onClose }
                     className="w-full px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   >
                     <option value="farmer">Smallholder / Cluster Farmer</option>
-                    <option value="cooperative">Cooperative Union Leader</option>
+                    <option value="cooperative">{t('form_coop_leader')}</option>
                     <option value="agribusiness">Agribusiness & Machinery Dealer</option>
                     <option value="researcher">Researcher / Extension Agent</option>
                     <option value="media">Media & Press Correspondent</option>

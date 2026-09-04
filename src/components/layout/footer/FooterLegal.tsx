@@ -24,7 +24,7 @@ export const FooterLegal: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveModal('privacy')}
-            className="hover:text-[#075B36] dark:hover:text-[#74d62c] underline-offset-4 hover:underline transition-colors cursor-pointer"
+            className="hv-underline hover:text-[#075B36] dark:hover:text-[#74d62c] transition-colors cursor-pointer"
           >
             {t('footer_privacy')}
           </button>
@@ -32,7 +32,7 @@ export const FooterLegal: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveModal('accessibility')}
-            className="hover:text-[#075B36] dark:hover:text-[#74d62c] underline-offset-4 hover:underline transition-colors cursor-pointer"
+            className="hv-underline hover:text-[#075B36] dark:hover:text-[#74d62c] transition-colors cursor-pointer"
           >
             {t('footer_accessibility')}
           </button>
@@ -40,7 +40,7 @@ export const FooterLegal: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveModal('terms')}
-            className="hover:text-[#075B36] dark:hover:text-[#74d62c] underline-offset-4 hover:underline transition-colors cursor-pointer"
+            className="hv-underline hover:text-[#075B36] dark:hover:text-[#74d62c] transition-colors cursor-pointer"
           >
             {t('footer_terms')}
           </button>

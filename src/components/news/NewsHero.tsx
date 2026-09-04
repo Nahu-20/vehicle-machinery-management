@@ -287,7 +287,7 @@ export const NewsHero: React.FC<NewsHeroProps> = ({
                   className="w-full flex items-center gap-2 text-left hover:text-[#15803d] dark:hover:text-emerald-400 transition-colors"
                 >
                   <Users className="w-3.5 h-3.5 text-[#15803d] dark:text-emerald-400 shrink-0" />
-                  <span className="truncate">Agricultural Expos</span>
+                  <span className="truncate">{t('news_expos')}</span>
                 </button>
 
                 <button
@@ -296,7 +296,7 @@ export const NewsHero: React.FC<NewsHeroProps> = ({
                   className="w-full flex items-center gap-2 text-left hover:text-[#15803d] dark:hover:text-emerald-400 transition-colors"
                 >
                   <GraduationCap className="w-3.5 h-3.5 text-[#15803d] dark:text-emerald-400 shrink-0" />
-                  <span className="truncate">Extension Trainings</span>
+                  <span className="truncate">{t('news_trainings')}</span>
                 </button>
               </div>
             </div>

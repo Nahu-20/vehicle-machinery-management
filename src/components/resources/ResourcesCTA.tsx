@@ -29,7 +29,7 @@ export const ResourcesCTA: React.FC<ResourcesCTAProps> = ({ onRequestOpen }) => 
             <div className="lg:col-span-8 space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/25 backdrop-blur-md border border-[#A3E635]/30 text-[#A3E635] text-xs font-black uppercase tracking-wider">
                 <Sparkles className="h-3.5 w-3.5" />
-                <span>Agricultural Knowledge Support Hotline</span>
+                <span>{t('res_knowledge_hotline')}</span>
               </div>
 
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-snug">
@@ -47,7 +47,7 @@ export const ResourcesCTA: React.FC<ResourcesCTAProps> = ({ onRequestOpen }) => 
                 className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#A3E635] hover:bg-[#84CC16] text-[#053B23] font-black text-xs sm:text-sm shadow-lg transition-all"
               >
                 <FileCheck className="h-4 w-4" />
-                <span>Request Physical Copies</span>
+                <span>{t('res_physical_copies')}</span>
               </button>
 
               <Link
@@ -55,7 +55,7 @@ export const ResourcesCTA: React.FC<ResourcesCTAProps> = ({ onRequestOpen }) => 
                 className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all shadow-xs"
               >
                 <MapPin className="h-4 w-4 text-[#A3E635]" />
-                <span>Locate Nearest Woreda Office</span>
+                <span>{t('res_nearest_woreda')}</span>
               </Link>
             </div>
           </div>

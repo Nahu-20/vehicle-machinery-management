@@ -58,7 +58,7 @@ export const NewsArticlesGrid: React.FC<NewsArticlesGridProps> = ({
     return (
       <div className="py-16 text-center bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-8 space-y-3 shadow-xs">
         <Info className="w-10 h-10 text-gray-400 mx-auto" />
-        <h3 className="text-base font-bold text-gray-800 dark:text-gray-200">No Matching Articles Found</h3>
+        <h3 className="text-base font-bold text-gray-800 dark:text-gray-200">{t('news_no_match')}</h3>
         <p className="text-xs text-gray-500 max-w-md mx-auto">
           Try clearing your search query or selecting a different category filter to view published bulletins.
         </p>
@@ -85,7 +85,7 @@ export const NewsArticlesGrid: React.FC<NewsArticlesGridProps> = ({
             return (
               <article
                 key={article.slug}
-                className="group rounded-3xl border border-gray-200/90 dark:border-gray-700/80 bg-white dark:bg-gray-800 overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between hover:-translate-y-1"
+                className="hv-lift group rounded-3xl border border-gray-200/90 dark:border-gray-700/80 bg-white dark:bg-gray-800 overflow-hidden shadow-xs hover:shadow-xl flex flex-col justify-between"
               >
                 <div>
                   {/* Image container */}
@@ -253,7 +253,7 @@ export const NewsArticlesGrid: React.FC<NewsArticlesGridProps> = ({
                         to={`/news/${article.slug}`}
                         className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-[#075D3A] hover:bg-[#05482d] dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-xl transition-colors shadow-xs"
                       >
-                        <span>Read Full Story</span>
+                        <span>{t('ui_read_full_story')}</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </Link>
                     </div>
