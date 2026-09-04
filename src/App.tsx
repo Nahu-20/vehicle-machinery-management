@@ -32,6 +32,7 @@ import { AchievementDetailPage } from './pages/AchievementDetailPage';
 import { InvestmentPage } from './pages/InvestmentPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { SectionLandingPage } from './pages/SectionLandingPage';
+import { PageAdvisory } from './components/alerts/PageAdvisory';
 import { SectionContentAdminPage } from './pages/admin/content/SectionContentAdminPage';
 import { ChatLauncher } from './components/chat/ChatLauncher';
 import { ChatPanel } from './components/chat/ChatPanel';
@@ -165,6 +166,8 @@ function PublicLayout() {
     <div className="flex min-h-screen flex-col bg-[#FAFAF7] dark:bg-[#0B1912] text-[#17211B] dark:text-[#E6F0EA] selection:bg-[#D7A928] selection:text-[#063D2A] transition-colors duration-200">
       <ScrollProgress />
       <Header />
+      {/* Note 12: the page's advisory sits above the chrome, not behind a bell */}
+      <PageAdvisory />
       <main id="main-content" className="flex-1 focus:outline-none" tabIndex={-1}>
         <Outlet />
       </main>

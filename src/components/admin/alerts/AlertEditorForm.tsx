@@ -72,6 +72,7 @@ import {
 } from 'lucide-react';
 import { LocalizedText } from '../../../types/news';
 import { StagedMediaReference, ManagedFeaturedImage } from '../../../types/media';
+import { ADVISORY_PAGES } from '../../../data/advisoryPlacement';
 
 interface AlertEditorFormProps {
   initialAlert?: AgriculturalAlert | null;
@@ -152,6 +153,11 @@ export const AlertEditorForm: React.FC<AlertEditorFormProps> = ({
 
   const [featured, setFeatured] = useState<boolean>(Boolean(initialAlert?.featured));
   const [pinned, setPinned] = useState<boolean>(Boolean(initialAlert?.pinned));
+  // Note 12: which pages carry this advisory in their hero. Left empty, the
+  // placement falls back to one derived from the category.
+  const [displayPages, setDisplayPages] = useState<string[]>(
+    initialAlert?.displayPages ?? []
+  );
 
   // Geographic Target
   const [regionWide, setRegionWide] = useState<boolean>(
@@ -353,6 +359,7 @@ export const AlertEditorForm: React.FC<AlertEditorFormProps> = ({
       severity,
       featured,
       pinned,
+      displayPages,
       geographicTarget: {
         regionWide,
         zones: regionWide ? [] : selectedZones,
@@ -1289,6 +1296,42 @@ export const AlertEditorForm: React.FC<AlertEditorFormProps> = ({
                 />
                 <span>Pin to Top of Public Alert Feeds</span>
               </label>
+
+              {/* Note 12: show the right advisory in the first hero of each
+                  page. Leave every box clear to let the category decide. */}
+              <fieldset className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <legend className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+                  Show in the hero of these pages
+                </legend>
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                  {ADVISORY_PAGES.map((advisoryPage) => (
+                    <label
+                      key={advisoryPage.id}
+                      className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={displayPages.includes(advisoryPage.id)}
+                        onChange={(e) => {
+                          setDisplayPages((prev) =>
+                            e.target.checked
+                              ? [...prev, advisoryPage.id]
+                              : prev.filter((id) => id !== advisoryPage.id)
+                          );
+                          setIsDirty(true);
+                        }}
+                        className="rounded-md text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <span className="capitalize">{advisoryPage.id}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                  Leave all clear and the advisory is placed by its category —
+                  weather reaches Farmer Services, pest and disease reach Home
+                  and Sectors, an emergency reaches every page.
+                </p>
+              </fieldset>
             </div>
           </div>
 

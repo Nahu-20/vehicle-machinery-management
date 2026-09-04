@@ -156,7 +156,12 @@ export async function ensureStaffUserRecord(staffUser?: StaffUser | null): Promi
 /**
  * Fallback mock alert generator when Firestore is offline or missing records
  */
-function getFallbackMockAlerts(): AgriculturalAlert[] {
+/**
+ * Demo advisories, used when Firestore has nothing published — the same
+ * fallback the news and achievements sections use, so a fresh environment
+ * shows the site as it is meant to look rather than an empty page.
+ */
+export function getFallbackMockAlerts(): AgriculturalAlert[] {
   const now = Date.now();
   return [
     {
@@ -1050,6 +1055,7 @@ export async function createAlertDraft(
     status: 'draft',
     featured: Boolean(data.featured),
     pinned: Boolean(data.pinned),
+    displayPages: data.displayPages ?? null,
     geographicTarget: data.geographicTarget || { regionWide: true, zones: [], woredas: [] },
     subjectTarget: data.subjectTarget || { crops: [], livestock: [] },
     recommendedActions: data.recommendedActions || [],

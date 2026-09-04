@@ -62,6 +62,11 @@ export interface AgriculturalAlert {
   featured: boolean;
   pinned: boolean;
 
+  /** Note 12: pages whose hero should carry this advisory. Empty or absent
+   *  falls back to a placement derived from `category` — see
+   *  src/data/advisoryPlacement.ts. */
+  displayPages?: string[] | null;
+
   geographicTarget: AlertGeographicTarget;
   subjectTarget: AlertSubjectTarget;
 
@@ -121,6 +126,7 @@ export interface PublicAgriculturalAlert {
   severity: AlertSeverity;
   featured: boolean;
   pinned: boolean;
+  displayPages?: string[] | null;
   geographicTarget: AlertGeographicTarget;
   subjectTarget: AlertSubjectTarget;
   recommendedActions: AlertRecommendedAction[];
@@ -412,6 +418,7 @@ export function toPublicAlert(alert: AgriculturalAlert): PublicAgriculturalAlert
     severity: alert.severity,
     featured: Boolean(alert.featured),
     pinned: Boolean(alert.pinned),
+    displayPages: alert.displayPages ?? null,
     geographicTarget: alert.geographicTarget || { regionWide: true, zones: [], woredas: [] },
     subjectTarget: alert.subjectTarget || { crops: [], livestock: [] },
     recommendedActions: alert.recommendedActions || [],

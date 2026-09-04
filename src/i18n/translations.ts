@@ -187,6 +187,9 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     qa_online_services: "Tajaajila Onlaayinii",
     qa_downloads: "Buufannaa",
     qa_ai: "Gargaaraa AI",
+    advisory_region_label: "Gorsa fuula kanaa",
+    advisory_read: "Dubbisi",
+    advisory_dismiss: "Cufi",
     // Note 15: one language family on each screen
     ach_impact_docs: "Sanada Madaallii Dhiibbaa",
     ach_milestones: "Milkaa’ina Seenaa",
@@ -1059,6 +1062,9 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     qa_online_services: "የመስመር ላይ አገልግሎቶች",
     qa_downloads: "ማውረጃዎች",
     qa_ai: "የ AI ረዳት",
+    advisory_region_label: "የዚህ ገጽ ምክር",
+    advisory_read: "ያንብቡ",
+    advisory_dismiss: "ዝጋ",
     // Note 15: one language family on each screen
     ach_impact_docs: "የተጽዕኖ ግምገማ ሰነድ",
     ach_milestones: "ታሪካዊ ምዕራፎች",
@@ -1927,6 +1933,9 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     qa_online_services: "Online Services",
     qa_downloads: "Downloads",
     qa_ai: "AI Assistant",
+    advisory_region_label: "Advisory for this page",
+    advisory_read: "Read",
+    advisory_dismiss: "Dismiss",
     // Note 15: one language family on each screen
     ach_impact_docs: "Impact Assessment Documentation",
     ach_milestones: "Historical Milestones",
