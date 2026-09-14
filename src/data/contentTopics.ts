@@ -1,5 +1,5 @@
 import { siteNavSections } from './siteNavigation';
-import type { ContentSectionId } from '../types/content';
+import { FIELD_PHOTO_TOPIC, type ContentSectionId } from '../types/content';
 
 /**
  * Which navigation links are filled in from the section CMS, and which
@@ -31,6 +31,8 @@ export const TOPICS_BY_SECTION: Record<ContentSectionId, ContentTopic[]> = {
   resources: linksOfGroups('bureau', (id) =>
     ['bureau-policy', 'bureau-data', 'bureau-reports'].includes(id),
   ),
+  // Field photographs belong to the homepage, not to a navigation entry.
+  field: [{ id: FIELD_PHOTO_TOPIC, labelKey: 'nav_home', href: '/' }],
 };
 
 /** Section a topic belongs to, or undefined if the topic is not CMS-backed. */
@@ -45,6 +47,9 @@ export function topicOfPath(
   pathname: string,
 ): { topic: ContentTopic; sectionId: ContentSectionId } | undefined {
   for (const sectionId of Object.keys(TOPICS_BY_SECTION) as ContentSectionId[]) {
+    // Field photographs live on the homepage, which is not a landing page;
+    // without this, its '/' topic would match every bare-root lookup.
+    if (sectionId === 'field') continue;
     const topic = TOPICS_BY_SECTION[sectionId].find(
       (candidate) => candidate.href.split('#')[0] === pathname,
     );

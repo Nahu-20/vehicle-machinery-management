@@ -30,7 +30,15 @@ const SECTION_LABEL: Record<ContentSectionId, string> = {
   plans: 'Plans, Programs & Projects',
   opportunities: 'Opportunities & Engagement',
   resources: 'Resource & Statistics',
+  field: 'Homepage Photographs',
 };
+
+/**
+ * Field photographs reuse title/summary/body as place/crop/season, so the
+ * three inputs are relabelled when that section is selected.
+ */
+const FIELD_LABELS = { title: 'Place', summary: 'Crop', body: 'Season' } as const;
+const DEFAULT_LABELS = { title: 'Title', summary: 'Summary', body: 'Body' } as const;
 
 const STATUS_STYLE: Record<AboutCmsStatus, string> = {
   draft: 'bg-slate-500/15 text-slate-300 border-slate-500/30',
@@ -55,6 +63,8 @@ export const SectionContentAdminPage: React.FC = () => {
   const [draft, setDraft] = useState<NewContentEntry | null>(null);
 
   const topics = useMemo(() => TOPICS_BY_SECTION[section] ?? [], [section]);
+  const isFieldSection = section === 'field';
+  const labels = isFieldSection ? FIELD_LABELS : DEFAULT_LABELS;
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -82,6 +92,10 @@ export const SectionContentAdminPage: React.FC = () => {
     const titleEn = draft.title.en.trim();
     if (!titleEn) {
       setError('An English title is required — it names the entry everywhere else.');
+      return;
+    }
+    if (section === 'field' && !draft.imageUrl?.trim()) {
+      setError('A photograph URL is required for a homepage photograph.');
       return;
     }
     const slug = draft.slug.trim() || slugifyContent(titleEn);
@@ -210,7 +224,7 @@ export const SectionContentAdminPage: React.FC = () => {
             <div key={lang} className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label className={labelClass} htmlFor={`title-${lang}`}>
-                  Title ({lang}){lang === 'en' && ' *'}
+                  {labels.title} ({lang}){lang === 'en' && ' *'}
                 </label>
                 <input
                   id={`title-${lang}`}
@@ -222,7 +236,9 @@ export const SectionContentAdminPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className={labelClass} htmlFor={`summary-${lang}`}>Summary ({lang})</label>
+                <label className={labelClass} htmlFor={`summary-${lang}`}>
+                  {labels.summary} ({lang})
+                </label>
                 <input
                   id={`summary-${lang}`}
                   className={inputClass}
@@ -235,7 +251,52 @@ export const SectionContentAdminPage: React.FC = () => {
             </div>
           ))}
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          {isFieldSection && (
+            <>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {(['en', 'om', 'am'] as const).map((lang) => (
+                  <div key={`season-${lang}`}>
+                    <label className={labelClass} htmlFor={`season-${lang}`}>
+                      {labels.body} ({lang})
+                    </label>
+                    <input
+                      id={`season-${lang}`}
+                      className={inputClass}
+                      placeholder={lang === 'en' ? 'Meher 2018 E.C.' : ''}
+                      value={draft.body[lang]}
+                      onChange={(e) =>
+                        setDraft({ ...draft, body: { ...draft.body, [lang]: e.target.value } })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <label className={labelClass} htmlFor="photo">Photograph URL *</label>
+                <input
+                  id="photo"
+                  className={inputClass}
+                  placeholder="https://… or an uploaded media URL"
+                  value={draft.imageUrl ?? ''}
+                  onChange={(e) => setDraft({ ...draft, imageUrl: e.target.value || null })}
+                />
+                {draft.imageUrl && (
+                  <img
+                    src={draft.imageUrl}
+                    alt=""
+                    className="mt-3 h-40 w-full max-w-sm rounded-xl object-cover border border-slate-200 dark:border-slate-700"
+                  />
+                )}
+                <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                  Published photographs replace the bundled homepage images. With none
+                  published, the site falls back to the images shipped with it.
+                </p>
+              </div>
+            </>
+          )}
+
+          <div className={`grid gap-4 sm:grid-cols-3 ${isFieldSection ? 'hidden' : ''}`}>
             <div>
               <label className={labelClass} htmlFor="url">Link (optional)</label>
               <input

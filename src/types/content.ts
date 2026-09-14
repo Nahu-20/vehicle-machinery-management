@@ -10,14 +10,31 @@ import type { AboutCmsMeta, AboutCmsStatus, AboutLocalizedText } from './about';
  * four near-identical copies. `topic` is the sub-page it appears on, matching
  * the link ids in src/data/siteNavigation.ts.
  */
-export type ContentSectionId = 'initiatives' | 'plans' | 'opportunities' | 'resources';
+export type ContentSectionId =
+  | 'initiatives'
+  | 'plans'
+  | 'opportunities'
+  | 'resources'
+  | 'field';
 
 export const CONTENT_SECTION_IDS: ContentSectionId[] = [
   'initiatives',
   'plans',
   'opportunities',
   'resources',
+  'field',
 ];
+
+/**
+ * The homepage "from the field" photographs. These reuse the shared entry
+ * shape rather than getting a collection of their own:
+ *   title   -> the place        ("Dodola Woreda, East Bale Zone")
+ *   summary -> the crop         ("Wheat cluster")
+ *   body    -> the season       ("Meher 2018 E.C.")
+ * plus imageUrl for the photograph itself. The admin form relabels these
+ * three fields when the field section is selected.
+ */
+export const FIELD_PHOTO_TOPIC = 'home';
 
 /** Human label keys for the section pickers, resolved through i18n. */
 export const CONTENT_SECTION_LABEL_KEY: Record<ContentSectionId, string> = {
@@ -25,6 +42,7 @@ export const CONTENT_SECTION_LABEL_KEY: Record<ContentSectionId, string> = {
   plans: 'nav_plans',
   opportunities: 'nav_group_opportunities',
   resources: 'nav_group_data',
+  field: 'field_title',
 };
 
 export interface ContentEntry extends AboutCmsMeta {
@@ -44,6 +62,8 @@ export interface ContentEntry extends AboutCmsMeta {
   effectiveDate?: string | null;
   /** ISO date it stops being current, e.g. a tender deadline. */
   expiresAt?: string | null;
+  /** Photograph for field-photo entries: an uploaded media URL or an external one. */
+  imageUrl?: string | null;
   featured?: boolean;
 }
 
@@ -70,6 +90,7 @@ export function emptyContentEntry(
     fileUrl: null,
     effectiveDate: null,
     expiresAt: null,
+    imageUrl: null,
     displayOrder: 0,
     featured: false,
     status: 'draft',

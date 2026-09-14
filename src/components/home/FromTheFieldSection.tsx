@@ -1,20 +1,23 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { FieldPhoto } from '../common/FieldPhoto';
 import { GrowingStem } from '../common/GrowingStem';
+import { listContentPublished } from '../../services/contentCmsService';
+import { FIELD_PHOTO_TOPIC, type ContentEntry } from '../../types/content';
 import coffeeHarvestImg from '../../assets/images/oromia_coffee_harvest_1785782724559.jpg';
 import irrigationImg from '../../assets/images/oromia_irrigation_program_1785782711113.jpg';
 import farmlandImg from '../../assets/images/oromia_hero_farmland_1785782697065.jpg';
 
 /**
- * Note 03: "Families, kebeles, cluster plots, and extension work would make
- * each image feel like proof of the Bureau's work on the ground."
+ * Photographs of the Bureau's work, each captioned with its place, crop and
+ * season.
  *
- * These use the Bureau's own Oromia photographs where we have them. Swapping
- * any of them later is a one-line change — or an edit in the admin, once the
- * section is CMS-backed.
+ * The photographs and their captions are managed from the admin (Section
+ * Content → Homepage Photographs). The three images bundled with the build are
+ * the fallback shown until something is published there, so the section is
+ * never empty on a fresh environment.
  */
-const fieldStories = [
+const bundledStories = [
   {
     id: 'cluster-wheat',
     image: irrigationImg,
@@ -42,7 +45,43 @@ const fieldStories = [
 ];
 
 export const FromTheFieldSection: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, currentLang } = useLanguage();
+  const [published, setPublished] = useState<ContentEntry[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listContentPublished('field', FIELD_PHOTO_TOPIC)
+      .then((rows) => {
+        if (!cancelled) setPublished(rows.filter((row) => row.imageUrl));
+      })
+      .catch(() => {
+        // The bundled photographs already cover this; never break the page.
+        if (!cancelled) setPublished([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // title -> place, summary -> crop, body -> season (see types/content.ts)
+  const stories =
+    published.length > 0
+      ? published.map((entry) => ({
+          id: entry.id,
+          image: entry.imageUrl as string,
+          place: entry.title[currentLang] || entry.title.en,
+          crop: entry.summary[currentLang] || entry.summary.en,
+          season: entry.body[currentLang] || entry.body.en,
+          subject: entry.title[currentLang] || entry.title.en,
+        }))
+      : bundledStories.map((story) => ({
+          id: story.id,
+          image: story.image,
+          place: t(story.placeKey),
+          crop: t(story.cropKey),
+          season: t(story.seasonKey),
+          subject: t(story.subjectKey),
+        }));
 
   return (
     <section
@@ -66,14 +105,14 @@ export const FromTheFieldSection: React.FC = () => {
         </div>
 
         <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-          {fieldStories.map((story) => (
+          {stories.map((story) => (
             <FieldPhoto
               key={story.id}
               src={story.image}
-              place={t(story.placeKey)}
-              crop={t(story.cropKey)}
-              season={t(story.seasonKey)}
-              subject={t(story.subjectKey)}
+              place={story.place}
+              crop={story.crop}
+              season={story.season}
+              subject={story.subject}
               onDark
               className="hv-lift"
             />

@@ -259,6 +259,9 @@ export async function getContentCounts(): Promise<Record<ContentSectionId, numbe
       acc[entry.sectionId] = (acc[entry.sectionId] || 0) + 1;
       return acc;
     },
-    { initiatives: 0, plans: 0, opportunities: 0, resources: 0 } as Record<ContentSectionId, number>,
+    { initiatives: 0, plans: 0, opportunities: 0, resources: 0, field: 0 } as Record<
+      ContentSectionId,
+      number
+    >,
   );
 }
