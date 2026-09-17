@@ -444,7 +444,17 @@ html.dark .band-soil   { background-color: #1A120B; color: var(--dark-text); }
   background-repeat: repeat;
 }
 
-html.dark .motif-contour, html.dark .motif-terrace { opacity: 0.55; }
+/* Dark mode gets its own pattern rather than a dimmed one. `opacity` here
+   would apply to the whole section, fading its text and cards along with the
+   background; and a dark-green stroke is invisible on a dark ground anyway,
+   so the dark variants stroke in lime at a low opacity instead. */
+html.dark .motif-contour {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cg fill='none' stroke='%23A3E635' stroke-opacity='0.045' stroke-width='1.3'%3E%3Cpath d='M-20 35 Q 35 12 70 35 T 160 35'/%3E%3Cpath d='M-20 70 Q 35 47 70 70 T 160 70'/%3E%3Cpath d='M-20 105 Q 35 82 70 105 T 160 105'/%3E%3Cpath d='M-20 140 Q 35 117 70 140 T 160 140'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+html.dark .motif-terrace {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='80' viewBox='0 0 160 80'%3E%3Cg fill='none' stroke='%23A3E635' stroke-opacity='0.04' stroke-width='1.2'%3E%3Cpath d='M0 20 H60 Q75 20 75 34 H160'/%3E%3Cpath d='M0 50 H30 Q45 50 45 64 H160'/%3E%3C/g%3E%3C/svg%3E");
+}
 
 /* Soft organic edge between bands */
 .band-edge-top {
